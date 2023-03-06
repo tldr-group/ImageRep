@@ -48,7 +48,7 @@ def load_generator(Project_path):
     netG = netG.cuda()
     return netG
 
-def generate_image(netG, Project_path, lf=100):
+def generate_image(netG, Project_path, lf=50):
     
     try:
         netG.load_state_dict(torch.load(Project_path + '_Gen.pt'))
@@ -56,7 +56,7 @@ def generate_image(netG, Project_path, lf=100):
         return torch.tensor(0)
     netG.eval()
     imgs = []
-    for i in range(10):
+    for i in range(1):
         noise = torch.randn(1, 16, 4, lf, lf)
         noise = noise.cuda()
         img = netG(noise)
@@ -86,3 +86,9 @@ def fit_fac(err_exp, ls, vf, max_fac=200):
     ls_model = np.linspace(ls[0]/fac, (ls[-1]*2)/fac, 100)
     err_model = bernouli(vf,  ls_model)
     return err_model, [l*fac for l in ls_model], fac
+
+def tpc(img):
+    tpc = []
+    for sh in range(1,150):
+        tpc.append(torch.mean(img[:, sh:]*img[:, :-sh]).item())
+    return tpc
