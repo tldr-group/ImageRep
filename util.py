@@ -56,7 +56,7 @@ def generate_image(netG, Project_path, lf=50):
         return torch.tensor(0)
     netG.eval()
     imgs = []
-    for i in range(1):
+    for i in range(10):
         noise = torch.randn(1, 16, 4, lf, lf)
         noise = noise.cuda()
         img = netG(noise)

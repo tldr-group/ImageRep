@@ -32,7 +32,7 @@ for i, n in enumerate(list(data_tpc.keys())[:l]):
     # fit a exp decay to the tpc
     y = np.array(d['tpc'])
     x = np.linspace(1, 149, 149)
-    coefs_poly3d, _ = curve_fit(func, x, y)
+    coefs_poly3d, _ = curve_fit(func, x[:100], y[:100])
     y_data = func(x, *coefs_poly3d)
     axs[i, 2].plot(x, y_data, c='black', ls='--')
     # find the knee
@@ -46,7 +46,10 @@ for i, n in enumerate(list(data_tpc.keys())[:l]):
 plt.tight_layout()
 
 fig, ax = plt.subplots(1,1)
-ax.plot(np.arange(60), np.arange(60))
+ax.plot(np.arange(60), np.arange(60), c='b')
+ax.plot(np.arange(30), np.arange(30)*2, c = 'r', lw=1)
+ax.plot(np.arange(30)*2, np.arange(30), c = 'r', lw=1)
+
 ax.scatter(facs, pred, s=1, c='black')
 ax.set_aspect(1)
 ax.set_xlabel('fac from model')
