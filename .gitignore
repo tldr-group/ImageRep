@@ -3,3 +3,5 @@ data
 vfconv.py
 bigboi.npy
 *.pyc
+old/
+fig2 copy.py
