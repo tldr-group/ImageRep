@@ -8,14 +8,17 @@ import numpy as np
 # Dataset path and list of subfolders
 projects = os.listdir("D:\Dataset")
 projects = [f"D:/Dataset/{p}/{p}" for p in projects]
-# Load generator
+# Load generator network
 netG = util.load_generator(projects[0])
+# Edge lengths to test
 edge_lengths = torch.arange(300, 800, 5)
+# Corresponding dims
 img_dims = [np.array((l, l)) for l in edge_lengths]
 imgs = []
 data = {}
 
 for j, proj in enumerate(projects):
+    # Make an image of micro
     img = util.generate_image(netG, proj)
     if img.any():
         microstructure_name = proj.split("/")[-1]

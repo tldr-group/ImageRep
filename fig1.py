@@ -33,7 +33,7 @@ errs.append(sample_error(img2[:,0], ls))
 ns = util.ns_from_dims(img_dims, 2)
 berns.append(util.bernouli(0.5, ns))
 
-with open("data_gen.json", "r") as fp:
+with open("datafin.json", "r") as fp:
     data = json.load(fp)['generated_data'] 
 
 n = 'microstructure205'
@@ -56,6 +56,8 @@ for l, err, bern, c in zip(labs, errs, berns, cs):
     axs[1,1].scatter(ls, err, c=c, s=8,marker = 'x')
     axs[1,1].plot(ls, bern, lw=1, c=c, label=l)
 axs[1,1].legend()
+axs[1,1].set_xlabel('Error from statistical analysis (%)')
+axs[1,1].set_ylabel('Error from tpc analysis (%)')
 plt.tight_layout()
 for ax in axs.ravel()[:3]:
     ax.set_xticks([])

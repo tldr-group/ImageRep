@@ -10,7 +10,7 @@ import torch
 import util
 from torch.nn.functional import interpolate
 
-with open("data_gen.json", "r") as fp:
+with open("datafin.json", "r") as fp:
     data = json.load(fp)['generated_data'] 
 
 l=len(list(data.keys()))
@@ -34,7 +34,6 @@ for n in list(data.keys()):
     d = data[n]
     d1 = data[n]
     
-    axs[i,1].set_title(n)
     csets = [['black', 'black'], ['gray', 'gray']]
     for j, met in enumerate(['vf', 'sa']):
         cs = csets[j]
@@ -42,12 +41,11 @@ for n in list(data.keys()):
         axs[i, 1].plot(d[f'ls'], d[f'err_model_{met}'], c=cs[0], ls='--', label = f'{met} errors from bernouli') 
         y = d[f'tpc_{met}']
         cut = max(20,np.argmin(y))
-        y = y[:cut] 
         x = np.linspace(1, len(y), len(y))
         bounds = ((-np.inf, 0.01, -np.inf), (np.inf, np.inf, np.inf))
         try:
-            coefs_poly3d, _ = curve_fit(util.tpc_fit, x, y, bounds=bounds)
-            y_data = util.tpc_fit(x,*coefs_poly3d)
+            coefs_poly3d, _ = curve_fit(util.tpc_fit, x[:cut], y[:cut], bounds=bounds)
+            y_data = util.tpc_fit(x[:cut],*coefs_poly3d)
         except:
             print(met, n)
             preds[1-j].pop(-1)
@@ -56,9 +54,9 @@ for n in list(data.keys()):
             continue
         y = np.array(y)
         y_data = np.array(y_data)
-        axs[i, 2].plot(x, y_data/y.max(), c=cs[1], label=f'{met} raw tpc')
-        axs[i, 2].plot(x, y/y.max(), c=cs[1], ls='--', label=f'{met} fitted tpc')
-        knee = int(kneed.KneeLocator(x, y_data, S=1.0, curve="convex", direction="decreasing").knee)
+        axs[i, 2].plot(x[:cut], y_data/y.max(), c=cs[1], label=f'{met} fitted tpc')
+        axs[i, 2].plot(x, y/y.max(), c=cs[1], ls='--', label=f'{met} raw tpc')
+        knee = int(kneed.KneeLocator(x[:cut], y_data, S=1.0, curve="convex", direction="decreasing").knee)
         axs[i, 2].scatter(x[knee], y_data[knee]/y.max(), c =cs[1], marker = 'x', label=f'{met} fac from tpc', s=100)
         fac = d[f'fac_{met}']
         axs[i, 2].scatter(x[int(fac)], y_data[int(fac)]/y.max(), facecolors='none', edgecolors = cs[1], label=f'{met} fac from sampling', s=100)
@@ -67,6 +65,8 @@ for n in list(data.keys()):
         if i ==0:
             axs[i,1].legend()
             axs[i,2].legend()
+            axs[i,1].set_xlabel('Error from statistical analysis (%)')
+            axs[i,1].set_ylabel('Error from tpc analysis (%)')
     fac = int(d[f'fac_vf'])
     sas.append(d['sa'])
     im = img[0]*255
@@ -76,14 +76,21 @@ for n in list(data.keys()):
     subim=torch.tensor(im[-sicrop:,-sicrop:]).unsqueeze(0).unsqueeze(0).float()
     subim = interpolate(subim, size=(si_size,si_size), mode='nearest')[0,0]
     subim = np.stack([subim]*3, axis=-1)
+    
     subim[:5,:,:] = 125
     subim[:,:5,:] = 125
+    # subim[5:20, 5:50, :]
     subim[10:15, 10:10+si_size//nfacs, :] = 0
     subim[10:15, 10:10+si_size//nfacs, 1:-1] = 125
 
     im = np.stack([im]*3, axis=-1)
     im[-si_size:,-si_size:] = subim
     axs[i, 0].imshow(im)
+    axs[i, 0].set_xticks([])
+    axs[i, 0].set_yticks([])
+    axs[i, 0].set_ylabel(f'M{n[1:]}')
+    axs[i, 0].set_xlabel(f'Fac: {fac}   Inset mag: x{np.round(si_size/sicrop, 2)}')
+
     i+=1
 
 
