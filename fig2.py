@@ -8,32 +8,41 @@ from scipy.optimize import curve_fit
 from scipy import stats
 import torch
 import util
+from torch.nn.functional import interpolate
 
-with open("data.json", "r") as fp:
+with open("data_gen.json", "r") as fp:
     data = json.load(fp)['generated_data'] 
 
 l=len(list(data.keys()))
 # l=3
 c=[(0,0,0), (0.5,0.5,0.5)]
+# plotting = [f'microstructure{f}' for f in [235, 209,205,177]]
+plotting = [f'microstructure{f}' for f in [722, 235,205,177]]
+
+# plotting = [k for k in data.keys()]
+l = len(plotting)
 fig, axs = plt.subplots(l, 3)
 fig.set_size_inches(12, l*4)
 preds = [[],[]]
 facs = [[],[]]
 sas =[]
-for i, n in enumerate(list(data.keys())[:l]):
+i=0
+for n in list(data.keys()):
+    if n not in plotting:
+        continue
     img = tifffile.imread(f'D:/Dataset/{n}/{n}.tif')
     d = data[n]
     d1 = data[n]
-
-    axs[i,0].set_title(n)
+    
+    axs[i,1].set_title(n)
     csets = [['black', 'black'], ['gray', 'gray']]
     for j, met in enumerate(['vf', 'sa']):
         cs = csets[j]
-        axs[i, 0].plot(d['ls'], d[f'err_exp_{met}'], c=cs[0], label = f'{met} errors from sampling')
-        axs[i, 0].plot(d[f'ls_model_{met}'], d[f'err_model_{met}'], c=cs[0], ls='--', label = f'{met} errors from bernouli') 
+        axs[i, 1].plot(d['ls'], d[f'err_exp_{met}'], c=cs[0], label = f'{met} errors from sampling')
+        axs[i, 1].plot(d[f'ls'], d[f'err_model_{met}'], c=cs[0], ls='--', label = f'{met} errors from bernouli') 
         y = d[f'tpc_{met}']
         cut = max(20,np.argmin(y))
-        y = y[:cut]
+        y = y[:cut] 
         x = np.linspace(1, len(y), len(y))
         bounds = ((-np.inf, 0.01, -np.inf), (np.inf, np.inf, np.inf))
         try:
@@ -47,23 +56,39 @@ for i, n in enumerate(list(data.keys())[:l]):
             continue
         y = np.array(y)
         y_data = np.array(y_data)
-        axs[i, 1].plot(x, y_data/y.max(), c=cs[1], label=f'{met} raw tpc')
-        axs[i, 1].plot(x, y/y.max(), c=cs[1], ls='--', label=f'{met} fitted tpc')
+        axs[i, 2].plot(x, y_data/y.max(), c=cs[1], label=f'{met} raw tpc')
+        axs[i, 2].plot(x, y/y.max(), c=cs[1], ls='--', label=f'{met} fitted tpc')
         knee = int(kneed.KneeLocator(x, y_data, S=1.0, curve="convex", direction="decreasing").knee)
-        axs[i, 1].scatter(x[knee], y_data[knee]/y.max(), c =cs[1], marker = 'x', label=f'{met} fac from tpc', s=100)
+        axs[i, 2].scatter(x[knee], y_data[knee]/y.max(), c =cs[1], marker = 'x', label=f'{met} fac from tpc', s=100)
         fac = d[f'fac_{met}']
-        axs[i, 1].scatter(x[int(fac)], y_data[int(fac)]/y.max(), facecolors='none', edgecolors = cs[1], label=f'{met} fac from sampling', s=100)
+        axs[i, 2].scatter(x[int(fac)], y_data[int(fac)]/y.max(), facecolors='none', edgecolors = cs[1], label=f'{met} fac from sampling', s=100)
         preds[j].append(knee)
         facs[j].append(fac)
         if i ==0:
-            axs[i,0].legend()
             axs[i,1].legend()
-
+            axs[i,2].legend()
+    fac = int(d[f'fac_vf'])
     sas.append(d['sa'])
-    axs[i, 2].imshow((img[0]*0.5)+0.5, cmap='gray')
+    im = img[0]*255
+    si_size, nfacs = 160, 5
+    sicrop = int(fac*nfacs)
+    print(fac, sicrop)
+    subim=torch.tensor(im[-sicrop:,-sicrop:]).unsqueeze(0).unsqueeze(0).float()
+    subim = interpolate(subim, size=(si_size,si_size), mode='nearest')[0,0]
+    subim = np.stack([subim]*3, axis=-1)
+    subim[:5,:,:] = 125
+    subim[:,:5,:] = 125
+    subim[10:15, 10:10+si_size//nfacs, :] = 0
+    subim[10:15, 10:10+si_size//nfacs, 1:-1] = 125
+
+    im = np.stack([im]*3, axis=-1)
+    im[-si_size:,-si_size:] = subim
+    axs[i, 0].imshow(im)
+    i+=1
 
 
 plt.tight_layout()
+plt.savefig('fig2.pdf', format='pdf')         
 
 # fig, axs = plt.subplots(1,2)
 # fig.set_size_inches(10,5)
@@ -93,7 +118,6 @@ plt.tight_layout()
 #     # res = 100*(np.mean((y-targ)**2/targ))**0.5
 
 #     print(res,res2)
-# plt.savefig('small.png')
 
 
 

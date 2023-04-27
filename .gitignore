@@ -5,3 +5,8 @@ bigboi.npy
 *.pyc
 old/
 fig2 copy.py
+*tif
+*info
+*mat
+*json
+*pdf

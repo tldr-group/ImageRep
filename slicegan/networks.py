@@ -33,9 +33,13 @@ def slicegan_nets(pth, Training, imtype, dk,ds,df,dp,gk,gs,gf,gp):
                 self.convs.append(nn.ConvTranspose3d(gf[lay], gf[lay+1], k, s, p, bias=False))
                 self.bns.append(nn.BatchNorm3d(gf[lay+1]))
 
-        def forward(self, x):
+        def forward(self, x, threed):
             for conv,bn in zip(self.convs[:-1],self.bns[:-1]):
-                x = F.relu_(bn(conv(x)))[:,:,1:-1]
+                if not threed:
+                    x = F.relu_(bn(conv(x)))[:,:,1:-1]
+                else:
+                    x = F.relu_(bn(conv(x)))
+
             #use tanh if colour or grayscale, otherwise softmax for one hot encoded
             if imtype in ['grayscale', 'colour']:
                 out = 0.5*(torch.tanh(self.convs[-1](x))+1)
