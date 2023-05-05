@@ -67,7 +67,65 @@ def make_sa(img, batch=True):
     return sa
 
 
+def conjunction_img_for_tpc(img, x, y, z, threed):
+    if threed:
+        if x == 0:
+            if y == 0:
+                if z == 0:
+                    con_img = img * img
+                else:
+                    con_img = img[..., :-z] * img[..., z:]
+            else:
+                if z == 0:
+                    con_img = img[..., :-y, :] * img[..., y:, :]
+                else:
+                    con_img = img[..., :-y, :-z] * img[..., y:, z:]
+        else:
+            if y == 0:
+                if z == 0:
+                    con_img = img[..., :-x, :, :] * img[..., x:, :, :]
+                else:
+                    con_img = img[..., :-x, :, :-z] * img[..., x:, :, z:]
+            else:
+                if z == 0:
+                    con_img = img[..., :-x, :-y, :] * img[..., x:, y:, :]
+                else:
+                    con_img = img[..., :-x, :-y, :-z] * img[..., x:, y:, z:]
+    else:
+        if x == 0:
+            if y == 0:
+                con_img = img * img
+            else:
+                con_img = img[..., :-y] * img[..., y:]
+        else:
+            if y == 0:
+                con_img = img[..., :-x, :] * img[..., x:, :]
+            else:
+                con_img = img[..., :-x, :-y] * img[..., x:, y:]
+    return con_img
+
+
 def tpc_radial(img, mx=100, threed=False):
+    img = torch.tensor(img, device=torch.device("cuda:0")).float()
+    tpc = dict()
+    for x in range(0, mx):
+        for y in range(0, mx):
+            for z in range(0, mx if threed else 1):
+                d = (x**2 + y**2 + z**2) ** 0.5
+                con_img = conjunction_img_for_tpc(img, x, y, z, threed)
+                con_img_tpc = torch.mean(con_img).cpu()
+                if d in tpc:
+                    tpc[d].append(con_img_tpc)
+                else:
+                    tpc[d] = [con_img_tpc]
+
+    tpcfin_dist = [key for key in sorted(tpc.keys())]
+    tpcfin = [np.mean(tpc[key]).item() for key in tpcfin_dist]
+    tpcfin = np.array(tpcfin, dtype=np.float64)
+    return tpcfin_dist, tpcfin
+
+
+def old_tpc_radial(img, mx=100, threed=False):
     img = torch.tensor(img, device=torch.device("cuda:0")).float()
     tpc = {i: [] for i in range(1, mx)}
     for x in range(1, mx):
