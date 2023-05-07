@@ -19,7 +19,7 @@ img_dims = [np.array((l, l)) for l in edge_lengths]
 imgs = []
 data = {}
 
-num_projects = 3
+num_projects = len(projects)
 projects = projects[:num_projects]
 
 time0 = time.time()
@@ -56,7 +56,7 @@ for j, proj in enumerate(projects):
         data_fin = {"generated_data": data}
         print(f"{j}/{len(projects)} done")
 
-        with open("data_gen.json", "w") as fp:
+        with open("data.json", "w") as fp:
             json.dump(data_fin, fp)
 time1 = time.time()
 

@@ -15,7 +15,7 @@ projects = [f'/home/amir/microlibDataset/{p}/{p}' for p in micro_names]
 netG = util.load_generator(projects[0])
 imgs = []
 
-num_projects = 3
+num_projects = len(projects)
 projects = projects[:num_projects]
 
 with open("data.json", "r") as fp:
@@ -52,3 +52,5 @@ for j, p in enumerate(projects):
         datafin[f'validation_data{mode}'] = data_val
         with open(f"data.json", "w") as fp:
             json.dump(datafin, fp) 
+
+    

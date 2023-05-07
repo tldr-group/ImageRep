@@ -224,10 +224,10 @@ def linear_fit(x, a, b):
 
 
 def tpc_to_fac(tpc_dist, tpc):
-    tpc = np.array(tpc)
+    tpc, tpc_dist = np.array(tpc), np.array(tpc_dist)
     vf = tpc[0]
     pred_fac = (1/(vf-vf*vf))*np.trapz(tpc - (vf*vf), x=tpc_dist)
-    return pred_fac
+    return pred_fac * np.pi  # it's not clear where does this 3 is coming from
 
 
 def old_tpc_to_fac(x, y):
