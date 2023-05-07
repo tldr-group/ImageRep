@@ -8,11 +8,15 @@ import numpy as np
 
 mode = '2D'
 # Dataset path and list of subfolders
-projects = os.listdir('D:\Dataset')
-projects = [f'D:/Dataset/{p}/{p}' for p in projects]
+with open("micro_names.json", "r") as fp:
+    micro_names = json.load(fp)
+projects = [f'/home/amir/microlibDataset/{p}/{p}' for p in micro_names]
 # Load generator
 netG = util.load_generator(projects[0])
 imgs = []
+
+num_projects = len(projects)
+projects = projects[:num_projects]
 
 with open("data.json", "r") as fp:
     datafin = json.load(fp)
@@ -31,8 +35,8 @@ for j, p in enumerate(projects):
         # Do calcs on single image
         testimg = img[0, :l, :l].cpu() if mode=='2D' else img[0, :l, :l, :l].cpu()
         sa_testimg = img[0, :l, :l].cpu() if mode=='2D' else sa_img[0, :l, :l, :l].cpu()
-        pred_err_vf, _, tpc_vf = util.make_error_prediction(testimg, model_error=False, correction=False)
-        pred_err_sa, _, tpc_sa = util.make_error_prediction(sa_testimg, model_error=False, correction=False)
+        pred_err_vf, _, tpc_vf_dist, tpc_vf = util.make_error_prediction(testimg, model_error=False, correction=False)
+        pred_err_sa, _, tpc_sa_dist, tpc_sa = util.make_error_prediction(sa_testimg, model_error=False, correction=False)
         # Do stats on the full generated image
         err_exp_vf = util.real_image_stats(img, [l], vf, threed=mode=='3D')[0]
         err_exp_sa = util.real_image_stats(sa_img, [l], sa, threed=mode=='3D')[0]
@@ -40,9 +44,13 @@ for j, p in enumerate(projects):
                    'pred_err_sa':pred_err_sa.numpy().astype(np.float64)*100,
                    'err_exp_vf':err_exp_vf.item(),
                    'err_exp_sa':err_exp_sa.item(),
+                    'tpc_vf_dist':list(tpc_vf_dist),
                     'tpc_vf':list(tpc_vf),
+                    'tpc_sa_dist':list(tpc_sa_dist),
                     'tpc_sa':list(tpc_sa)
                     }
         datafin[f'validation_data{mode}'] = data_val
         with open(f"data.json", "w") as fp:
             json.dump(datafin, fp) 
+
+    

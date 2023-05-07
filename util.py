@@ -67,7 +67,65 @@ def make_sa(img, batch=True):
     return sa
 
 
+def conjunction_img_for_tpc(img, x, y, z, threed):
+    if threed:
+        if x == 0:
+            if y == 0:
+                if z == 0:
+                    con_img = img * img
+                else:
+                    con_img = img[..., :-z] * img[..., z:]
+            else:
+                if z == 0:
+                    con_img = img[..., :-y, :] * img[..., y:, :]
+                else:
+                    con_img = img[..., :-y, :-z] * img[..., y:, z:]
+        else:
+            if y == 0:
+                if z == 0:
+                    con_img = img[..., :-x, :, :] * img[..., x:, :, :]
+                else:
+                    con_img = img[..., :-x, :, :-z] * img[..., x:, :, z:]
+            else:
+                if z == 0:
+                    con_img = img[..., :-x, :-y, :] * img[..., x:, y:, :]
+                else:
+                    con_img = img[..., :-x, :-y, :-z] * img[..., x:, y:, z:]
+    else:
+        if x == 0:
+            if y == 0:
+                con_img = img * img
+            else:
+                con_img = img[..., :-y] * img[..., y:]
+        else:
+            if y == 0:
+                con_img = img[..., :-x, :] * img[..., x:, :]
+            else:
+                con_img = img[..., :-x, :-y] * img[..., x:, y:]
+    return con_img
+
+
 def tpc_radial(img, mx=100, threed=False):
+    img = torch.tensor(img, device=torch.device("cuda:0")).float()
+    tpc = dict()
+    for x in range(0, mx):
+        for y in range(0, mx):
+            for z in range(0, mx if threed else 1):
+                d = (x**2 + y**2 + z**2) ** 0.5
+                con_img = conjunction_img_for_tpc(img, x, y, z, threed)
+                con_img_tpc = torch.mean(con_img).cpu()
+                if d in tpc:
+                    tpc[d].append(con_img_tpc)
+                else:
+                    tpc[d] = [con_img_tpc]
+
+    tpcfin_dist = [key for key in sorted(tpc.keys())]
+    tpcfin = [np.mean(tpc[key]).item() for key in tpcfin_dist]
+    tpcfin = np.array(tpcfin, dtype=np.float64)
+    return tpcfin_dist, tpcfin
+
+
+def old_tpc_radial(img, mx=100, threed=False):
     img = torch.tensor(img, device=torch.device("cuda:0")).float()
     tpc = {i: [] for i in range(1, mx)}
     for x in range(1, mx):
@@ -165,7 +223,14 @@ def linear_fit(x, a, b):
     return a * x + b
 
 
-def tpc_to_fac(x, y):
+def tpc_to_fac(tpc_dist, tpc):
+    tpc, tpc_dist = np.array(tpc), np.array(tpc_dist)
+    vf = tpc[0]
+    pred_fac = (1/(vf-vf*vf))*np.trapz(tpc - (vf*vf), x=tpc_dist)
+    return pred_fac * np.pi  # it's not clear where does this 3 is coming from
+
+
+def old_tpc_to_fac(x, y):
     bounds = ((-np.inf, 0.01, -np.inf), (np.inf, np.inf, np.inf))
     coefs_poly3d, _ = curve_fit(tpc_fit, x, y, bounds=bounds)
     y_data = tpc_fit(x, *coefs_poly3d)
@@ -176,6 +241,36 @@ def tpc_to_fac(x, y):
 
 
 def make_error_prediction(img, conf=0.95, err_targ=0.05,  model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
+    vf = img.mean()
+    dims = len(img.shape)
+    tpc_dist, tpc = tpc_radial(img, threed=dims == 3, mx=mxtpc)
+    fac = tpc_to_fac(tpc_dist, tpc)
+    n = ns_from_dims([np.array(img.shape)], fac)
+    # print(n, fac)
+    std_bern = ((1 / n[0]) * (vf * (1 - vf))) ** 0.5
+    std_model, slope, intercept = get_model_params(f'{dims}d{met}') 
+    if not correction:
+        slope, intercept = 1, 0
+    if model_error:
+        # print(std_bern)
+        bounds = [(conf*1.001, 1)]
+        args = (conf, std_bern, std_model, vf, slope, intercept)
+        err_for_img = minimize(optimize_error_conf_pred, conf**0.5, args, bounds=bounds).fun
+        args = (conf, std_model, vf, slope, intercept, err_targ)
+        n_for_err_targ = minimize(optimize_error_n_pred, conf**0.5, args, bounds=bounds).fun
+        # print(n, n_for_err_targ, fac)
+    else:
+        z = stats.norm.interval(conf)[1]
+        err_for_img = (z*std_bern/vf)*slope+intercept
+        # print(stats.norm.interval(conf, scale=std_bern)[1], std_bern)
+        n_for_err_targ = vf * (1 - vf) * (z/ ((err_targ -intercept)/slope * vf)) ** 2
+
+        # print(n_for_err_targ, n, fac)
+    l_for_err_targ = dims_from_n(n_for_err_targ, shape, fac, dims)
+    return err_for_img, l_for_err_targ, tpc_dist, tpc
+
+
+def make_error_prediction_old(img, conf=0.95, err_targ=0.05,  model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
     vf = img.mean()
     dims = len(img.shape)
     tpc = tpc_radial(img, threed=dims == 3, mx=mxtpc)
