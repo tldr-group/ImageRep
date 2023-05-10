@@ -6,7 +6,7 @@ import json
 import numpy as np
 
 
-mode = '2D'
+mode = '3D'
 # Dataset path and list of subfolders
 with open("micro_names.json", "r") as fp:
     micro_names = json.load(fp)
@@ -23,7 +23,7 @@ with open("data.json", "r") as fp:
 data_val = {}
 for j, p in enumerate(projects):
     print(f'{j}/{len(projects)} done')
-    img = util.generate_image(netG, p)
+    img = util.generate_image(netG, p, threed=mode=='3D')
     if img.any():
         # testing single image of edge length l
         l = 1000 if mode=='2D' else 400

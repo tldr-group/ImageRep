@@ -5,6 +5,7 @@ from scipy.optimize import curve_fit
 import kneed
 from scipy import stats
 from scipy.optimize import minimize
+from scipy.stats import norm
 
 def load_generator(Project_path):
     img_size, img_channels, scale_factor = 64, 1, 1
@@ -34,7 +35,7 @@ def load_generator(Project_path):
 def generate_image(netG, Project_path, lf=50, threed=False, reps=50):
     try:
         netG.load_state_dict(torch.load(Project_path + "_Gen.pt"))
-    except:
+    except:  # if the image is greayscale it's excepting because there's only 1 channel
         return torch.tensor(0)
     netG.eval()
     imgs = []
@@ -219,15 +220,28 @@ def tpc_fit(x, a, b, c):
     return a * np.e ** (-b * x) + c
 
 
-def linear_fit(x, a, b):
-    return a * x + b
+def percentage_error(y_true, y_pred):  
+    return (y_true - y_pred) / y_true
+
+
+def mape(y_true, y_pred):  # mean absolute percentage error
+    return np.mean(np.abs(percentage_error(y_true, y_pred))) 
+
+
+def mape_linear_objective(params, y_pred, y_true):
+    y_pred_new = linear_fit(y_pred, *params)
+    return mape(y_true, y_pred_new) 
+
+
+def linear_fit(x, m, b):
+    return m * x + b
 
 
 def tpc_to_fac(tpc_dist, tpc):
     tpc, tpc_dist = np.array(tpc), np.array(tpc_dist)
     vf = tpc[0]
     pred_fac = (1/(vf-vf*vf))*np.trapz(tpc - (vf*vf), x=tpc_dist)
-    return pred_fac * np.pi  # it's not clear where does this 3 is coming from
+    return pred_fac  
 
 
 def old_tpc_to_fac(x, y):
@@ -322,8 +336,8 @@ def optimize_error_n_pred(bern_conf, total_conf, std_model, vf, slope, intercept
     return num/den
 
 
-def get_model_params(imtype):
-    params= {'2dvf':[0.3864217197069208,1.1135881070072418, 0.002607077277789935],
+def get_model_params(imtype):  # see model_param.py for the appropriate code that was used.
+    params= {'2dvf':[0.2863185623920709,2.565789407003636, 0.0003318955996696201],
              '2dsa':[0.3697788866716134,0.8522276248407129, 0.007904077381387118],
              '3dvf':[0.5761622825137038,1.588087103916383, 0.0036686523118274283],
              '3dsa':[0.47390094290400503,0.8922479454738727, 0.007302588617491829]}
