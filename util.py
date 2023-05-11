@@ -65,6 +65,26 @@ def make_sa(img, batch=True):
         sa[:, :, :, :-1] += (1 - img[:, :, :, 1:]) * img[:, :, :, :-1]
     if not batch:
         sa = sa[0]
+    sa[sa>0] = 1
+    return sa
+
+
+def make_sa_old(img, batch=True):
+    if not batch:
+        img = np.expand_dims(img, 0)
+        sa = np.zeros_like(img)
+    else:
+        sa = torch.zeros_like(img)
+    dims = len(img.shape)
+    sa[:, 1:] += img[:, 1:] * (1 - img[:, :-1])
+    sa[:, :, 1:] += img[:, :, 1:] * (1 - img[:, :, :-1])
+    sa[:, :-1] += (1 - img[:, 1:]) * img[:, :-1]
+    sa[:, :, :-1] += (1 - img[:, :, 1:]) * img[:, :, :-1]
+    if dims == 4:
+        sa[:, :, :, 1:] += img[:, :, :, 1:] * (1 - img[:, :, :, :-1])
+        sa[:, :, :, :-1] += (1 - img[:, :, :, 1:]) * img[:, :, :, :-1]
+    if not batch:
+        sa = sa[0]
     return sa
 
 
@@ -108,22 +128,28 @@ def conjunction_img_for_tpc(img, x, y, z, threed):
 
 def tpc_radial(img, mx=100, threed=False):
     img = torch.tensor(img, device=torch.device("cuda:0")).float()
-    tpc = dict()
+    tpc = {i:[0,0] for i in range(mx+1)}
     for x in range(0, mx):
+        if (x%10) == 0:
+            print(f'{x}% complete')
         for y in range(0, mx):
             for z in range(0, mx if threed else 1):
                 d = (x**2 + y**2 + z**2) ** 0.5
-                con_img = conjunction_img_for_tpc(img, x, y, z, threed)
-                con_img_tpc = torch.mean(con_img).cpu()
-                if d in tpc:
-                    tpc[d].append(con_img_tpc)
-                else:
-                    tpc[d] = [con_img_tpc]
+                if d < mx:
+                    remainder = d%1
+                    con_img = conjunction_img_for_tpc(img, x, y, z, threed)
+                    con_img_tpc = torch.mean(con_img).cpu()
+                    weight_floor = 1-remainder
+                    weight_ceil = remainder
+                    tpc[int(d)][0] += weight_floor 
+                    tpc[int(d)][1] += con_img_tpc*weight_floor
+                    tpc[int(d)+1][0] += weight_ceil 
+                    tpc[int(d)+1][1] += con_img_tpc*weight_ceil
+                    
 
-    tpcfin_dist = [key for key in sorted(tpc.keys())]
-    tpcfin = [np.mean(tpc[key]).item() for key in tpcfin_dist]
+    tpcfin = [tpc[key][1]/tpc[key][0] for key in tpc.keys()]
     tpcfin = np.array(tpcfin, dtype=np.float64)
-    return tpcfin_dist, tpcfin
+    return np.arange(mx+1, dtype=np.float64), tpcfin  
 
 
 def old_tpc_radial(img, mx=100, threed=False):
@@ -149,7 +175,7 @@ def old_tpc_radial(img, mx=100, threed=False):
     for key in tpc.keys():
         tpcfin.append(np.mean(tpc[key]).item())
     tpcfin = np.array(tpcfin, dtype=np.float64)
-    return tpcfin
+    return tpcfin  
 
 
 def real_image_stats(img, ls, vf, repeats=1000, threed=False, z=1.96):
@@ -165,8 +191,7 @@ def real_image_stats(img, ls, vf, repeats=1000, threed=False, z=1.96):
                 crop = img[b, x : x + l, y : y + l]
                 vfs.append(torch.mean(crop).cpu())
         else:
-            
-            vfs = torch.mean(img, dim=(1,2,3)).cpu()
+            vfs = torch.mean(img, dim=(1,2,3)).cpu().numpy()
         std = np.std(vfs)
         errs.append(100 * ((z * std) / vf))
     return errs
@@ -257,7 +282,9 @@ def old_tpc_to_fac(x, y):
 def make_error_prediction(img, conf=0.95, err_targ=0.05,  model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
     vf = img.mean()
     dims = len(img.shape)
+    print(f'starting tpc radial')
     tpc_dist, tpc = tpc_radial(img, threed=dims == 3, mx=mxtpc)
+    print(f'starting tpc to fac')
     fac = tpc_to_fac(tpc_dist, tpc)
     n = ns_from_dims([np.array(img.shape)], fac)
     # print(n, fac)
@@ -337,7 +364,7 @@ def optimize_error_n_pred(bern_conf, total_conf, std_model, vf, slope, intercept
 
 
 def get_model_params(imtype):  # see model_param.py for the appropriate code that was used.
-    params= {'2dvf':[0.2863185623920709,2.565789407003636, 0.0003318955996696201],
+    params= {'2dvf':[0.3863185623920709,2.565789407003636, 0.0003318955996696201],
              '2dsa':[0.3697788866716134,0.8522276248407129, 0.007904077381387118],
              '3dvf':[0.5761622825137038,1.588087103916383, 0.0036686523118274283],
              '3dsa':[0.47390094290400503,0.8922479454738727, 0.007302588617491829]}

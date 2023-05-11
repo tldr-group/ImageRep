@@ -29,7 +29,7 @@ with open("micro_names.json", "r") as fp:
     micro_names = json.load(fp)
 projects = [f'/home/amir/microlibDataset/{p}/{p}' for p in micro_names]
 # projects = [f'D:/Dataset/{p}/{p}' for p in projects]
-fig, axs = plt.subplots(1)
+fig, axs = plt.subplots(1,2)
 # fig.set_size_inches(10,10)
 dim = ['2d', '3d']
 for i, data in enumerate(['2D']):
@@ -43,8 +43,8 @@ for i, data in enumerate(['2D']):
     vf_results = [err_exp_vf, pred_err_vf]
     sa_results = [err_exp_sa[pred_err_sa!=0], pred_err_sa[pred_err_sa!=0]]
     
-    for j, (met, res) in enumerate(zip(['Volume fraction'], [vf_results])):
-        ax = axs
+    for j, (met, res) in enumerate(zip(['Volume fraction', 'surface area'], [vf_results, sa_results])):
+        ax = axs[j]
         ax.plot(np.arange(20), np.arange(20))
         beta_init = np.array([1, 0])
         result = minimize(objective_function, beta_init, args=(res[0], res[1]),
@@ -77,7 +77,7 @@ for i, data in enumerate(['2D']):
 
         # print(f'Unfitted {met} error {dim[i]}: {abs((res[0] - res[1])/res[0]).mean()}')
         # print(f'Fitted {met} error {dim[i]}: {abs((res[0] - y_data)/res[0]).mean()}')
-axs.legend()
+axs[0].legend()
 fig.savefig('fig3.pdf', format='pdf')         
 # fig2.savefig('fig4.pdf', format='pdf')         
 
