@@ -145,11 +145,10 @@ def tpc_radial(img, mx=100, threed=False):
                     tpc[int(d)][1] += con_img_tpc*weight_floor
                     tpc[int(d)+1][0] += weight_ceil 
                     tpc[int(d)+1][1] += con_img_tpc*weight_ceil
-                    
-
+    tpc_weights = [tpc[key][0] for key in tpc.keys()]
     tpcfin = [tpc[key][1]/tpc[key][0] for key in tpc.keys()]
     tpcfin = np.array(tpcfin, dtype=np.float64)
-    return np.arange(mx+1, dtype=np.float64), tpcfin  
+    return np.arange(mx+1, dtype=np.float64), tpc_weights, tpcfin  
 
 
 def old_tpc_radial(img, mx=100, threed=False):
@@ -178,9 +177,18 @@ def old_tpc_radial(img, mx=100, threed=False):
     return tpcfin  
 
 
-def real_image_stats(img, ls, vf, repeats=1000, threed=False, z=1.96):
+def stat_analysis_error(img, edge_lengths, img_dims, vf, threed=False, conf=0.95):
+    err_exp_vf = real_image_stats(img, edge_lengths, vf, threed=threed)
+    err_model_vf, fac_vf = fit_fac(err_exp_vf, img_dims, vf)
+    shape = [np.array(img.size()[-3:] if threed else img.size()[-2:])]
+    return bernouli(vf, ns_from_dims(shape, fac_vf), conf=conf)
+
+
+def real_image_stats(img, ls, vf, repeats=1000, threed=False, z_score=1.96):
     errs = []
     for l in ls:
+        if (l%50) == 0:
+            print(f'length = {l}')
         vfs = []
         if not threed:
             for i in range(repeats):
@@ -191,9 +199,19 @@ def real_image_stats(img, ls, vf, repeats=1000, threed=False, z=1.96):
                 crop = img[b, x : x + l, y : y + l]
                 vfs.append(torch.mean(crop).cpu())
         else:
-            vfs = torch.mean(img, dim=(1,2,3)).cpu().numpy()
+            repeats = 500 - l.item()
+            for i in range(repeats):
+                bm, xm, ym, zm = img.shape
+                x = torch.randint(0, xm - l, (1,))
+                y = torch.randint(0, ym - l, (1,))
+                z = torch.randint(0, zm - l, (1,))
+                b = torch.randint(0, bm, (1,))
+                crop = img[b, x : x + l, y : y + l, z : z + l]
+                vfs.append(torch.mean(crop).cpu())
+        vfs = np.array(vfs)
         std = np.std(vfs)
-        errs.append(100 * ((z * std) / vf))
+        errs.append(100 * ((z_score * std) / vf))
+    print(f'error = {errs}')
     return errs
 
 
@@ -213,9 +231,9 @@ def fit_fac(err_exp, img_dims, vf, max_fac=100):
     return err_model, fac
 
 
-def ns_from_dims(img_dims, fac):
-    den = fac ** (len(img_dims[0]))
-    return [np.prod(i + fac - 1) / den for i in img_dims]
+def ns_from_dims(img_dims, ir):
+    den = ir ** (len(img_dims[0]))
+    return [np.prod(i + ir - 1) / den for i in img_dims]
 
 def dims_from_n(n, shape, fac, dims):
     den = fac ** dims
@@ -283,9 +301,10 @@ def make_error_prediction(img, conf=0.95, err_targ=0.05,  model_error=True, corr
     vf = img.mean()
     dims = len(img.shape)
     print(f'starting tpc radial')
-    tpc_dist, tpc = tpc_radial(img, threed=dims == 3, mx=mxtpc)
+    tpc_dist, tpc_weights, tpc = tpc_radial(img, threed=dims == 3, mx=mxtpc)
     print(f'starting tpc to fac')
-    fac = tpc_to_fac(tpc_dist, tpc)
+    fac = tpc_to_fac(tpc_dist, tpc_weights, tpc)
+    print(f'pred fac = {fac}')
     n = ns_from_dims([np.array(img.shape)], fac)
     # print(n, fac)
     std_bern = ((1 / n[0]) * (vf * (1 - vf))) ** 0.5
