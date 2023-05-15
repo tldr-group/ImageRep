@@ -30,7 +30,6 @@ projects = projects[:num_projects]
 with open("data.json", "r") as fp:
     datafin = json.load(fp)
 
-projects = projects[:1]
 # data_val = {}
 for j, p in enumerate(projects):
     t_before = time.time()
