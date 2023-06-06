@@ -7,6 +7,7 @@ import os
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 from scipy.stats import norm
+import math
 
 # with open("data3d.json", "r") as fp:
 #     data3d = json.load(fp)['validation_data3d']
@@ -14,12 +15,19 @@ from scipy.stats import norm
 # with open("data2d.json", "r") as fp:
 #     data2d = json.load(fp)['validation_data']
 
-with open("data.json", "r") as fp:
+with open("datafin_new2.json", "r") as fp:
     datafull = json.load(fp)
 
 def objective_function(beta, y_true, y_pred):
     y_pred = beta[0]*y_pred + beta[1]
     return(np.mean(np.abs((y_true - y_pred) / (y_true+y_pred))) * 100)
+
+# Slope and intercept for tpc to stat.analysis error fit, that have 0 mean: 
+slope_and_intercept = {'2D':
+                       {'Volume fraction': (2, 0.083), 'Surface area': (2*2, 0.077)},
+                       '3D':
+                       {'Volume fraction': (6, 0.4217), 'Surface area': (6*3, 0)}
+}
 
 
 # You must provide a starting point at which to initialize
@@ -29,10 +37,10 @@ with open("micro_names.json", "r") as fp:
     micro_names = json.load(fp)
 projects = [f'/home/amir/microlibDataset/{p}/{p}' for p in micro_names]
 # projects = [f'D:/Dataset/{p}/{p}' for p in projects]
-fig, axs = plt.subplots(1,2)
-# fig.set_size_inches(10,10)
-dim = ['2d', '3d']
-for i, data in enumerate(['2D']):
+fig, axs = plt.subplots(2,2)
+fig.set_size_inches(10,10)
+dims = ['2D', '3D']
+for i, data in enumerate(dims):
     # data.pop('microstructure054')
     data = datafull[f'validation_data{data}']
     err_exp_vf = np.array([data[n]['err_exp_vf'] for n in data.keys()])
@@ -41,45 +49,63 @@ for i, data in enumerate(['2D']):
     pred_err_sa = np.array([data[n]['pred_err_sa'] for n in data.keys()])
 
     vf_results = [err_exp_vf, pred_err_vf]
-    sa_results = [err_exp_sa[pred_err_sa!=0], pred_err_sa[pred_err_sa!=0]]
+    sa_results = [[err_exp_sa[0]], [pred_err_sa[0]]]
+    for idx in range(1, len(err_exp_sa)):
+        if not math.isnan(err_exp_sa[idx]) and not math.isnan(pred_err_sa[i]):
+            sa_results[0].append(err_exp_sa[idx])
+            sa_results[1].append(pred_err_sa[idx])
+    sa_results[0], sa_results[1] = np.array(sa_results[0]), np.array(sa_results[1])
+    # sa_results = [err_exp_sa[pred_err_sa!=math.isnan], pred_err_sa[pred_err_sa!=math.nan]]
+    for j, (met, res) in enumerate(zip(['Volume fraction', 'Surface area'], [vf_results, sa_results])):
     
-    for j, (met, res) in enumerate(zip(['Volume fraction', 'surface area'], [vf_results, sa_results])):
-        ax = axs[j]
-        ax.plot(np.arange(20), np.arange(20))
-        beta_init = np.array([1, 0])
-        result = minimize(objective_function, beta_init, args=(res[0], res[1]),
-                  method='BFGS', options={'maxiter': 50000})
-        print(result)
-        y_data = result.x[0]*res[1] + result.x[1]
-        # print(result.x[0], result.x[1])
-        # y_data = res[1]
-        ax.scatter(res[0], y_data, s=7, label='Predictions')
-        x = np.arange(20)
-        ax.plot(x, x, label = 'Ideal fit')
+        ax = axs[i, j]
         
-        ax.set_xlabel('Error from statistical analysis')
-        ax.set_ylabel('Error from tpc analysis')
-        ax.set_title(f'{met} {dim[i]}')
-        ax.set_aspect(1)
-        ax.set_yticks([0, 5, 10, 15, 20])
-        errs = (y_data-res[0])/y_data
-        errs = np.sort(errs)
-        std = np.std((y_data-res[0])/y_data)
+        beta_init = np.array([1, 0])
+        # bounds = [(-10,10),(-10,10)]
+        # To find a good fit:
+        # result = minimize(objective_function, beta_init, args=(res[0], res[1]),
+                #   options={'maxiter': 50000})
+        # print(result)
+        # y_data = result.x[0]*res[1] + result.x[1]
+
+        slope, intercept = slope_and_intercept[dims[i]][met]
+        y_data = slope*res[1] + intercept
+        
+        ax.scatter(res[0], y_data, s=7, label='Predictions')
+        
+        # print(f'slope = {slope} and intercept = {intercept}')
+        ax.set_xlabel(f'Error from statistical analysis [%]')
+        ax.set_ylabel(f'Error from tpc analysis [%]')
+        ax.set_title(f'{met} {dims[i]}')
+        
+        errs = (y_data-res[0])/y_data 
+        
+        max_val = int(np.max([np.max(y_data),np.max(res[0])]))+2
+        
+        x = np.arange(max_val+1)
+        ax.plot(x, x, label = 'Ideal error prediction', color='black')
+        ax.set_yticks(np.arange(0, max_val, 5))
+        ax.set_xticks(np.arange(0, max_val, 5))
+        ax.set_xlim(right=max_val)
+        ax.set_ylim(top=max_val)
+        errs = np.sort(errs) 
+        std = np.std((y_data-res[0])/y_data) 
+        
         z = norm.interval(0.9)[1]
         err = std*z
-        print(std)
-        print(err)
-        # ax.plot(x - x*err, x, c='black', ls='--', linewidth=1)
-        ax.plot(x ,x -x*err, label = f'95% confidence ', c='black', ls='--', linewidth=1)
-        # ax.plot(np.arange(20)/err, np.arange(20))
-
-
-
-        # print(f'Unfitted {met} error {dim[i]}: {abs((res[0] - res[1])/res[0]).mean()}')
-        # print(f'Fitted {met} error {dim[i]}: {abs((res[0] - y_data)/res[0]).mean()}')
-axs[0].legend()
+        print(f'{met} {dims[i]} std = {std}')
+        print(f'mean = {np.mean(errs)}')
+        print(f'error = {err}')
+        
+        ax.plot(np.arange(max_val), np.arange(max_val), c='black')
+        ax.plot(x ,x/(1+err), c='black', ls='--', linewidth=1)
+        fill_1 = ax.fill_between(x, np.ones(x.shape[0])*(max_val),x/(1+err), alpha=0.2, label = f'95% confidence range')
+        ax.set_aspect('equal')
+        
+        # print(f'Unfitted {met} MAPE error {dims[i]}: {abs((res[0] - res[1])/res[0]).mean()}')
+        # print(f'Fitted {met} MAPE error {dims[i]}: {abs((res[0] - y_data)/res[0]).mean()}')
+axs[0, 0].legend()
 fig.savefig('fig3.pdf', format='pdf')         
-# fig2.savefig('fig4.pdf', format='pdf')         
 
 
 

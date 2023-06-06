@@ -49,6 +49,31 @@ def generate_image(netG, Project_path, lf=50, threed=False, reps=50):
     return img.float()
 
 
+def make_sas(img, batch=True):  # TODO check this works
+    if not batch:
+        img = torch.unsqueeze(img, 0)
+    sa_lr = torch.zeros_like(img)
+    sa_ud = torch.zeros_like(img)
+    dims = len(img.shape)
+    sa_lr[:, :, :-1] = (img[:, :, 1:] + img[:, :, :-1]) % 2
+    sa_ud[:, :-1] = (img[:, 1:] + img[:, :-1]) % 2
+    sas = [sa_lr, sa_ud]
+    if dims == 4:  # 3d
+        sa_z = torch.zeros_like(img)
+        sa_z[:, :, :, :-1] += (img[:, :, :, 1:] + img[:, :, :, :-1]) % 2
+        sas.append(sa_z)
+    if not batch:
+        sas = [sa[0] for sa in sas]
+    return sas
+
+
+def sa_map_from_sas(sa_images):
+    # For memory issues, this calculation is the same as:
+    # return torch.stack(sa_images, dim=0).sum(dim=0)
+    sa_maps = [[sa_images[map_idx][k, ...] for map_idx in range(len(sa_images))] for k in range(sa_images[0].size()[0])]
+    return torch.stack([torch.stack(maps, dim=0).sum(dim=0) for maps in sa_maps], dim=0)
+
+
 def make_sa(img, batch=True):
     if not batch:
         img = np.expand_dims(img, 0)
@@ -126,29 +151,33 @@ def conjunction_img_for_tpc(img, x, y, z, threed):
     return con_img
 
 
-def tpc_radial(img, mx=100, threed=False):
-    img = torch.tensor(img, device=torch.device("cuda:0")).float()
-    tpc = {i:[0,0] for i in range(mx+1)}
-    for x in range(0, mx):
-        if (x%10) == 0:
-            print(f'{x}% complete')
-        for y in range(0, mx):
-            for z in range(0, mx if threed else 1):
-                d = (x**2 + y**2 + z**2) ** 0.5
-                if d < mx:
-                    remainder = d%1
-                    con_img = conjunction_img_for_tpc(img, x, y, z, threed)
-                    con_img_tpc = torch.mean(con_img).cpu()
-                    weight_floor = 1-remainder
-                    weight_ceil = remainder
-                    tpc[int(d)][0] += weight_floor 
-                    tpc[int(d)][1] += con_img_tpc*weight_floor
-                    tpc[int(d)+1][0] += weight_ceil 
-                    tpc[int(d)+1][1] += con_img_tpc*weight_ceil
-    tpc_weights = [tpc[key][0] for key in tpc.keys()]
-    tpcfin = [tpc[key][1]/tpc[key][0] for key in tpc.keys()]
-    tpcfin = np.array(tpcfin, dtype=np.float64)
-    return np.arange(mx+1, dtype=np.float64), tpc_weights, tpcfin  
+def tpc_radial(img_list, mx=100, threed=False):
+    tpcfin_list = []
+    for i in range(len(img_list)):
+        img = img_list[i]
+        img = torch.tensor(img, device=torch.device("cuda:0")).float()
+        tpc = {i:[0,0] for i in range(mx+1)}
+        for x in range(0, mx):
+            if (x % 5) == 0:
+                print(f'{x}% done in tpc radial {i+1}/{len(img_list)}')
+            for y in range(0, mx):
+                for z in range(0, mx if threed else 1):
+                    d = (x**2 + y**2 + z**2) ** 0.5
+                    if d < mx:
+                        remainder = d%1
+                        con_img = conjunction_img_for_tpc(img, x, y, z, threed)
+                        con_img_tpc = torch.mean(con_img).cpu()
+                        weight_floor = 1-remainder
+                        weight_ceil = remainder
+                        tpc[int(d)][0] += weight_floor 
+                        tpc[int(d)][1] += con_img_tpc*weight_floor
+                        tpc[int(d)+1][0] += weight_ceil 
+                        tpc[int(d)+1][1] += con_img_tpc*weight_ceil
+    
+        tpcfin = [tpc[key][1]/tpc[key][0] for key in tpc.keys()]
+        tpcfin = np.array(tpcfin, dtype=np.float64)
+        tpcfin_list.append(tpcfin)
+    return np.arange(mx+1, dtype=np.float64), tpcfin_list  
 
 
 def old_tpc_radial(img, mx=100, threed=False):
@@ -177,20 +206,21 @@ def old_tpc_radial(img, mx=100, threed=False):
     return tpcfin  
 
 
-def stat_analysis_error(img, edge_lengths, img_dims, vf, threed=False, conf=0.95):
+def stat_analysis_error(img, edge_lengths, img_dims, vf, threed=False, conf=0.95):  # TODO see if to delete this or not
     err_exp_vf = real_image_stats(img, edge_lengths, vf, threed=threed)
     err_model_vf, fac_vf = fit_fac(err_exp_vf, img_dims, vf)
     shape = [np.array(img.size()[-3:] if threed else img.size()[-2:])]
     return bernouli(vf, ns_from_dims(shape, fac_vf), conf=conf)
 
 
-def real_image_stats(img, ls, vf, repeats=1000, threed=False, z_score=1.96):
+def real_image_stats(img, ls, vf, repeats=1000, threed=False, z_score=1.96):  
     errs = []
     for l in ls:
-        if (l%50) == 0:
+        if (l%200) == 0:
             print(f'length = {l}')
         vfs = []
         if not threed:
+            repeats = 1100 - l.item()
             for i in range(repeats):
                 bm, xm, ym = img.shape
                 x = torch.randint(0, xm - l, (1,))
@@ -199,6 +229,8 @@ def real_image_stats(img, ls, vf, repeats=1000, threed=False, z_score=1.96):
                 crop = img[b, x : x + l, y : y + l]
                 vfs.append(torch.mean(crop).cpu())
         else:
+            if (l%10) == 0:
+                print(f'length = {l}')
             repeats = 500 - l.item()
             for i in range(repeats):
                 bm, xm, ym, zm = img.shape
@@ -211,7 +243,6 @@ def real_image_stats(img, ls, vf, repeats=1000, threed=False, z_score=1.96):
         vfs = np.array(vfs)
         std = np.std(vfs)
         errs.append(100 * ((z_score * std) / vf))
-    print(f'error = {errs}')
     return errs
 
 
@@ -280,11 +311,15 @@ def linear_fit(x, m, b):
     return m * x + b
 
 
-def tpc_to_fac(tpc_dist, tpc):
-    tpc, tpc_dist = np.array(tpc), np.array(tpc_dist)
-    vf = tpc[0]
-    pred_fac = (1/(vf-vf*vf))*np.trapz(tpc - (vf*vf), x=tpc_dist)
-    return pred_fac  
+def tpc_to_fac(tpc_dist, tpc_list, threed=False):
+    pred_facs = []
+    for tpc in tpc_list:
+        tpc, tpc_dist = np.array(tpc), np.array(tpc_dist)
+        vf = tpc[0]
+        omega_n = 2*3 if threed else 2
+        pred_facs.append((omega_n/(vf-vf*vf))*np.trapz(tpc - (vf*vf), x=tpc_dist))
+    print(pred_facs)
+    return np.mean(pred_facs)  
 
 
 def old_tpc_to_fac(x, y):
@@ -297,15 +332,14 @@ def old_tpc_to_fac(x, y):
     return kneedle.knee
 
 
-def make_error_prediction(img, conf=0.95, err_targ=0.05,  model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
-    vf = img.mean()
-    dims = len(img.shape)
+def make_error_prediction(images, vf, conf=0.95, err_targ=0.05,  model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
+    dims = len(images[0].shape)
     print(f'starting tpc radial')
-    tpc_dist, tpc_weights, tpc = tpc_radial(img, threed=dims == 3, mx=mxtpc)
+    tpc_dist, tpc_list = tpc_radial(images, threed=dims == 3, mx=mxtpc)
     print(f'starting tpc to fac')
-    fac = tpc_to_fac(tpc_dist, tpc_weights, tpc)
+    fac = tpc_to_fac(tpc_dist, tpc_list, threed=dims==3)
     print(f'pred fac = {fac}')
-    n = ns_from_dims([np.array(img.shape)], fac)
+    n = ns_from_dims([np.array(images[0].shape)], fac)
     # print(n, fac)
     std_bern = ((1 / n[0]) * (vf * (1 - vf))) ** 0.5
     std_model, slope, intercept = get_model_params(f'{dims}d{met}') 
@@ -327,7 +361,7 @@ def make_error_prediction(img, conf=0.95, err_targ=0.05,  model_error=True, corr
 
         # print(n_for_err_targ, n, fac)
     l_for_err_targ = dims_from_n(n_for_err_targ, shape, fac, dims)
-    return err_for_img, l_for_err_targ, tpc_dist, tpc
+    return err_for_img, l_for_err_targ, tpc_dist, tpc_list
 
 
 def make_error_prediction_old(img, conf=0.95, err_targ=0.05,  model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
@@ -383,6 +417,14 @@ def optimize_error_n_pred(bern_conf, total_conf, std_model, vf, slope, intercept
 
 
 def get_model_params(imtype):  # see model_param.py for the appropriate code that was used.
+    params= {'2dvf':[0.3462957393561648, 2, 0.108],
+             '2dsa':[0.280524266479876, 2.973, 0],
+             '3dvf':[0.5584825884176943, 6, 0.4217],
+             '3dsa':[0.4256621550262103, 17.7, 0]}
+    return params[imtype]
+
+
+def get_model_params_old(imtype):  # see model_param.py for the appropriate code that was used.
     params= {'2dvf':[0.3863185623920709,2.565789407003636, 0.0003318955996696201],
              '2dsa':[0.3697788866716134,0.8522276248407129, 0.007904077381387118],
              '3dvf':[0.5761622825137038,1.588087103916383, 0.0036686523118274283],
