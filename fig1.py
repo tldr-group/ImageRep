@@ -15,7 +15,7 @@ def sample_error(img, ls, vf=0.5):
     for l in ls:
         vfs = torch.mean(img[:,:l,:l], dim=(1,2))
         std = torch.std(vfs.cpu())
-        err.append(100*((1.96*std)/0.5))
+        err.append(100*((1.96*std)/0.5))  # percentage of error from 0.5
     return err
 
 errs = []
@@ -33,11 +33,11 @@ errs.append(sample_error(img2[:,0], ls))
 ns = util.ns_from_dims(img_dims, 2)
 berns.append(util.bernouli(0.5, ns))
 
-with open("datafin.json", "r") as fp:
+with open("data_gen.json", "r") as fp:
     data = json.load(fp)['generated_data'] 
 
 n = 'microstructure205'
-img3 = tifffile.imread(f'D:/Dataset/{n}/{n}.tif')
+img3 = tifffile.imread(f'/home/amir/microlibDataset/{n}/{n}.tif')
 d = data[n]
 errs.append(d[f'err_exp_vf'][::4])
 ns = util.ns_from_dims(img_dims, d['fac_vf'])
@@ -56,8 +56,9 @@ for l, err, bern, c in zip(labs, errs, berns, cs):
     axs[1,1].scatter(ls, err, c=c, s=8,marker = 'x')
     axs[1,1].plot(ls, bern, lw=1, c=c, label=l)
 axs[1,1].legend()
-axs[1,1].set_xlabel('Error from statistical analysis (%)')
-axs[1,1].set_ylabel('Error from tpc analysis (%)')
+axs[1,1].set_xlabel('Image length size [pixels]')
+axs[1,1].set_ylabel('Volume fraction percentage error [%]')
+axs[1,1].set_ylim(bottom=0)
 plt.tight_layout()
 for ax in axs.ravel()[:3]:
     ax.set_xticks([])

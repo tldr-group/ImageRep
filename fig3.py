@@ -15,7 +15,7 @@ import math
 # with open("data2d.json", "r") as fp:
 #     data2d = json.load(fp)['validation_data']
 
-with open("datafin_new2.json", "r") as fp:
+with open("datafin_new4.json", "r") as fp:
     datafull = json.load(fp)
 
 def objective_function(beta, y_true, y_pred):
@@ -24,9 +24,9 @@ def objective_function(beta, y_true, y_pred):
 
 # Slope and intercept for tpc to stat.analysis error fit, that have 0 mean: 
 slope_and_intercept = {'2D':
-                       {'Volume fraction': (2, 0.083), 'Surface area': (2*2, 0.077)},
+                       {'Volume fraction': (1.61, 0), 'Surface area': (1.61, 0)},
                        '3D':
-                       {'Volume fraction': (6, 0.4217), 'Surface area': (6*3, 0)}
+                       {'Volume fraction': (2*3*1.61, 0.08), 'Surface area': (2*1.61, 0)}
 }
 
 
@@ -57,9 +57,11 @@ for i, data in enumerate(dims):
     sa_results[0], sa_results[1] = np.array(sa_results[0]), np.array(sa_results[1])
     # sa_results = [err_exp_sa[pred_err_sa!=math.isnan], pred_err_sa[pred_err_sa!=math.nan]]
     for j, (met, res) in enumerate(zip(['Volume fraction', 'Surface area'], [vf_results, sa_results])):
-    
-        ax = axs[i, j]
+
         
+        ax = axs[i, j]
+        # end_idx = 52
+        # res[0], res[1] = res[0][:end_idx], res[1][:end_idx]
         beta_init = np.array([1, 0])
         # bounds = [(-10,10),(-10,10)]
         # To find a good fit:
@@ -71,16 +73,17 @@ for i, data in enumerate(dims):
         slope, intercept = slope_and_intercept[dims[i]][met]
         y_data = slope*res[1] + intercept
         
-        ax.scatter(res[0], y_data, s=7, label='Predictions')
+        without_last_outlier = np.logical_and(y_data < 40, res[0] < 40)
+        ax.scatter(res[0][without_last_outlier], y_data[without_last_outlier], s=7, label='Predictions')
         
         # print(f'slope = {slope} and intercept = {intercept}')
-        ax.set_xlabel(f'Error from statistical analysis [%]')
-        ax.set_ylabel(f'Error from tpc analysis [%]')
+        ax.set_xlabel(f'Percentage error from statistical analysis [%]')
+        ax.set_ylabel(f'Percentage error from tpc analysis [%]')
         ax.set_title(f'{met} {dims[i]}')
         
         errs = (y_data-res[0])/y_data 
         
-        max_val = int(np.max([np.max(y_data),np.max(res[0])]))+2
+        max_val = int(np.max([np.max(y_data[without_last_outlier]),np.max(res[0][without_last_outlier])]))+2
         
         x = np.arange(max_val+1)
         ax.plot(x, x, label = 'Ideal error prediction', color='black')
@@ -95,6 +98,7 @@ for i, data in enumerate(dims):
         err = std*z
         print(f'{met} {dims[i]} std = {std}')
         print(f'mean = {np.mean(errs)}')
+        print(f'mape = {np.mean(np.abs(errs))}')
         print(f'error = {err}')
         
         ax.plot(np.arange(max_val), np.arange(max_val), c='black')
@@ -104,7 +108,7 @@ for i, data in enumerate(dims):
         
         # print(f'Unfitted {met} MAPE error {dims[i]}: {abs((res[0] - res[1])/res[0]).mean()}')
         # print(f'Fitted {met} MAPE error {dims[i]}: {abs((res[0] - y_data)/res[0]).mean()}')
-axs[0, 0].legend()
+axs[0, 0].legend()  # TODO add text to the legend indicating the MAPE
 fig.savefig('fig3.pdf', format='pdf')         
 
 

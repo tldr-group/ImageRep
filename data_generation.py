@@ -6,10 +6,12 @@ import json
 import numpy as np
 import time
 
+mode = '2D'
 # Dataset path and list of subfolders
-with open("micro_names.json", "r") as fp:
-    micro_names = json.load(fp)
-projects = [f'/home/amir/microlibDataset/{p}/{p}' for p in micro_names]
+# with open("micro_names.json", "r") as fp:  # TODO change this later
+    # micro_names = json.load(fp)
+plotting = [f'microstructure{f}' for f in [228, 235,205,177]]
+projects = [f'/home/amir/microlibDataset/{p}/{p}' for p in plotting]
 # Load generator network
 netG = util.load_generator(projects[0])
 # Edge lengths to test
@@ -22,6 +24,7 @@ data = {}
 num_projects = len(projects)
 projects = projects[:num_projects]
 
+l = 1000 if mode=='2D' else 400
 time0 = time.time()
 for j, proj in enumerate(projects):
     # Make an image of micro
@@ -29,24 +32,33 @@ for j, proj in enumerate(projects):
     print(img.size())
     if img.any():
         microstructure_name = proj.split("/")[-1]
-        vf = torch.mean(img).cpu()
-        sa_img = util.make_sa(img)
-        sa = torch.mean(sa_img).cpu()
-        tpc_vf_dist, tpc_vf = util.tpc_radial(img)
-        tpc_sa_dist, tpc_sa = util.tpc_radial(sa_img)
-        err_exp_vf = util.real_image_stats(img, edge_lengths, vf)
-        err_exp_sa = util.real_image_stats(sa_img, edge_lengths, sa)
-        err_model_vf, fac_vf = util.fit_fac(err_exp_vf, img_dims, vf)
-        err_model_sa, fac_sa = util.fit_fac(err_exp_sa, img_dims, sa)
+        vf = torch.mean(img).cpu().item()
+        sa_images = util.make_sas(img)
+        img = [img]
+        sa = torch.mean(util.sa_map_from_sas(sa_images)).cpu().item()
+        print(f'starting tpc')
+        testimg = [img[0, :l, :l].cpu() if mode=='2D' else img[0, :l, :l, :l].cpu() for img in img]
+        tpc_vf_dist, tpc_vf = util.tpc_radial(testimg)
+        sa_testimg = [sa_img[0, :l, :l].cpu() if mode=='2D' else sa_img[0, :l, :l, :l].cpu() for sa_img in sa_images]
+        tpc_sa_dist, tpc_sa = util.tpc_radial(sa_testimg)
+        print(f'finished tpc, starting image stats')
+        err_exp_vf = util.real_image_stats(img[0], edge_lengths, vf, repeats=2000)
+        err_exp_sa = util.real_image_stats(util.sa_map_from_sas(sa_images), edge_lengths, sa, repeats=2000)
+        ir_vf = util.fit_ir(err_exp_vf, img_dims, vf)
+        shape_vf = [np.array(testimg[0].size())]
+        err_model_vf = util.bernouli(vf, util.ns_from_dims(shape_vf, ir_vf), conf=0.95)
+        ir_sa = util.fit_ir(err_exp_sa, img_dims, sa)
+        shape_sa = [np.array(sa_testimg[0].size())]
+        err_model_sa = util.bernouli(sa, util.ns_from_dims(shape_sa, ir_sa), conf=0.95)
         data[microstructure_name] = {
-            "vf": vf.item(),
-            "sa": sa.item(),
-            "fac_vf": fac_vf,
-            "fac_sa": fac_sa,
-            "tpc_vf_dist": list(tpc_vf_dist),
-            "tpc_vf": list(tpc_vf),
+            "vf": vf,
+            "sa": sa,
+            "ir_vf": ir_vf,
+            "ir_sa": ir_sa,
+            "tpc_vf_dist": list(tpc_vf_dist),  
+            "tpc_vf": [list(tpc) for tpc in tpc_vf],
             "tpc_sa_dist": list(tpc_sa_dist),
-            "tpc_sa": list(tpc_sa),
+            "tpc_sa": [list(tpc) for tpc in tpc_sa],
             "err_exp_vf": [e.item() for e in err_exp_vf],
             "err_exp_sa": [s.item() for s in err_exp_sa],
             "err_model_vf": [e.item() for e in err_model_vf],
@@ -56,7 +68,7 @@ for j, proj in enumerate(projects):
         data_fin = {"generated_data": data}
         print(f"{j}/{len(projects)} done")
 
-        with open("data.json", "w") as fp:
+        with open("data_gen2.json", "w") as fp:
             json.dump(data_fin, fp)
 time1 = time.time()
 

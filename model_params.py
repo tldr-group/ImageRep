@@ -25,11 +25,11 @@ conf=0.95
 for micro_n in gen_data:
     cur_micro = gen_data[micro_n]
     tpc_vf_dist, tpc_vf = np.arange(100+1, dtype=np.float64), cur_micro["tpc_vf"]
-    pred_IR = util.tpc_to_fac(tpc_vf_dist, tpc_vf)
+    pred_IR = util.tpc_to_ir(tpc_vf_dist, tpc_vf)
     
     k = 1000
     m_pred = util.ns_from_dims([np.array([1000,1000])], pred_IR)
-    m_statistical = util.ns_from_dims([np.array([1000,1000])], cur_micro["fac_vf"])
+    m_statistical = util.ns_from_dims([np.array([1000,1000])], cur_micro["ir_vf"])
     vf = cur_micro["vf"]
     z = norm.interval(conf)[1]
     pred_err = z*((vf*(1-vf)/m_pred[0])**0.5)/vf*100
@@ -55,7 +55,7 @@ def scatter_plot_IR(stat_IR, pred_IR, std):
     # ax.plot(x ,x -x*err, label = f'95% confidence ', c='black', ls='--', linewidth=1)
     ax.set_aspect('equal', adjustable='box')
     plt.legend(loc='lower right')
-    plt.savefig('fac_pred.png')
+    plt.savefig('ir_pred.png')
     plt.show()
 
 # it's not clear where does this 3 is coming from

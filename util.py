@@ -158,8 +158,8 @@ def tpc_radial(img_list, mx=100, threed=False):
         img = torch.tensor(img, device=torch.device("cuda:0")).float()
         tpc = {i:[0,0] for i in range(mx+1)}
         for x in range(0, mx):
-            if (x % 5) == 0:
-                print(f'{x}% done in tpc radial {i+1}/{len(img_list)}')
+            # if (x % 10) == 0:
+                # print(f'{x}% done in tpc radial {i+1}/{len(img_list)}')
             for y in range(0, mx):
                 for z in range(0, mx if threed else 1):
                     d = (x**2 + y**2 + z**2) ** 0.5
@@ -206,18 +206,18 @@ def old_tpc_radial(img, mx=100, threed=False):
     return tpcfin  
 
 
-def stat_analysis_error(img, edge_lengths, img_dims, vf, threed=False, conf=0.95):  # TODO see if to delete this or not
-    err_exp_vf = real_image_stats(img, edge_lengths, vf, threed=threed)
-    err_model_vf, fac_vf = fit_fac(err_exp_vf, img_dims, vf)
-    shape = [np.array(img.size()[-3:] if threed else img.size()[-2:])]
-    return bernouli(vf, ns_from_dims(shape, fac_vf), conf=conf)
+def stat_analysis_error(img, edge_lengths, img_dims, compared_shape, vf, threed=False, conf=0.95):  # TODO see if to delete this or not
+    err_exp = real_image_stats(img, edge_lengths, vf, threed=threed)
+    real_ir = fit_ir(err_exp, img_dims, vf)
+    # TODO different size image 1000 vs 1500
+    return bernouli(vf, ns_from_dims(compared_shape, real_ir), conf=conf), real_ir
 
 
 def real_image_stats(img, ls, vf, repeats=1000, threed=False, z_score=1.96):  
     errs = []
     for l in ls:
-        if (l%200) == 0:
-            print(f'length = {l}')
+        # if (l%300) == 0:
+        #     print(f'length = {l}')
         vfs = []
         if not threed:
             repeats = 1100 - l.item()
@@ -229,7 +229,7 @@ def real_image_stats(img, ls, vf, repeats=1000, threed=False, z_score=1.96):
                 crop = img[b, x : x + l, y : y + l]
                 vfs.append(torch.mean(crop).cpu())
         else:
-            if (l%10) == 0:
+            if (l%50) == 0:
                 print(f'length = {l}')
             repeats = 500 - l.item()
             for i in range(repeats):
@@ -254,40 +254,40 @@ def bernouli(vf, ns, conf=0.95):
     return np.array(errs, dtype=np.float64)
 
 
-def fit_fac(err_exp, img_dims, vf, max_fac=100):
+def fit_ir(err_exp, img_dims, vf, max_ir=100):
     err_exp = np.array(err_exp)
-    fac = test_fac_set(err_exp, vf, np.arange(1, max_fac, 1), img_dims)
-    fac = test_fac_set(err_exp, vf, np.linspace(fac - 1, fac + 1, 20), img_dims)
-    err_model = bernouli(vf, ns_from_dims(img_dims, fac))
-    return err_model, fac
+    ir = test_ir_set(err_exp, vf, np.arange(1, max_ir, 1), img_dims)
+    ir = test_ir_set(err_exp, vf, np.linspace(ir - 1, ir + 1, 20), img_dims)
+    print(f'real ir = {ir}')
+    return ir
 
 
 def ns_from_dims(img_dims, ir):
     den = ir ** (len(img_dims[0]))
     return [np.prod(i + ir - 1) / den for i in img_dims]
 
-def dims_from_n(n, shape, fac, dims):
-    den = fac ** dims
+def dims_from_n(n, shape, ir, dims):
+    den = ir ** dims
     if shape=='equal':
-        return (n*den)**(1/dims)-fac+1
+        return (n*den)**(1/dims)-ir+1
     else:
         if dims==len(shape):
             raise ValueError('cannot define all the dimensions')
         if len(shape)==1:
-            return ((n*den)/(shape[0]+fac-1))**(1/(dims-1))-fac+1
+            return ((n*den)/(shape[0]+ir-1))**(1/(dims-1))-ir+1
         else:
-            return ((n*den)/((shape[0]+fac-1) * (shape[1]+fac-1)))-fac+1
+            return ((n*den)/((shape[0]+ir-1) * (shape[1]+ir-1)))-ir+1
 
 
-def test_fac_set(err_exp, vf, facs, img_dims):
+def test_ir_set(err_exp, vf, irs, img_dims):
     err_fit = []
-    for fac in facs:
-        ns = ns_from_dims(img_dims, fac)
+    for ir in irs:
+        ns = ns_from_dims(img_dims, ir)
         err_model = bernouli(vf, ns)
         err = np.mean(abs(err_exp - err_model))
         err_fit.append(err)
-    fac = facs[np.argmin(err_fit)].item()
-    return fac
+    ir = irs[np.argmin(err_fit)].item()
+    return ir
 
 
 def tpc_fit(x, a, b, c):
@@ -308,21 +308,23 @@ def mape_linear_objective(params, y_pred, y_true):
 
 
 def linear_fit(x, m, b):
-    return m * x + b
+    return m * x + b 
 
 
-def tpc_to_fac(tpc_dist, tpc_list, threed=False):
-    pred_facs = []
+def tpc_to_ir(tpc_dist, tpc_list, threed=False):
+    pred_irs = []
     for tpc in tpc_list:
         tpc, tpc_dist = np.array(tpc), np.array(tpc_dist)
         vf = tpc[0]
+        vf_squared = np.mean(tpc[-10:])
         omega_n = 2*3 if threed else 2
-        pred_facs.append((omega_n/(vf-vf*vf))*np.trapz(tpc - (vf*vf), x=tpc_dist))
-    print(pred_facs)
-    return np.mean(pred_facs)  
+        pred_irs.append(omega_n/(vf-vf_squared)*np.trapz(tpc - vf_squared, x=tpc_dist))
+    print(f'pred irs = {pred_irs}')
+    print(f'sum of pred irs = {np.sum(pred_irs)}')
+    return np.sum(pred_irs)  
 
 
-def old_tpc_to_fac(x, y):
+def old_tpc_to_ir(x, y):
     bounds = ((-np.inf, 0.01, -np.inf), (np.inf, np.inf, np.inf))
     coefs_poly3d, _ = curve_fit(tpc_fit, x, y, bounds=bounds)
     y_data = tpc_fit(x, *coefs_poly3d)
@@ -336,11 +338,11 @@ def make_error_prediction(images, vf, conf=0.95, err_targ=0.05,  model_error=Tru
     dims = len(images[0].shape)
     print(f'starting tpc radial')
     tpc_dist, tpc_list = tpc_radial(images, threed=dims == 3, mx=mxtpc)
-    print(f'starting tpc to fac')
-    fac = tpc_to_fac(tpc_dist, tpc_list, threed=dims==3)
-    print(f'pred fac = {fac}')
-    n = ns_from_dims([np.array(images[0].shape)], fac)
-    # print(n, fac)
+    print(f'starting tpc to ir')
+    ir = tpc_to_ir(tpc_dist, tpc_list, threed=dims==3)
+    print(f'pred ir = {ir}')
+    n = ns_from_dims([np.array(images[0].shape)], ir)
+    # print(n, ir)
     std_bern = ((1 / n[0]) * (vf * (1 - vf))) ** 0.5
     std_model, slope, intercept = get_model_params(f'{dims}d{met}') 
     if not correction:
@@ -352,16 +354,16 @@ def make_error_prediction(images, vf, conf=0.95, err_targ=0.05,  model_error=Tru
         err_for_img = minimize(optimize_error_conf_pred, conf**0.5, args, bounds=bounds).fun
         args = (conf, std_model, vf, slope, intercept, err_targ)
         n_for_err_targ = minimize(optimize_error_n_pred, conf**0.5, args, bounds=bounds).fun
-        # print(n, n_for_err_targ, fac)
+        # print(n, n_for_err_targ, ir)
     else:
         z = stats.norm.interval(conf)[1]
         err_for_img = (z*std_bern/vf)*slope+intercept
         # print(stats.norm.interval(conf, scale=std_bern)[1], std_bern)
         n_for_err_targ = vf * (1 - vf) * (z/ ((err_targ -intercept)/slope * vf)) ** 2
 
-        # print(n_for_err_targ, n, fac)
-    l_for_err_targ = dims_from_n(n_for_err_targ, shape, fac, dims)
-    return err_for_img, l_for_err_targ, tpc_dist, tpc_list
+        # print(n_for_err_targ, n, ir)
+    l_for_err_targ = dims_from_n(n_for_err_targ, shape, ir, dims)
+    return err_for_img, l_for_err_targ, tpc_dist, tpc_list, ir
 
 
 def make_error_prediction_old(img, conf=0.95, err_targ=0.05,  model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
@@ -371,9 +373,9 @@ def make_error_prediction_old(img, conf=0.95, err_targ=0.05,  model_error=True, 
     cut = max(20, np.argmin(tpc))
     tpc = tpc[:cut]
     x = np.arange(len(tpc))
-    fac = tpc_to_fac(x, tpc)
-    n = ns_from_dims([np.array(img.shape)], fac)
-    # print(n, fac)
+    ir = tpc_to_ir(x, tpc)
+    n = ns_from_dims([np.array(img.shape)], ir)
+    # print(n, ir)
     std_bern = ((1 / n[0]) * (vf * (1 - vf))) ** 0.5
     std_model, slope, intercept = get_model_params(f'{dims}d{met}') 
     if not correction:
@@ -385,15 +387,15 @@ def make_error_prediction_old(img, conf=0.95, err_targ=0.05,  model_error=True, 
         err_for_img = minimize(optimize_error_conf_pred, conf**0.5, args, bounds=bounds).fun
         args = (conf, std_model, vf, slope, intercept, err_targ)
         n_for_err_targ = minimize(optimize_error_n_pred, conf**0.5, args, bounds=bounds).fun
-        # print(n, n_for_err_targ, fac)
+        # print(n, n_for_err_targ, ir)
     else:
         z = stats.norm.interval(conf)[1]
         err_for_img = (z*std_bern/vf)*slope+intercept
         # print(stats.norm.interval(conf, scale=std_bern)[1], std_bern)
         n_for_err_targ = vf * (1 - vf) * (z/ ((err_targ -intercept)/slope * vf)) ** 2
 
-        # print(n_for_err_targ, n, fac)
-    l_for_err_targ = dims_from_n(n_for_err_targ, shape, fac, dims)
+        # print(n_for_err_targ, n, ir)
+    l_for_err_targ = dims_from_n(n_for_err_targ, shape, ir, dims)
     return err_for_img, l_for_err_targ, tpc
 
 def optimize_error_conf_pred(bern_conf, total_conf, std_bern, std_model, vf, slope, intercept):
@@ -417,10 +419,10 @@ def optimize_error_n_pred(bern_conf, total_conf, std_model, vf, slope, intercept
 
 
 def get_model_params(imtype):  # see model_param.py for the appropriate code that was used.
-    params= {'2dvf':[0.3462957393561648, 2, 0.108],
-             '2dsa':[0.280524266479876, 2.973, 0],
-             '3dvf':[0.5584825884176943, 6, 0.4217],
-             '3dsa':[0.4256621550262103, 17.7, 0]}
+    params= {'2dvf':[0.34014036731289116, 1.61, 0],
+             '2dsa':[0.2795574424176512, 1.61, 0],
+             '3dvf':[0.5584825884176943, 6, 0.4217],  # TODO needs to be changed according to fig3.py
+             '3dsa':[0.4256621550262103, 17.7, 0]}  # TODO needs to be changed according to fig3.py
     return params[imtype]
 
 
