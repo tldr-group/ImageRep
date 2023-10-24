@@ -24,9 +24,9 @@ def objective_function(beta, y_true, y_pred):
 
 # Slope and intercept for tpc to stat.analysis error fit, that have 0 mean: 
 slope_and_intercept = {'2D':
-                       {'Volume fraction': (1.61, 0), 'Surface area': (1.61, 0)},
+                       {'Volume fraction': (1.6, 0), 'Surface area': (1.6, 0)},
                        '3D':
-                       {'Volume fraction': (2*3*1.61, 0.08), 'Surface area': (2*1.61, 0)}
+                       {'Volume fraction': (2*3*1.6, 0.08), 'Surface area': (2*1.6, 0)}
 }
 
 
@@ -81,7 +81,7 @@ for i, data in enumerate(dims):
         ax.set_ylabel(f'Percentage error from tpc analysis [%]')
         ax.set_title(f'{met} {dims[i]}')
         
-        errs = (y_data-res[0])/y_data 
+        errs = (res[0]-y_data)/y_data 
         
         max_val = int(np.max([np.max(y_data[without_last_outlier]),np.max(res[0][without_last_outlier])]))+2
         

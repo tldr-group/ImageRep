@@ -47,13 +47,26 @@ for n in list(data.keys()):
         x = d[f'tpc_{met}_dist']
         y = np.array(y)
         
-        axs[i, 2].plot(x, y, c=cs[1], label=f'{met} tpc')
+        # TODO erase this afterwards:
+        if met=='vf':
+            ir = np.round(d[f'ir_vf'], 1)
+            axs[i, 2].plot(x, y, c=cs[1], label=f'Volume fraction 2PC')
+            axs[i, 2].axhline(d['vf']**2, linestyle='dashed', label='$p^2$')
+            axs[i, 2].plot([0,ir],[d['vf']**2-0.02, d['vf']**2-0.02], c='green', linewidth=3, label=r'$\tilde{a}_2$')
+            ticks = [0, int(ir), 20, 40, 60, 80, 100]
+            ticklabels = map(str, ticks)
+            axs[i, 2].set_xticks(ticks)
+            axs[i, 2].set_xticklabels(ticklabels)
+            axs[i,2].fill_between(x, d['vf']**2, y, alpha=0.5, label=f'Integrated part')
+            axs[i,2].legend()
+            
+            
         # axs[i, 2].scatter(x[knee], y_data[knee]/y.max(), c =cs[1], marker = 'x', label=f'{met} ir from tpc', s=100)
         ir = d[f'ir_{met}']
         pred_ir = util.tpc_to_ir(d[f'tpc_{met}_dist'], d[f'tpc_{met}']) 
         pred_ir = pred_ir * 1.61
-        axs[i, 2].scatter(x[round(pred_ir)], y[round(pred_ir)], c =cs[1], marker = 'x', label=f'{met} predicted tpc IR', s=100)
-        axs[i, 2].scatter(x[round(ir)], y[round(ir)], facecolors='none', edgecolors = cs[1], label=f'{met} fitted IR', s=100)
+        # axs[i, 2].scatter(x[round(pred_ir)], y[round(pred_ir)], c =cs[1], marker = 'x', label=f'{met} predicted tpc IR', s=100)
+        # axs[i, 2].scatter(x[round(ir)], y[round(ir)], facecolors='none', edgecolors = cs[1], label=f'{met} fitted IR', s=100)
 
         irs[j].append(ir)
         if i ==0:
@@ -84,7 +97,7 @@ for n in list(data.keys()):
     axs[i, 0].set_xticks([])
     axs[i, 0].set_yticks([])
     axs[i, 0].set_ylabel(f'M{n[1:]}')
-    axs[i, 0].set_xlabel(f'Volume fraction IR: {ir}   Inset mag: x{np.round(si_size/sicrop, 2)}')
+    axs[i, 0].set_xlabel(f'Volume fraction '+ r'$\tilde{a}_2$: '+ f'{ir}   Inset mag: x{np.round(si_size/sicrop, 2)}')
 
     i+=1
 

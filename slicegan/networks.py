@@ -33,10 +33,11 @@ def slicegan_nets(pth, Training, imtype, dk,ds,df,dp,gk,gs,gf,gp):
                 self.convs.append(nn.ConvTranspose3d(gf[lay], gf[lay+1], k, s, p, bias=False))
                 self.bns.append(nn.BatchNorm3d(gf[lay+1]))
 
-        def forward(self, x, threed):
+        def forward(self, x, threed, slice_dim):
             for conv,bn in zip(self.convs[:-1],self.bns[:-1]):
                 if not threed:
-                    x = F.relu_(bn(conv(x)))[:,:,1:-1]
+                    x = F.relu_(bn(conv(x)))
+                    x = torch.index_select(x, slice_dim + 2, torch.arange(0,4).cuda())
                 else:
                     x = F.relu_(bn(conv(x)))
 

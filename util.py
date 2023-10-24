@@ -39,12 +39,15 @@ def generate_image(netG, Project_path, lf=50, threed=False, reps=50):
         return torch.tensor(0)
     netG.eval()
     imgs = []
+    slice_dims = [0] if threed else [0, 1, 2]
     for i in range(reps):
-        noise = torch.randn(1, 16, lf if threed else 4, lf, lf)
-        noise = noise.cuda()
-        img = netG(noise, threed)
-        img = slicegan.util.post_proc(img)
-        imgs.append(img.cpu() if threed else img[0])
+        for slice_dim in slice_dims:
+            noise = torch.randn(1, 16, lf if threed else 4, lf, lf)
+            noise = torch.permute(noise, (0,1) + tuple(((torch.arange(3) - slice_dim) % 3).numpy() + 2)) 
+            noise = noise.cuda()
+            img = netG(noise, threed, slice_dim)
+            img = slicegan.util.post_proc(img)
+            imgs.append(img.cpu() if threed else torch.select(img, slice_dim, 0).cpu())
     img = torch.stack(imgs, 0)
     return img.float()
 
@@ -205,34 +208,55 @@ def old_tpc_radial(img, mx=100, threed=False):
     tpcfin = np.array(tpcfin, dtype=np.float64)
     return tpcfin  
 
+def tpc_horizontal(img_list, mx=100, threed=False):
+    tpcfin_list = []
+    for i in range(len(img_list)):
+        img = img_list[i]
+        img = torch.tensor(img, device=torch.device("cuda:0")).float()
+        tpc = [torch.mean(img).cpu()]  # vf is tpc[0]
+        for d in range(1, mx):
+            tpc_1 = torch.mean(img[..., :-d] * img[..., d:]).cpu()
+            tpc_2 = torch.mean(img[..., :-d, :] * img[..., d:, :]).cpu()
+            if threed:
+                tpc_3 = torch.mean(img[..., :-d, :, :] * img[..., d:, :, :]).cpu()
+                tpc.append((tpc_1 + tpc_2 + tpc_3) / 3)
+            else:
+                tpc.append((tpc_1 + tpc_2) / 2)
+        tpcfin_list.append(np.array(tpc, dtype=np.float64))
+    return np.arange(mx, dtype=np.float64), tpcfin_list  
 
-def stat_analysis_error(img, edge_lengths, img_dims, compared_shape, vf, threed=False, conf=0.95):  # TODO see if to delete this or not
-    err_exp = real_image_stats(img, edge_lengths, vf, threed=threed)
+def stat_analysis_error(img, edge_lengths, img_dims, compared_shape, vf, conf=0.95):  # TODO see if to delete this or not
+    err_exp = real_image_stats(img, edge_lengths, vf)
     real_ir = fit_ir(err_exp, img_dims, vf)
     # TODO different size image 1000 vs 1500
     return bernouli(vf, ns_from_dims(compared_shape, real_ir), conf=conf), real_ir
 
 
-def real_image_stats(img, ls, vf, repeats=1000, threed=False, z_score=1.96):  
+def real_image_stats(img, ls, vf, repeats=4000, z_score=1.96):  
+    dims = len(img.shape) - 1
+    print(f'repeats = {repeats}')
     errs = []
     for l in ls:
-        # if (l%300) == 0:
-        #     print(f'length = {l}')
         vfs = []
-        if not threed:
-            repeats = 1100 - l.item()
-            for i in range(repeats):
+        if dims == 1:
+            for _ in range(repeats):
+                bm, xm = img.shape
+                x = torch.randint(0, xm - l, (1,))
+                b = torch.randint(0, bm, (1,))
+                crop = img[b, x : x + l]
+                vfs.append(torch.mean(crop).cpu())
+        elif dims == 2:
+            for _ in range(repeats):
                 bm, xm, ym = img.shape
                 x = torch.randint(0, xm - l, (1,))
                 y = torch.randint(0, ym - l, (1,))
                 b = torch.randint(0, bm, (1,))
                 crop = img[b, x : x + l, y : y + l]
                 vfs.append(torch.mean(crop).cpu())
-        else:
-            if (l%50) == 0:
-                print(f'length = {l}')
-            repeats = 500 - l.item()
-            for i in range(repeats):
+        else:  # 3D
+            cur_repeats = repeats - l*10
+            print(cur_repeats)
+            for _ in range(cur_repeats):
                 bm, xm, ym, zm = img.shape
                 x = torch.randint(0, xm - l, (1,))
                 y = torch.randint(0, ym - l, (1,))
@@ -254,17 +278,21 @@ def bernouli(vf, ns, conf=0.95):
     return np.array(errs, dtype=np.float64)
 
 
-def fit_ir(err_exp, img_dims, vf, max_ir=100):
+def fit_ir(err_exp, img_dims, vf, max_ir=150):
     err_exp = np.array(err_exp)
     ir = test_ir_set(err_exp, vf, np.arange(1, max_ir, 1), img_dims)
-    ir = test_ir_set(err_exp, vf, np.linspace(ir - 1, ir + 1, 20), img_dims)
+    ir = test_ir_set(err_exp, vf, np.linspace(ir - 1, ir + 1, 50), img_dims)
     print(f'real ir = {ir}')
     return ir
 
 
 def ns_from_dims(img_dims, ir):
-    den = ir ** (len(img_dims[0]))
-    return [np.prod(i + ir - 1) / den for i in img_dims]
+    n_dims = len(img_dims[0])
+    den = ir ** n_dims
+    if n_dims == 3:
+        return [np.prod(i + 2*(ir - 1)) / den for i in img_dims]
+    else:  # n_dims == 2
+        return [np.prod(i + 2*(ir - 1)) * (1 + 2*(ir - 1)) / (den * ir) for i in img_dims]
 
 def dims_from_n(n, shape, ir, dims):
     den = ir ** dims
@@ -317,7 +345,7 @@ def tpc_to_ir(tpc_dist, tpc_list, threed=False):
         tpc, tpc_dist = np.array(tpc), np.array(tpc_dist)
         vf = tpc[0]
         vf_squared = np.mean(tpc[-10:])
-        omega_n = 2*3 if threed else 2
+        omega_n = 1
         pred_irs.append(omega_n/(vf-vf_squared)*np.trapz(tpc - vf_squared, x=tpc_dist))
     print(f'pred irs = {pred_irs}')
     print(f'sum of pred irs = {np.sum(pred_irs)}')
@@ -337,7 +365,7 @@ def old_tpc_to_ir(x, y):
 def make_error_prediction(images, vf, conf=0.95, err_targ=0.05,  model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
     dims = len(images[0].shape)
     print(f'starting tpc radial')
-    tpc_dist, tpc_list = tpc_radial(images, threed=dims == 3, mx=mxtpc)
+    tpc_dist, tpc_list = tpc_horizontal(images, threed=dims == 3, mx=mxtpc)
     print(f'starting tpc to ir')
     ir = tpc_to_ir(tpc_dist, tpc_list, threed=dims==3)
     print(f'pred ir = {ir}')
