@@ -34,6 +34,7 @@ def slicegan_nets(pth, Training, imtype, dk,ds,df,dp,gk,gs,gf,gp):
                 self.bns.append(nn.BatchNorm3d(gf[lay+1]))
 
         def forward(self, x, threed, slice_dim):
+            
             for conv,bn in zip(self.convs[:-1],self.bns[:-1]):
                 if not threed:
                     x = F.relu_(bn(conv(x)))

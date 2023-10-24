@@ -39,7 +39,7 @@ def generate_image(netG, Project_path, lf=50, threed=False, reps=50):
         return torch.tensor(0)
     netG.eval()
     imgs = []
-    slice_dims = [0] if threed else [0, 1, 2]
+    slice_dims = [0] if threed else [0,1,2]
     for i in range(reps):
         for slice_dim in slice_dims:
             noise = torch.randn(1, 16, lf if threed else 4, lf, lf)
@@ -47,7 +47,7 @@ def generate_image(netG, Project_path, lf=50, threed=False, reps=50):
             noise = noise.cuda()
             img = netG(noise, threed, slice_dim)
             img = slicegan.util.post_proc(img)
-            imgs.append(img.cpu() if threed else torch.select(img, slice_dim, 0).cpu())
+            imgs.append(img.cpu() if threed else torch.select(img, slice_dim, 2).cpu())
     img = torch.stack(imgs, 0)
     return img.float()
 
