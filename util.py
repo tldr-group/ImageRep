@@ -6,48 +6,38 @@ import kneed
 from scipy import stats
 from scipy.optimize import minimize
 from scipy.stats import norm
-
-def load_generator(Project_path):
-    img_size, img_channels, scale_factor = 64, 1, 1
-    z_channels = 16
-    lays = 6
-    dk, gk = [4] * lays, [4] * lays
-    ds, gs = [2] * lays, [2] * lays
-    df, gf = [img_channels, 64, 128, 256, 512, 1], [
-        z_channels,
-        512,
-        256,
-        128,
-        64,
-        img_channels,
-    ]
-    dp, gp = [1, 1, 1, 1, 0], [2, 2, 2, 2, 3]
-
-    ## Create Networks
-    netD, netG = slicegan.networks.slicegan_nets(
-        Project_path, False, "grayscale", dk, ds, df, dp, gk, gs, gf, gp
-    )
-    netG = netG()
-    netG = netG.cuda()
-    return netG
+from matplotlib import pyplot as plt
 
 
-def generate_image(netG, Project_path, lf=50, threed=False, reps=50):
+def generate_image(netG, Project_path, slice_dim, lf=50, threed=False, reps=50):
     try:
         netG.load_state_dict(torch.load(Project_path + "_Gen.pt"))
     except:  # if the image is greayscale it's excepting because there's only 1 channel
         return torch.tensor(0)
     netG.eval()
     imgs = []
-    slice_dims = [0] if threed else [0,1,2]
+    z_channels = 32
+    plot_profiles = []
+    img_size = [450, 450, 450] if threed else [64, 1500, 1500]
     for i in range(reps):
-        for slice_dim in slice_dims:
-            noise = torch.randn(1, 16, lf if threed else 4, lf, lf)
-            noise = torch.permute(noise, (0,1) + tuple(((torch.arange(3) - slice_dim) % 3).numpy() + 2)) 
-            noise = noise.cuda()
-            img = netG(noise, threed, slice_dim)
-            img = slicegan.util.post_proc(img)
-            imgs.append(img.cpu() if threed else torch.select(img, slice_dim, 2).cpu())
+        img_step_size = 64
+        lfs = np.array([(l-3) // img_step_size + 7 for l in img_size])
+        noise = torch.randn(1, z_channels, *lfs)
+        noise = torch.permute(noise, (0,1) + tuple(((torch.arange(3) - slice_dim) % 3).numpy() + 2)) 
+        noise = noise.cuda()
+        img = netG(noise, threed, slice_dim)
+        img = slicegan.util.post_proc(img)
+        imgs.append(img.cpu())
+    # plot_profiles = np.stack(plot_profiles)
+    # profile_stds = np.std(plot_profiles, axis=0)
+    # print(f'mean stds = {np.mean(profile_stds)}, std stds = {np.std(profile_stds)}')
+    # profile_means = np.mean(plot_profiles, axis=0)
+    # print(f'std means = {np.std(profile_means)}')
+    # plt.errorbar(np.arange(64), profile_means, profile_stds, linestyle='None', marker='*')
+    # plt.title(f'volume fraction mean and std for each of the 64 slices.')
+    # plt.xlabel(f'first dimension index (slice)')
+    # plt.ylabel(f'mean volume fraction (with std)')
+    # plt.show()
     img = torch.stack(imgs, 0)
     return img.float()
 
@@ -155,27 +145,29 @@ def conjunction_img_for_tpc(img, x, y, z, threed):
 
 
 def tpc_radial(img_list, mx=100, threed=False):
+    mxs = [mx] * 3 if threed else [mx] * 2
     tpcfin_list = []
     for i in range(len(img_list)):
         img = img_list[i]
         img = torch.tensor(img, device=torch.device("cuda:0")).float()
         tpc = {i:[0,0] for i in range(mx+1)}
-        for x in range(0, mx):
-            # if (x % 10) == 0:
-                # print(f'{x}% done in tpc radial {i+1}/{len(img_list)}')
-            for y in range(0, mx):
-                for z in range(0, mx if threed else 1):
-                    d = (x**2 + y**2 + z**2) ** 0.5
-                    if d < mx:
-                        remainder = d%1
-                        con_img = conjunction_img_for_tpc(img, x, y, z, threed)
-                        con_img_tpc = torch.mean(con_img).cpu()
-                        weight_floor = 1-remainder
-                        weight_ceil = remainder
-                        tpc[int(d)][0] += weight_floor 
-                        tpc[int(d)][1] += con_img_tpc*weight_floor
-                        tpc[int(d)+1][0] += weight_ceil 
-                        tpc[int(d)+1][1] += con_img_tpc*weight_ceil
+        for dim_along in range(0, 3 if threed else 1):
+            mxs_cur = mxs.copy()
+            mxs_cur[dim_along] = 1 if threed else mx
+            for x in range(0, mxs_cur[0]):
+                for y in range(0, mxs_cur[1]):
+                    for z in range(0, mxs_cur[2] if threed else 1):
+                        d = (x**2 + y**2 + z**2) ** 0.5
+                        if d < mx:
+                            remainder = d%1
+                            con_img = conjunction_img_for_tpc(img, x, y, z, threed)
+                            con_img_tpc = torch.mean(con_img).cpu()
+                            weight_floor = 1-remainder
+                            weight_ceil = remainder
+                            tpc[int(d)][0] += weight_floor 
+                            tpc[int(d)][1] += con_img_tpc*weight_floor
+                            tpc[int(d)+1][0] += weight_ceil 
+                            tpc[int(d)+1][1] += con_img_tpc*weight_ceil
     
         tpcfin = [tpc[key][1]/tpc[key][0] for key in tpc.keys()]
         tpcfin = np.array(tpcfin, dtype=np.float64)
@@ -225,7 +217,8 @@ def tpc_horizontal(img_list, mx=100, threed=False):
         tpcfin_list.append(np.array(tpc, dtype=np.float64))
     return np.arange(mx, dtype=np.float64), tpcfin_list  
 
-def stat_analysis_error(img, edge_lengths, img_dims, compared_shape, vf, conf=0.95):  # TODO see if to delete this or not
+def stat_analysis_error(img, edge_lengths, img_dims, compared_shape, conf=0.95):  # TODO see if to delete this or not
+    vf = torch.mean(img).cpu().item()
     err_exp = real_image_stats(img, edge_lengths, vf)
     real_ir = fit_ir(err_exp, img_dims, vf)
     # TODO different size image 1000 vs 1500
@@ -289,10 +282,11 @@ def fit_ir(err_exp, img_dims, vf, max_ir=150):
 def ns_from_dims(img_dims, ir):
     n_dims = len(img_dims[0])
     den = ir ** n_dims
-    if n_dims == 3:
-        return [np.prod(i + 2*(ir - 1)) / den for i in img_dims]
-    else:  # n_dims == 2
-        return [np.prod(i + 2*(ir - 1)) * (1 + 2*(ir - 1)) / (den * ir) for i in img_dims]
+    return [np.prod(i) / den for i in img_dims]
+    # if n_dims == 3:  # 2ir length
+    #     return [np.prod(i + 2*(ir - 1)) / den for i in img_dims]
+    # else:  # n_dims == 2
+    #     return [np.prod(i + 2*(ir - 1)) * (1 + 2*(ir - 1)) / (den * ir) for i in img_dims]
 
 def dims_from_n(n, shape, ir, dims):
     den = ir ** dims
@@ -344,7 +338,9 @@ def tpc_to_ir(tpc_dist, tpc_list, threed=False):
     for tpc in tpc_list:
         tpc, tpc_dist = np.array(tpc), np.array(tpc_dist)
         vf = tpc[0]
-        vf_squared = np.mean(tpc[-10:])
+        print(f'vf squared = {vf**2}')
+        print(f'end of tpc = {np.mean(tpc[-10:])}')
+        vf_squared = (vf**2 + np.mean(tpc[-10:]))/2  # mean of vf**2 and the end of the tpc because the volume fraction is not exact.
         omega_n = 1
         pred_irs.append(omega_n/(vf-vf_squared)*np.trapz(tpc - vf_squared, x=tpc_dist))
     print(f'pred irs = {pred_irs}')
@@ -362,10 +358,11 @@ def old_tpc_to_ir(x, y):
     return kneedle.knee
 
 
-def make_error_prediction(images, vf, conf=0.95, err_targ=0.05,  model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
+def make_error_prediction(images, conf=0.95, err_targ=0.05,  model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
+    vf = np.mean([torch.mean(i).cpu().item() for i in images])
     dims = len(images[0].shape)
     print(f'starting tpc radial')
-    tpc_dist, tpc_list = tpc_horizontal(images, threed=dims == 3, mx=mxtpc)
+    tpc_dist, tpc_list = tpc_radial(images, threed=dims == 3, mx=mxtpc)
     print(f'starting tpc to ir')
     ir = tpc_to_ir(tpc_dist, tpc_list, threed=dims==3)
     print(f'pred ir = {ir}')
