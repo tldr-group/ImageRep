@@ -7,6 +7,7 @@ from scipy import stats
 from scipy.optimize import minimize
 from scipy.stats import norm
 from matplotlib import pyplot as plt
+import time
 
 
 def generate_image(netG, Project_path, slice_dim, lf=50, threed=False, reps=50):
@@ -28,6 +29,9 @@ def generate_image(netG, Project_path, slice_dim, lf=50, threed=False, reps=50):
         img = netG(noise, threed, slice_dim)
         img = slicegan.util.post_proc(img)
         imgs.append(img.cpu())
+        # time1 = time.time()
+        # fft_calc = p2_crosscorrelation(imgs[0], imgs[0])
+        # print(f'fft calc time = {time.time() - time1}')
     # plot_profiles = np.stack(plot_profiles)
     # profile_stds = np.std(plot_profiles, axis=0)
     # print(f'mean stds = {np.mean(profile_stds)}, std stds = {np.std(profile_stds)}')
@@ -488,3 +492,16 @@ def cld(img):
         cld[-(i + 1)] = (sums[-(i + 1)] - sums[-i] - sum(cld[-i:])).cpu().item()
     cld = np.array(cld)
     return cld / np.sum(cld)
+
+def p2_crosscorrelation(arr1, arr2):
+    """
+    defines the crosscorrelation between arr1 and arr2:
+    :param arr1:
+    :param arr2:
+    :return:
+    """
+    ax = list(range(0, len(arr1.shape)))
+    arr1_FFT = np.fft.rfftn(arr1, axes=ax)
+    arr2_FFT = np.fft.rfftn(arr2, axes=ax)
+    return np.fft.irfftn(arr1_FFT.conjugate() * arr2_FFT, s=arr1.shape, axes=ax).real / np.product(
+        arr1.shape)

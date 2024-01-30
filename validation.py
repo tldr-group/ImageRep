@@ -59,9 +59,9 @@ for j, p in enumerate(projects):
                 testimg = [img[0, :l, :l].cpu() if mode=='2D' else img[0, :l, :l, :l].cpu() for img in img]
                 pred_err_vf, _, tpc_vf_dist, tpc_vf, pred_ir_vf = util.make_error_prediction(testimg, model_error=False, correction=False)
                 compared_shape = [np.array(testimg[0].size())]
-                err_exp_vf, exp_ir_vf = util.stat_analysis_error(img[0], edge_lengths, img_dims, compared_shape, conf=0.95)
-                errs_exp_vf.append(err_exp_vf)
-                errs_ir_vf.append(exp_ir_vf)
+                # err_exp_vf, exp_ir_vf = util.stat_analysis_error(img[0], edge_lengths, img_dims, compared_shape, conf=0.95)
+                # errs_exp_vf.append(err_exp_vf)
+                # errs_ir_vf.append(exp_ir_vf)
                 # print(f'{j} pred error vf = {pred_err_vf*100}')
                 # print(f'{j} experiment error vf = {err_exp_vf}')
                 # print(f'% diff vf = {(err_exp_vf-pred_err_vf*100)/err_exp_vf}')
@@ -101,7 +101,7 @@ for j, p in enumerate(projects):
                 datafin[f'validation_data{mode}'][n]['pred_ir_vf'] = pred_ir_vf
         if errs_ir_vf:
             print(errs_ir_vf)
-            exp_ir_vf = np.mean(errs_ir_vf)
+            # exp_ir_vf = np.mean(errs_ir_vf)
         #     print(f'mean ir = {exp_ir_vf}')
             # datafin[f'validation_data{mode}'] = data_val
             # datafin[f'validation_data{mode}'][n]['sa'] = sa
@@ -115,13 +115,13 @@ for j, p in enumerate(projects):
             
             # datafin[f'validation_data{mode}'][n]['vf'] = vf
             datafin[f'validation_data{mode}'][n]['pred_err_vf'] = pred_err_vf.astype(np.float64)*100
-            datafin[f'validation_data{mode}'][n]['err_exp_vf'] = err_exp_vf.item()
-            datafin[f'validation_data{mode}'][n]['exp_ir_vf'] = exp_ir_vf
+            # datafin[f'validation_data{mode}'][n]['err_exp_vf'] = err_exp_vf.item()
+            # datafin[f'validation_data{mode}'][n]['exp_ir_vf'] = exp_ir_vf
             # datafin[f'validation_data{mode}'][n]['tpc_vf_dist'] = list(tpc_vf_dist)
             # datafin[f'validation_data{mode}'][n]['tpc_vf'] = tpc_vf
             
             print()
-            with open(f"datafin_sg2.json", "w") as fp:
+            with open(f"datafin_sg2_fft.json", "w") as fp:
                 json.dump(datafin, fp) 
             print(f'time for one micro {mode} = {np.round((time.time()-t_before)/60)} minutes')
 
