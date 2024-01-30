@@ -3,9 +3,6 @@ import matplotlib.pyplot as plt
 import tifffile
 import json
 import numpy as np
-import kneed
-from scipy.optimize import curve_fit
-from scipy import stats
 import torch
 import util
 from torch.nn.functional import interpolate
@@ -49,80 +46,38 @@ errs.append(sample_error(img1[:,0], ls, d['vf']))
 berns.append(util.bernouli(d['vf'], ns))
 
 img2 = interpolate(img1[:,:,:ls[-1]//2, :ls[-1]//2], scale_factor=(2,2), mode='nearest')
-# errs.append(sample_error(img2[:,0], ls, d['vf']))
-# ns = util.ns_from_dims(img_dims, 2)
-# berns.append(util.bernouli(d['vf'], ns))
+errs.append(sample_error(img2[:,0], ls, d['vf']))
+ns = util.ns_from_dims(img_dims, 2)
+berns.append(util.bernouli(d['vf'], ns))
 
-# errs.append(d[f'err_exp_vf'][::4])
-# ns = util.ns_from_dims(img_dims, d['fac_vf'])
-# berns.append(util.bernouli(d['vf'], ns))
+errs.append(d[f'err_exp_vf'][::4])
+ns = util.ns_from_dims(img_dims, d['fac_vf'])
+berns.append(util.bernouli(d['vf'], ns))
 
-# fig, axs = plt.subplots(2,2)
-# fig.set_size_inches(8,8)
-# l=150
-# axs[0,0].imshow(img1[0,0, :l, :l].cpu(), cmap='gray')
-# axs[0,1].imshow(img2[0,0, :l, :l].cpu(), cmap='gray')
-# axs[1,0].imshow(img3[0, :150, :150], cmap='gray')
+fig, axs = plt.subplots(2,2)
+fig.set_size_inches(8,8)
+l=150
+axs[0,0].imshow(img1[0,0, :l, :l].cpu(), cmap='gray')
+axs[0,1].imshow(img2[0,0, :l, :l].cpu(), cmap='gray')
+axs[1,0].imshow(img3[0, :150, :150], cmap='gray')
 
-# cs = ['r', 'b', 'g']
-# labs = ['a) random 1x1', 'b) random 2x2', 'c) micrograph 205']
-# for l, err, bern, c in zip(labs, errs, berns, cs):
-#     axs[1,1].scatter(ls, err, c=c, s=8,marker = 'x')
-#     axs[1,1].plot(ls, bern, lw=1, c=c, label=l)
-# axs[1,1].legend()
-# axs[0,0].set_title('a) Random 1x1 (vf = 0.845, $a_2$ = 1)')
-# axs[0,1].set_title('b) Random 2x2 (vf = 0.845, $a_2$ = 2)')
-# axs[1,0].set_title('c) Micro. 205 (vf = 0.845, $a_2$ = 7.526)')
-# axs[1,1].set_title('d) Experimental integral range fit')
-# axs[1,1].set_xlabel('Image length size [pixels]')
-# axs[1,1].set_ylabel('Volume fraction percentage error [%]')
-# axs[1,1].set_ylim(bottom=0)
-# plt.tight_layout()
-# for ax in axs.ravel()[:3]:
-#     ax.set_xticks([])
-#     ax.set_yticks([])
-
-# plt.savefig('fig1.pdf', format='pdf')         
-
-errs = []
-berns = []
-
-large_size_3d = int(ls[-1]**(2/3))
-img7 = torch.rand((1000, 1, *[large_size_3d]*3), device = torch.device('cuda:0')).float()
-img7[img7<=d['vf']] = 0
-img7[img7>d['vf']] = 1
-img7 = 1 - img7
-
-img8 = interpolate(img7[:,:, :large_size_3d//2, :large_size_3d//2, :large_size_3d//2], scale_factor=2, mode='nearest')
-img_dims_3d = [np.array([int(i[0]**(2/3))]*3) for i in img_dims]
-ns_8 = util.ns_from_dims(img_dims_3d, 2)
-errs.append(sample_error(img8[:,0], ls, d['vf']))  
-berns.append(util.bernouli(d['vf'], ns_8))
-
-errs.append(sample_error(img2[:,0], ls, d['vf']))  # 2D 2x2 (a_2 = 2)
-ns_2 = util.ns_from_dims(img_dims, 2)
-berns.append(util.bernouli(d['vf'], ns_2))
-
-img5 = torch.rand((1000, 1, ls[-1]*ls[-1]), device = torch.device('cuda:0')).float()
-img5[img5<=d['vf']] = 0
-img5[img5>d['vf']] = 1
-img5 = 1 - img5
-
-img6 = interpolate(img5[:,:, :ls[-1]*ls[-1]//2], scale_factor=2, mode='nearest')
-img_dims_1d = [np.array([np.prod(i)]) for i in img_dims]
-ns_6 = util.ns_from_dims(img_dims_1d, 2)
-errs.append(sample_error(img6[:,0], ls, d['vf']))  # 1D 1x2 (a_1 = 2)
-berns.append(util.bernouli(d['vf'], ns_6))
-
-
-
-fig, axs = plt.subplots(1,1)
 cs = ['r', 'b', 'g']
-labs = ['3D random 2x2x2', '2D random 2x2', '1D random 1x2']
+labs = ['a) random 1x1', 'b) random 2x2', 'c) micrograph 205']
 for l, err, bern, c in zip(labs, errs, berns, cs):
-    plt.scatter(ls*ls, err, c=c, s=8, marker = 'x', label=f'Experimental {l}')
-    plt.plot(ls*ls, bern, lw=1, c=c, label=f'Equation {l}')
-plt.legend()
-plt.xlabel('Number of voxels/pixels')
-plt.ylabel('VF error (linear in std)')
-plt.show()
+    axs[1,1].scatter(ls, err, c=c, s=8,marker = 'x')
+    axs[1,1].plot(ls, bern, lw=1, c=c, label=l)
+axs[1,1].legend()
+axs[0,0].set_title('a) Random 1x1 (vf = 0.845, $a_2$ = 1)')
+axs[0,1].set_title('b) Random 2x2 (vf = 0.845, $a_2$ = 2)')
+axs[1,0].set_title('c) Micro. 205 (vf = 0.845, $a_2$ = 7.526)')
+axs[1,1].set_title('d) Experimental integral range fit')
+axs[1,1].set_xlabel('Image length size [pixels]')
+axs[1,1].set_ylabel('Volume fraction percentage error [%]')
+axs[1,1].set_ylim(bottom=0)
+plt.tight_layout()
+for ax in axs.ravel()[:3]:
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+plt.savefig('fig1.pdf', format='pdf')         
+

@@ -147,31 +147,46 @@ def conjunction_img_for_tpc(img, x, y, z, threed):
                 con_img = img[..., :-x, :-y] * img[..., x:, y:]
     return con_img
 
+# def tpc_radial_fft(img_list, mx=100, threed=False):
+#     """Calculates the radial tpc using fft"""
+#     tpcfin_list = []
+#     for i in range(len(img_list)):  
+#         img = img_list[i]
+#         tpc_radial = p2_crosscorrelation(img, img)
+#         if threed:
+#             tpc_radial = tpc_radial[:mx, :mx, :mx]
+#         else:   
+#             tpc_radial = tpc_radial[:mx, :mx]
+#         tpcfin_list.append(np.array(tpc_radial, dtype=np.float64))
+#     return tpcfin_list
 
-def tpc_radial(img_list, mx=100, threed=False):
-    mxs = [mx] * 3 if threed else [mx] * 2
+
+def tpc_radial(img_list, mx=100, w_fft=True, threed=False):
     tpcfin_list = []
     for i in range(len(img_list)):
         img = img_list[i]
-        img = torch.tensor(img, device=torch.device("cuda:0")).float()
+        if w_fft:
+            tpc_radial = p2_crosscorrelation(img, img)
+        else:
+            img = torch.tensor(img, device=torch.device("cuda:0")).float()
         tpc = {i:[0,0] for i in range(mx+1)}
-        for dim_along in range(0, 3 if threed else 1):
-            mxs_cur = mxs.copy()
-            mxs_cur[dim_along] = 1 if threed else mx
-            for x in range(0, mxs_cur[0]):
-                for y in range(0, mxs_cur[1]):
-                    for z in range(0, mxs_cur[2] if threed else 1):
-                        d = (x**2 + y**2 + z**2) ** 0.5
-                        if d < mx:
-                            remainder = d%1
+        for x in range(0, mx):
+            for y in range(0, mx):
+                for z in range(0, mx if threed else 1):
+                    d = (x**2 + y**2 + z**2) ** 0.5
+                    if d < mx:
+                        remainder = d%1
+                        if w_fft:
+                            cur_tpc = tpc_radial[x,y,z] if threed else tpc_radial[x,y]
+                        else:
                             con_img = conjunction_img_for_tpc(img, x, y, z, threed)
-                            con_img_tpc = torch.mean(con_img).cpu()
-                            weight_floor = 1-remainder
-                            weight_ceil = remainder
-                            tpc[int(d)][0] += weight_floor 
-                            tpc[int(d)][1] += con_img_tpc*weight_floor
-                            tpc[int(d)+1][0] += weight_ceil 
-                            tpc[int(d)+1][1] += con_img_tpc*weight_ceil
+                            cur_tpc = torch.mean(con_img).cpu()
+                        weight_floor = 1-remainder
+                        weight_ceil = remainder
+                        tpc[int(d)][0] += weight_floor 
+                        tpc[int(d)][1] += cur_tpc*weight_floor
+                        tpc[int(d)+1][0] += weight_ceil 
+                        tpc[int(d)+1][1] += cur_tpc*weight_ceil
     
         tpcfin = [tpc[key][1]/tpc[key][0] for key in tpc.keys()]
         tpcfin = np.array(tpcfin, dtype=np.float64)
@@ -336,6 +351,21 @@ def mape_linear_objective(params, y_pred, y_true):
 def linear_fit(x, m, b):
     return m * x + b 
 
+# def tpc_to_ir_from_fft(tpc_list, threed=False):
+#     pred_irs = []
+#     for tpc in tpc_list:
+#         if threed:
+#             vf = tpc[0,0,0]
+#             vf_squared = np.mean([np.mean(tpc[-10:, ...]),np.mean(tpc[:, -10:, :]), np.mean(tpc[..., -10:])])
+#             omega_n = 1
+#         else:
+#             vf = tpc[0,0]
+#             vf_squared = np.mean([np.mean(tpc[-10:, :]),np.mean(tpc[:, -10:])])
+#             omega_n = 1
+#         pred_irs.append(omega_n/(vf-vf_squared)*np.sum(tpc - vf_squared))
+#     print(f'pred irs = {pred_irs}')
+#     print(f'sum of pred irs = {np.sum(pred_irs)}')
+#     return np.sum(pred_irs)  
 
 def tpc_to_ir(tpc_dist, tpc_list, threed=False):
     pred_irs = []
@@ -343,8 +373,8 @@ def tpc_to_ir(tpc_dist, tpc_list, threed=False):
         tpc, tpc_dist = np.array(tpc), np.array(tpc_dist)
         vf = tpc[0]
         print(f'vf squared = {vf**2}')
-        print(f'end of tpc = {np.mean(tpc[-10:])}')
-        vf_squared = (vf**2 + np.mean(tpc[-10:]))/2  # mean of vf**2 and the end of the tpc because the volume fraction is not exact.
+        print(f'end of tpc = {np.mean(tpc[-15:])}')
+        vf_squared = np.mean(tpc[-15:])  # mean of vf**2 and the end of the tpc because the volume fraction is not exact.
         omega_n = 1
         pred_irs.append(omega_n/(vf-vf_squared)*np.trapz(tpc - vf_squared, x=tpc_dist))
     print(f'pred irs = {pred_irs}')

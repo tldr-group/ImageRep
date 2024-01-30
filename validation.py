@@ -8,7 +8,7 @@ import time
 from slicegan import networks
 
 
-with open("datafin_new_radial_correct_vf.json", "r") as fp:
+with open("datafin_sg2_fft.json", "r") as fp:
     datafin = json.load(fp)
 # Dataset path and list of subfolders
 with open("micro_names.json", "r") as fp:
@@ -33,21 +33,22 @@ projects = projects[:num_projects]
 for j, p in enumerate(projects):
     for mode in modes:
         t_before = time.time()
-        errs_exp_vf, errs_ir_vf = [], []
-        # dims_i = [0] if mode == '3D' else [0,1,2]  # for 2D and 3D comparison
-        dims_i = [0] 
+        pred_err_vfs, pred_ir_vfs = [], []
+        dims_i = [0] if mode == '3D' else [0,1,2]  # for 2D and 3D comparison
+        # dims_i = [0, 1, 2] 
         for dim_i in dims_i:
             edge_lengths = edge_lengths_list[1] if mode=='3D' else edge_lengths_list[0]
             img_dims = img_dims_3d if mode == '3D' else img_dims_2d
             print(f'{j}/{len(projects)} done')
             
             lf = 16 if mode=='3D' else 50
-            img = util.generate_image(netG, p, dim_i, lf=lf, threed=mode=='3D')
+            img = util.generate_image(netG, p, dim_i, lf=lf, threed=mode=='3D', reps=1)
             print(mode)
             print(img.size())
             if img.any():
                 # testing single image of edge length l
-                l = 1000 if mode=='2D' else 400
+                # print(img.size())
+                l = 1500 if mode=='2D' else 450
                 n = p.split('/')[-1]
                 # make the sa images
                 print(n)
@@ -60,8 +61,8 @@ for j, p in enumerate(projects):
                 pred_err_vf, _, tpc_vf_dist, tpc_vf, pred_ir_vf = util.make_error_prediction(testimg, model_error=False, correction=False)
                 compared_shape = [np.array(testimg[0].size())]
                 # err_exp_vf, exp_ir_vf = util.stat_analysis_error(img[0], edge_lengths, img_dims, compared_shape, conf=0.95)
-                # errs_exp_vf.append(err_exp_vf)
-                # errs_ir_vf.append(exp_ir_vf)
+                pred_err_vfs.append(pred_err_vf)
+                pred_ir_vfs.append(pred_ir_vf)
                 # print(f'{j} pred error vf = {pred_err_vf*100}')
                 # print(f'{j} experiment error vf = {err_exp_vf}')
                 # print(f'% diff vf = {(err_exp_vf-pred_err_vf*100)/err_exp_vf}')
@@ -98,9 +99,9 @@ for j, p in enumerate(projects):
                             # 'tpc_sa_dist':list(tpc_sa_dist),
                             # 'tpc_sa':tpc_sa
                             # }
-                datafin[f'validation_data{mode}'][n]['pred_ir_vf'] = pred_ir_vf
-        if errs_ir_vf:
-            print(errs_ir_vf)
+                
+        if pred_ir_vfs:
+            # print(errs_ir_vf)
             # exp_ir_vf = np.mean(errs_ir_vf)
         #     print(f'mean ir = {exp_ir_vf}')
             # datafin[f'validation_data{mode}'] = data_val
@@ -114,7 +115,16 @@ for j, p in enumerate(projects):
             # datafin[f'validation_data{mode}'][n]['tpc_sa'] = tpc_sa
             
             # datafin[f'validation_data{mode}'][n]['vf'] = vf
-            datafin[f'validation_data{mode}'][n]['pred_err_vf'] = pred_err_vf.astype(np.float64)*100
+            print(pred_ir_vfs)
+            print(f'mean ir = {np.mean(pred_ir_vfs)}')
+            datafin[f'validation_data{mode}'][n]['pred_ir_vf'] = np.mean(pred_ir_vfs)
+            datafin[f'validation_data{mode}'][n]['pred_ir_vf'] = np.mean(pred_ir_vfs)
+            if mode=='3D':
+                datafin[f'validation_data{mode}'][n]['dim_variation'] = 0
+            else:
+                datafin[f'validation_data{mode}'][n]['dim_variation'] = np.var(pred_ir_vfs)/np.mean(pred_ir_vfs)
+                print(f'dim variation = {np.var(pred_ir_vfs)/np.mean(pred_ir_vfs)}')
+            datafin[f'validation_data{mode}'][n]['pred_err_vf'] = np.mean(pred_err_vfs).astype(np.float64)*100
             # datafin[f'validation_data{mode}'][n]['err_exp_vf'] = err_exp_vf.item()
             # datafin[f'validation_data{mode}'][n]['exp_ir_vf'] = exp_ir_vf
             # datafin[f'validation_data{mode}'][n]['tpc_vf_dist'] = list(tpc_vf_dist)
