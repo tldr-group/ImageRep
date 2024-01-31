@@ -8,7 +8,31 @@ from scipy.optimize import minimize
 from scipy.stats import norm
 from matplotlib import pyplot as plt
 import time
+from scipy import ndimage
 
+def load_generator(Project_path):
+    img_size, img_channels, scale_factor = 64, 1, 1
+    z_channels = 16
+    lays = 6
+    dk, gk = [4] * lays, [4] * lays
+    ds, gs = [2] * lays, [2] * lays
+    df, gf = [img_channels, 64, 128, 256, 512, 1], [
+        z_channels,
+        512,
+        256,
+        128,
+        64,
+        img_channels,
+    ]
+    dp, gp = [1, 1, 1, 1, 0], [2, 2, 2, 2, 3]
+
+    ## Create Networks
+    netD, netG = slicegan.networks.slicegan_nets(
+        Project_path, False, "grayscale", dk, ds, df, dp, gk, gs, gf, gp
+    )
+    netG = netG()
+    netG = netG.cuda()
+    return netG
 
 def generate_image(netG, Project_path, slice_dim, lf=50, threed=False, reps=50):
     try:
@@ -17,21 +41,22 @@ def generate_image(netG, Project_path, slice_dim, lf=50, threed=False, reps=50):
         return torch.tensor(0)
     netG.eval()
     imgs = []
-    z_channels = 32
-    plot_profiles = []
-    img_size = [450, 450, 450] if threed else [64, 1500, 1500]
+    # z_channels = 16
+    # plot_profiles = []
+    # img_size = [450, 450, 450] if threed else [64, 1500, 1500]
     for i in range(reps):
-        img_step_size = 64
-        lfs = np.array([(l-3) // img_step_size + 7 for l in img_size])
-        noise = torch.randn(1, z_channels, *lfs)
-        noise = torch.permute(noise, (0,1) + tuple(((torch.arange(3) - slice_dim) % 3).numpy() + 2)) 
+        noise = torch.randn(1, 16, lf if threed else 4, lf, lf)
+        noise.transpose_(2, slice_dim+2)
         noise = noise.cuda()
         img = netG(noise, threed, slice_dim)
         img = slicegan.util.post_proc(img)
-        imgs.append(img.cpu())
-        # time1 = time.time()
-        # fft_calc = p2_crosscorrelation(imgs[0], imgs[0])
-        # print(f'fft calc time = {time.time() - time1}')
+        img.transpose_(0, slice_dim)
+        if not threed:
+            img = angular_img(img)
+            imgs.append(img[0])
+        else:
+            imgs.append(img.cpu())
+        
     # plot_profiles = np.stack(plot_profiles)
     # profile_stds = np.std(plot_profiles, axis=0)
     # print(f'mean stds = {np.mean(profile_stds)}, std stds = {np.std(profile_stds)}')
@@ -44,6 +69,20 @@ def generate_image(netG, Project_path, slice_dim, lf=50, threed=False, reps=50):
     # plt.show()
     img = torch.stack(imgs, 0)
     return img.float()
+
+def angular_img(img):
+    base_len, l = img.shape[0:2]
+    img = img.cpu().numpy()
+    plt.imshow(img[0, :100, :100])
+    plt.show()
+    img_rot = ndimage.rotate(img, base_len/l*90, axes=(1, 0), reshape=False)
+    for i in range(img_rot.shape[0]):
+        print(f'slice {i}')
+        plt.imshow(img_rot[i, :100, :100])
+        plt.show()
+        plt.imshow(img_rot[i, -100:, -100:])
+        plt.show()
+    return img_rot
 
 
 def make_sas(img, batch=True):  # TODO check this works

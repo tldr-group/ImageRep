@@ -15,7 +15,7 @@ import math
 # with open("data2d.json", "r") as fp:
 #     data2d = json.load(fp)['validation_data']
 
-with open("datafin_sg2_fft.json", "r") as fp:
+with open("datafin_sg1_fft.json", "r") as fp:
     datafull = json.load(fp)
 
 def objective_function(beta, y_true, y_pred):
@@ -24,9 +24,9 @@ def objective_function(beta, y_true, y_pred):
 
 # Slope and intercept for tpc to stat.analysis error fit, that have 0 mean: 
 slope_and_intercept = {'2D':
-                       {'Volume fraction': (5, 0), 'Surface area': (1.6, 0)},
+                       {'Volume fraction': (4.51, 0), 'Surface area': (1.6, 0)},
                        '3D':
-                       {'Volume fraction': (8, 0.08), 'Surface area': (2*1.6, 0)}
+                       {'Volume fraction': (7.5, 0.08), 'Surface area': (2*1.6, 0)}
 }
 
 periodic_micros = np.load('periodicity_list.npy')
@@ -43,7 +43,7 @@ dims = ['2D', '3D']
 for i, data in enumerate(dims):
     # data.pop('microstructure054')
     data_dim = datafull[f'validation_data{data}']
-    err_exp_vf = np.array([data_dim[n]['err_exp_vf'] for n in data_dim.keys()])
+    err_exp_vf = np.array([data_dim[n]['exp_err_vf'] for n in data_dim.keys()])
     err_exp_sa = np.array([data_dim[n]['err_exp_sa'] for n in data_dim.keys()])
     pred_err_vf = np.array([data_dim[n]['pred_err_vf'] for n in data_dim.keys()])
     pred_err_sa = np.array([data_dim[n]['pred_err_sa'] for n in data_dim.keys()])
@@ -65,7 +65,7 @@ for i, data in enumerate(dims):
 
         
         ax = axs[i, j]
-        end_idx = 78
+        end_idx = 6
         res[0], res[1] = res[0][:end_idx], res[1][:end_idx]
         colors = colors[:end_idx]
     
