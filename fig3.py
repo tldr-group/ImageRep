@@ -24,9 +24,9 @@ def objective_function(beta, y_true, y_pred):
 
 # Slope and intercept for tpc to stat.analysis error fit, that have 0 mean: 
 slope_and_intercept = {'2D':
-                       {'Volume fraction': (4.51, 0), 'Surface area': (1.6, 0)},
+                       {'Volume fraction': (math.pi, 0), 'Surface area': (1.6, 0)},
                        '3D':
-                       {'Volume fraction': (7.5, 0.08), 'Surface area': (2*1.6, 0)}
+                       {'Volume fraction': (math.pi**2, 0), 'Surface area': (2*1.6, 0)}
 }
 
 periodic_micros = np.load('periodicity_list.npy')
@@ -43,9 +43,9 @@ dims = ['2D', '3D']
 for i, data in enumerate(dims):
     # data.pop('microstructure054')
     data_dim = datafull[f'validation_data{data}']
-    err_exp_vf = np.array([data_dim[n]['exp_err_vf'] for n in data_dim.keys()])
+    err_exp_vf = np.array([data_dim[n]['exp_ir_vf'] for n in data_dim.keys()])
     err_exp_sa = np.array([data_dim[n]['err_exp_sa'] for n in data_dim.keys()])
-    pred_err_vf = np.array([data_dim[n]['pred_err_vf'] for n in data_dim.keys()])
+    pred_err_vf = np.array([data_dim[n]['pred_ir_vf'] for n in data_dim.keys()])
     pred_err_sa = np.array([data_dim[n]['pred_err_sa'] for n in data_dim.keys()])
     data_2d = datafull[f'validation_data2D']
     dim_var = np.array([data_2d[n]['dim_variation'] if 'dim_variation' in data_2d[n] else 0 for n in data_2d.keys()])
@@ -65,7 +65,7 @@ for i, data in enumerate(dims):
 
         
         ax = axs[i, j]
-        end_idx = 6
+        end_idx = 78
         res[0], res[1] = res[0][:end_idx], res[1][:end_idx]
         colors = colors[:end_idx]
     
@@ -80,7 +80,10 @@ for i, data in enumerate(dims):
         slope, intercept = slope_and_intercept[dims[i]][met]
         y_data = slope*res[1] + intercept
         
-        without_last_outlier = np.logical_and(y_data < 300, res[0] < 300)
+        if data == '3D':
+            y_data = y_data/np.sqrt(y_data)
+
+        without_last_outlier = np.logical_and(y_data < 10000, res[0] < 10000)
         ax.scatter(res[0][without_last_outlier], y_data[without_last_outlier], s=7, label='Predictions', c=colors[without_last_outlier])
         
         # print(f'slope = {slope} and intercept = {intercept}')

@@ -415,7 +415,12 @@ def tpc_to_ir(tpc_dist, tpc_list, threed=False):
         print(f'end of tpc = {np.mean(tpc[-15:])}')
         vf_squared = np.mean(tpc[-15:])  # mean of vf**2 and the end of the tpc because the volume fraction is not exact.
         omega_n = 1
-        pred_irs.append(omega_n/(vf-vf_squared)*np.trapz(tpc - vf_squared, x=tpc_dist))
+        if threed:
+            multiplyer = tpc_dist + 1
+            pred_ir = omega_n/(vf-vf_squared)*np.trapz(multiplyer*(tpc - vf_squared), x=tpc_dist)
+            pred_irs.append(pred_ir)
+        else:  
+            pred_irs.append(omega_n/(vf-vf_squared)*np.trapz(tpc - vf_squared, x=tpc_dist))
     print(f'pred irs = {pred_irs}')
     print(f'sum of pred irs = {np.sum(pred_irs)}')
     return np.sum(pred_irs)  
