@@ -45,14 +45,14 @@ def generate_image(netG, Project_path, slice_dim, lf=50, threed=False, reps=50):
     # plot_profiles = []
     # img_size = [450, 450, 450] if threed else [64, 1500, 1500]
     for i in range(reps):
-        noise = torch.randn(1, 16, lf if threed else 4, lf, lf)
+        noise = torch.randn(1, 16, lf if threed else 4, lf+30, lf+30)
         noise.transpose_(2, slice_dim+2)
         noise = noise.cuda()
         img = netG(noise, threed, slice_dim)
         img = slicegan.util.post_proc(img)
         img.transpose_(0, slice_dim)
         if not threed:
-            img = angular_img(img)
+            # img = angular_img(img)
             imgs.append(img[0])
         else:
             imgs.append(img.cpu())
@@ -412,15 +412,24 @@ def tpc_to_ir(tpc_dist, tpc_list, threed=False):
         tpc, tpc_dist = np.array(tpc), np.array(tpc_dist)
         vf = tpc[0]
         print(f'vf squared = {vf**2}')
-        print(f'end of tpc = {np.mean(tpc[-15:])}')
-        vf_squared = np.mean(tpc[-15:])  # mean of vf**2 and the end of the tpc because the volume fraction is not exact.
-        omega_n = 1
+        print(f'end of tpc = {np.mean(tpc[-10:])}')
+        vf_squared = np.mean(tpc[-10:])  # mean of vf**2 and the end of the tpc because the volume fraction is not exact.
+        omega_n = 2*np.pi
+        vf_squared = (vf_squared + vf**2)/2
+        multiplyer  = tpc_dist + 1
         if threed:
-            multiplyer = tpc_dist + 1
+            omega_n = 4*np.pi
+            multiplyer = multiplyer**2
+        pred_ir = omega_n/(vf-vf_squared)*np.trapz(multiplyer*(tpc - vf_squared), x=tpc_dist)
+        if pred_ir < 1:
+            print(f'pred ir = {pred_ir} CHANGING TPC TO POSITIVE VALUES')
+            negatives = np.where(tpc - vf_squared < 0)
+            tpc[negatives] += (vf_squared - tpc[negatives])/2
             pred_ir = omega_n/(vf-vf_squared)*np.trapz(multiplyer*(tpc - vf_squared), x=tpc_dist)
-            pred_irs.append(pred_ir)
-        else:  
-            pred_irs.append(omega_n/(vf-vf_squared)*np.trapz(tpc - vf_squared, x=tpc_dist))
+        pred_ir = pred_ir**(1/3) if threed else pred_ir**(1/2)
+        pred_irs.append(pred_ir)
+        # else:  
+            # pred_irs.append(omega_n/(vf-vf_squared)*np.trapz(tpc - vf_squared, x=tpc_dist))
     print(f'pred irs = {pred_irs}')
     print(f'sum of pred irs = {np.sum(pred_irs)}')
     return np.sum(pred_irs)  

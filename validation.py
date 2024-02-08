@@ -20,11 +20,12 @@ imgs = []
 
 modes = ['3D']
 # Edge lengths to test
-edge_lengths_list = [torch.arange(300, 800, 20), torch.arange(120, 400, 20)]
+edge_lengths_exp = [torch.arange(500, 1000, 20), torch.arange(120, 400, 20)]
+edge_lengths_test = [torch.arange(300, 2000, 20), torch.arange(200, 500, 20)]
 # Corresponding dims
 
-img_dims_2d = [np.array((l, l)) for l in edge_lengths_list[0]]
-img_dims_3d = [np.array((l, l, l)) for l in edge_lengths_list[1]]
+img_dims_2d = [np.array((l, l)) for l in edge_lengths_exp[0]]
+img_dims_3d = [np.array((l, l, l)) for l in edge_lengths_exp[1]]
 
 num_projects = len(projects)
 projects = projects[:num_projects]
@@ -35,10 +36,12 @@ for j, p in enumerate(projects):
         t_before = time.time()
         pred_err_vfs, pred_ir_vfs = [], []
         exp_err_vfs, exp_ir_vfs = [], []
-        dims_i = [0] if mode == '3D' else [0,1,2]  # for 2D and 3D comparison
-        # dims_i = [0, 1, 2] 
+        # pred_err_sas, pred_ir_sas = [], []
+        # exp_err_sas, exp_ir_sas = [], []
+        # dims_i = [0] if mode == '3D' else [0,1,2]  # for 2D and 3D comparison
+        dims_i = [0] 
         for dim_i in dims_i:
-            edge_lengths = edge_lengths_list[1] if mode=='3D' else edge_lengths_list[0]
+            edge_lengths = edge_lengths_exp[1] if mode=='3D' else edge_lengths_exp[0]
             img_dims = img_dims_3d if mode == '3D' else img_dims_2d
             print(f'{j}/{len(projects)} done')
             
@@ -48,28 +51,27 @@ for j, p in enumerate(projects):
             print(img.size())
             if img.any():
                 # testing single image of edge length l
-                # print(img.size())
-                l = 1500 if mode=='2D' else 450
+                print(img.size())
+                l = img.size()[-1] if mode=='2D' else 450
                 n = p.split('/')[-1]
                 # make the sa images
                 print(n)
                 vf = torch.mean(img).cpu().item()
                 img = [img]  # this way it will work together with the surface areas
-                # print(f'{j} vf = {vf}')
                 
                 print(f'{j} vf = {vf}')
                 testimg = [img[0, :l, :l].cpu() if mode=='2D' else img[0, :l, :l, :l].cpu() for img in img]
                 pred_err_vf, _, tpc_vf_dist, tpc_vf, pred_ir_vf = util.make_error_prediction(testimg, model_error=False, correction=False)
                 compared_shape = [np.array(testimg[0].size())]
-                # exp_err_vf, exp_ir_vf = util.stat_analysis_error(img[0], edge_lengths, img_dims, compared_shape, conf=0.95)
+                exp_err_vf, exp_ir_vf = util.stat_analysis_error(img[0], edge_lengths, img_dims, compared_shape, conf=0.95)
                 pred_err_vfs.append(pred_err_vf)
                 pred_ir_vfs.append(pred_ir_vf)
-                # exp_err_vfs.append(exp_err_vf)
-                # exp_ir_vfs.append(exp_ir_vf)
+                exp_err_vfs.append(exp_err_vf)
+                exp_ir_vfs.append(exp_ir_vf)
                 # print(f'{j} pred error vf = {pred_err_vf*100}')
                 # print(f'{j} experiment error vf = {err_exp_vf}')
                 # print(f'% diff vf = {(err_exp_vf-pred_err_vf*100)/err_exp_vf}')
-                print()
+                # print()
                 
                 # print(f'{j} starting to sa')
                 # sa_images = util.make_sas(img[0])
@@ -79,11 +81,16 @@ for j, p in enumerate(projects):
                 # print(f'{j} sa = {sa}')
                 # sa_testimg = [sa_img[0, :l, :l].cpu() if mode=='2D' else sa_img[0, :l, :l, :l].cpu() for sa_img in sa_images]
                 # pred_err_sa, _, tpc_sa_dist, tpc_sa, pred_ir_sa = util.make_error_prediction(sa_testimg, sa, model_error=False, correction=False)
-                # # compared_shape = [np.array(sa_testimg[0].size())]
-                # # err_exp_sa, exp_ir_sa = util.stat_analysis_error(util.sa_map_from_sas(sa_images), edge_lengths, img_dims, compared_shape, sa, conf=0.95)
+                # compared_shape = [np.array(sa_testimg[0].size())]
+                # err_exp_sa, exp_ir_sa = util.stat_analysis_error(util.sa_map_from_sas(sa_images), edge_lengths, img_dims, compared_shape, conf=0.95)
                 # print(f'{j} pred error = {pred_err_sa*100}')
-                # # print(f'{j} experiment error = {err_exp_sa}')
-                # # print(f'% diff = {(err_exp_sa-pred_err_sa*100)/err_exp_sa}')
+                # print(f'{j} experiment error = {err_exp_sa}')
+                # print(f'% diff = {(err_exp_sa-pred_err_sa*100)/err_exp_sa}')
+
+                # pred_err_sas.append(pred_err_sa)
+                # pred_ir_sas.append(pred_ir_sa)
+                # exp_err_sas.append(err_exp_sa)
+                # exp_ir_sas.append(exp_ir_sa)
 
                 # print(f'{j} starting real image stats')
                 # Do stats on the full generated image
@@ -117,7 +124,7 @@ for j, p in enumerate(projects):
             # datafin[f'validation_data{mode}'][n]['tpc_sa_dist'] = list(tpc_sa_dist)
             # datafin[f'validation_data{mode}'][n]['tpc_sa'] = tpc_sa
             
-            # datafin[f'validation_data{mode}'][n]['vf'] = vf
+            datafin[f'validation_data{mode}'][n]['vf'] = vf
             print(pred_ir_vfs)
             print(f'mean ir = {np.mean(pred_ir_vfs)}')
             datafin[f'validation_data{mode}'][n]['pred_ir_vf'] = np.mean(pred_ir_vfs)
@@ -128,16 +135,38 @@ for j, p in enumerate(projects):
                 datafin[f'validation_data{mode}'][n]['dim_variation'] = np.var(pred_ir_vfs)/np.mean(pred_ir_vfs)
                 print(f'dim variation = {np.var(pred_ir_vfs)/np.mean(pred_ir_vfs)}')
             datafin[f'validation_data{mode}'][n]['pred_err_vf'] = np.mean(pred_err_vfs).astype(np.float64)*100
-            # print(exp_ir_vfs)
-            # print(f'mean ir = {np.mean(exp_ir_vfs)}')
-            # datafin[f'validation_data{mode}'][n]['exp_ir_vf'] = np.mean(exp_ir_vfs)
-            # datafin[f'validation_data{mode}'][n]['exp_ir_vf'] = np.mean(exp_ir_vfs)
+
+            # print(pred_ir_sas)
+            # print(f'mean ir = {np.mean(pred_ir_sas)}')
+            # datafin[f'validation_data{mode}'][n]['pred_ir_sa'] = np.mean(pred_ir_sas)
+            # if mode=='3D':
+            #     datafin[f'validation_data{mode}'][n]['dim_variation'] = 0
+            # else:
+            #     datafin[f'validation_data{mode}'][n]['dim_variation'] = np.var(pred_ir_sas)/np.mean(pred_ir_sas)
+            #     print(f'dim variation = {np.var(pred_ir_sas)/np.mean(pred_ir_sas)}')
+            # datafin[f'validation_data{mode}'][n]['pred_err_sa'] = np.mean(pred_err_sas).astype(np.float64)*100
+
+            print(exp_ir_vfs)
+            print(f'mean ir = {np.mean(exp_ir_vfs)}')
+            datafin[f'validation_data{mode}'][n]['exp_ir_vf'] = np.mean(exp_ir_vfs)
+            datafin[f'validation_data{mode}'][n]['exp_ir_vf'] = np.mean(exp_ir_vfs)
+            if mode=='3D':
+                datafin[f'validation_data{mode}'][n]['exp_dim_variation'] = 0
+            else:
+                datafin[f'validation_data{mode}'][n]['exp_dim_variation'] = np.var(exp_ir_vfs)/np.mean(exp_ir_vfs)
+                print(f'dim variation = {np.var(exp_ir_vfs)/np.mean(exp_ir_vfs)}')
+            datafin[f'validation_data{mode}'][n]['exp_err_vf'] = np.mean(exp_err_vfs).astype(np.float64)
+
+            # print(exp_ir_sas)
+            # print(f'mean ir = {np.mean(exp_ir_sas)}')
+            # datafin[f'validation_data{mode}'][n]['exp_ir_sa'] = np.mean(exp_ir_sas)
             # if mode=='3D':
             #     datafin[f'validation_data{mode}'][n]['exp_dim_variation'] = 0
             # else:
-            #     datafin[f'validation_data{mode}'][n]['exp_dim_variation'] = np.var(exp_ir_vfs)/np.mean(exp_ir_vfs)
-            #     print(f'dim variation = {np.var(exp_ir_vfs)/np.mean(exp_ir_vfs)}')
-            # datafin[f'validation_data{mode}'][n]['exp_err_vf'] = np.mean(exp_err_vfs).astype(np.float64)
+            #     datafin[f'validation_data{mode}'][n]['exp_dim_variation'] = np.var(exp_ir_sas)/np.mean(exp_ir_sas)
+            #     print(f'dim variation = {np.var(exp_ir_sas)/np.mean(exp_ir_sas)}')
+            # datafin[f'validation_data{mode}'][n]['exp_err_sa'] = np.mean(exp_err_sas).astype(np.float64)
+
             # datafin[f'validation_data{mode}'][n]['err_exp_vf'] = err_exp_vf.item()
             # datafin[f'validation_data{mode}'][n]['exp_ir_vf'] = exp_ir_vf
             # datafin[f'validation_data{mode}'][n]['tpc_vf_dist'] = list(tpc_vf_dist)
