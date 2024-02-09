@@ -1,10 +1,8 @@
 import numpy as np
 import torch
 import slicegan
-from scipy.optimize import curve_fit
-from scipy import stats
 from scipy.optimize import minimize
-from scipy.stats import norm
+from scipy import stats
 from matplotlib import pyplot as plt
 import time
 from scipy import ndimage
@@ -204,7 +202,7 @@ def tpc_radial(img_list, mx=100, w_fft=True, threed=False):
     for i in range(len(img_list)):
         img = img_list[i]
         if w_fft:
-            tpc_radial = p2_crosscorrelation(img, img)
+            tpc_radial = two_point_correlation(img, desired_length=mx, threed=threed)
         else:
             img = torch.tensor(img, device=torch.device("cuda:0")).float()
         tpc = {i:[0,0] for i in range(mx+1)}
@@ -588,5 +586,3 @@ def two_point_correlation(img, desired_length=100, periodic=False, threed=False)
         return normaliser*tpc_desired
     else:
         return tpc_desired  
-    
-print(two_point_correlation(np.array([[1, 0, 1], [0, 1, 1], [1, 0, 1]]), 3, periodic=False, threed=False))

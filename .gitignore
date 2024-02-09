@@ -8,5 +8,6 @@ fig2 copy.py
 *tif
 *info
 *mat
-*json
-*pdf
+*.json
+*.pdf
+*.png
