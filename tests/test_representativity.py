@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import util 
+from representativity import util 
 # from tests.utils import *
 # import numpy as np
 # import matplotlib.pyplot as plt
@@ -8,4 +8,4 @@ import util
 #  Testing the main solver
 
 
-def test_solver_on_uniform_block():
+# def test_solver_on_uniform_block():

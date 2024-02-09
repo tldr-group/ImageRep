@@ -2,7 +2,6 @@ import numpy as np
 import torch
 import slicegan
 from scipy.optimize import curve_fit
-import kneed
 from scipy import stats
 from scipy.optimize import minimize
 from scipy.stats import norm
@@ -433,16 +432,6 @@ def tpc_to_ir(tpc_dist, tpc_list, threed=False):
     print(f'pred irs = {pred_irs}')
     print(f'sum of pred irs = {np.sum(pred_irs)}')
     return np.sum(pred_irs)  
-
-
-def old_tpc_to_ir(x, y):
-    bounds = ((-np.inf, 0.01, -np.inf), (np.inf, np.inf, np.inf))
-    coefs_poly3d, _ = curve_fit(tpc_fit, x, y, bounds=bounds)
-    y_data = tpc_fit(x, *coefs_poly3d)
-    kneedle = kneed.KneeLocator(
-        x, y_data, S=1.0, curve="convex", direction="decreasing"
-    )
-    return kneedle.knee
 
 
 def make_error_prediction(images, conf=0.95, err_targ=0.05,  model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):

@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import json
 import numpy as np
 import time
-from slicegan import networks
 
 
 with open("datafin_sg1_fft.json", "r") as fp:
