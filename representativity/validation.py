@@ -57,7 +57,7 @@ for j, p in enumerate(projects):
                 # make the sa images.
                 print(n)
                 vf = torch.mean(img).cpu().item()
-                img = [img]  # this way it will work together with the surface areas
+                img = [img]  # this way it will work together with the surface areas.
                 
                 print(f'{j} vf = {vf}')
                 testimg = [img[0, :l, :l].cpu() if mode=='2D' else img[0, :l, :l, :l].cpu() for img in img]
