@@ -6,7 +6,7 @@ from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 
 
-with open("data.json", "r") as fp:
+with open("data_gen.json", "r") as fp:
     datafin = json.load(fp)
 
 predicted_IR_err_vf = []
@@ -24,16 +24,16 @@ conf=0.95
 
 for micro_n in gen_data:
     cur_micro = gen_data[micro_n]
-    tpc_vf_dist, tpc_vf = cur_micro["tpc_vf_dist"], cur_micro["tpc_vf"]
-    pred_IR = util.tpc_to_fac(tpc_vf_dist, tpc_vf)
+    tpc_vf_dist, tpc_vf = np.arange(100+1, dtype=np.float64), cur_micro["tpc_vf"]
+    pred_IR = util.tpc_to_ir(tpc_vf_dist, tpc_vf)
     
     k = 1000
-    m_pred = k/pred_IR
-    m_statistical = k/cur_micro["fac_vf"]
+    m_pred = util.ns_from_dims([np.array([1000,1000])], pred_IR)
+    m_statistical = util.ns_from_dims([np.array([1000,1000])], cur_micro["ir_vf"])
     vf = cur_micro["vf"]
     z = norm.interval(conf)[1]
-    pred_err = z*((vf*(1-vf))**0.5)/m_pred/vf*100
-    statistical_err = z*((vf*(1-vf))**0.5)/m_statistical/vf*100
+    pred_err = z*((vf*(1-vf)/m_pred[0])**0.5)/vf*100
+    statistical_err = z*((vf*(1-vf)/m_statistical[0])**0.5)/vf*100
     predicted_IR_err_vf.append(pred_err)
     stat_analysis_IR_err_vf.append(statistical_err)
     # print(stats.norm.interval(conf, scale=std_bern)[1], std_bern)
@@ -55,13 +55,13 @@ def scatter_plot_IR(stat_IR, pred_IR, std):
     # ax.plot(x ,x -x*err, label = f'95% confidence ', c='black', ls='--', linewidth=1)
     ax.set_aspect('equal', adjustable='box')
     plt.legend(loc='lower right')
-    plt.savefig('fac_pred.png')
+    plt.savefig('ir_pred.png')
     plt.show()
 
 # it's not clear where does this 3 is coming from
 initial_guess = np.array([3, 0])  # slope and intercept initial guess
 minimise_args = (predicted_IR_err_vf, stat_analysis_IR_err_vf)
-bounds = [(0,3.5),(-10,10)]
+bounds = [(-10,10),(-10,10)]
 best_slope_and_intercept = minimize(util.mape_linear_objective, initial_guess, args=minimise_args, bounds=bounds)
 print(best_slope_and_intercept)
 
@@ -75,4 +75,9 @@ model_errors = (stat_analysis_IR_err_vf - new_pred_err_vf)/stat_analysis_IR_err_
 mu, std = norm.fit(model_errors)
 
 scatter_plot_IR(stat_analysis_IR_err_vf, new_pred_err_vf, std)
+
+print(f'number of micros = {len(stat_analysis_IR_err_vf)}')
+print(f'mu = {mu}')
+print(f'std = {std}')
+print(util.mape_linear_objective([2.7, intercept], *minimise_args))
 
