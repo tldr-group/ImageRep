@@ -2,12 +2,15 @@ import tifffile
 import json
 import numpy as np
 from scipy.optimize import curve_fit
-import util
-import os
+import sys
+sys.path.append('../')
+from representativity import util
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 from scipy.stats import norm
 import math
+import os
+
 
 # with open("data3d.json", "r") as fp:
 #     data3d = json.load(fp)['validation_data3d']
@@ -15,7 +18,7 @@ import math
 # with open("data2d.json", "r") as fp:
 #     data2d = json.load(fp)['validation_data']
 
-with open("datafin_sg1_fft.json", "r") as fp:
+with open("../datafin_sg1_fft_w_pad.json", "r") as fp:
     datafull = json.load(fp)
 
 def objective_function(beta, y_true, y_pred):
@@ -30,11 +33,11 @@ slope_and_intercept = {'2D':
                        {'Volume fraction': (1, 0), 'Surface area': (1, 0)}
 }
 
-periodic_micros = np.load('periodicity_list.npy')
+periodic_micros = np.load('../periodicity_list.npy')
 # You must provide a starting point at which to initialize
 # the parameter search space
 
-with open("micro_names.json", "r") as fp:
+with open("../micro_names.json", "r") as fp:
     micro_names = json.load(fp)
 projects = [f'/home/amir/microlibDataset/{p}/{p}' for p in micro_names]
 # projects = [f'D:/Dataset/{p}/{p}' for p in projects]

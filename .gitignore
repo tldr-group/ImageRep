@@ -11,3 +11,4 @@ fig2 copy.py
 *.json
 *.pdf
 *.png
+*.npy

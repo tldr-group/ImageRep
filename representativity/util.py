@@ -202,7 +202,7 @@ def tpc_radial(img_list, mx=100, w_fft=True, threed=False):
     for i in range(len(img_list)):
         img = img_list[i]
         if w_fft:
-            tpc_radial = two_point_correlation(img, desired_length=mx, threed=threed)
+            tpc_radial = two_point_correlation(img, desired_length=mx, periodic=True, threed=threed)
         else:
             img = torch.tensor(img, device=torch.device("cuda:0")).float()
         tpc = {i:[0,0] for i in range(mx+1)}
@@ -409,8 +409,9 @@ def tpc_to_ir(tpc_dist, tpc_list, threed=False):
         tpc, tpc_dist = np.array(tpc), np.array(tpc_dist)
         vf = tpc[0]
         print(f'vf squared = {vf**2}')
-        print(f'end of tpc = {np.mean(tpc[-10:])}')
-        vf_squared = np.mean(tpc[-10:])  # mean of vf**2 and the end of the tpc because the volume fraction is not exact.
+        n_mean = 10
+        print(f'end of tpc = {np.mean(tpc[-n_mean:])}')
+        vf_squared = np.mean(tpc[-n_mean:])  # mean of vf**2 and the end of the tpc because the volume fraction is not exact.
         omega_n = 2*np.pi
         vf_squared = (vf_squared + vf**2)/2
         multiplyer  = tpc_dist + 1
@@ -563,7 +564,7 @@ def cld(img):
     cld = np.array(cld)
     return cld / np.sum(cld)
 
-def two_point_correlation(img, desired_length=100, periodic=False, threed=False):
+def two_point_correlation(img, desired_length=100, periodic=True, threed=False):
     """
     Calculates the two point correlation function of an image.
     If the image is not periodic, it pads the image with desired_length number of zeros, before

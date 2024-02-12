@@ -17,7 +17,7 @@ projects = [f'/home/amir/microlibDataset/{p}/{p}' for p in micro_names]
 netG = util.load_generator(projects[0])
 imgs = []
 
-modes = ['2D', '3D']
+modes = ['2D']
 # Edge lengths to test
 edge_lengths_exp = [torch.arange(500, 1000, 20), torch.arange(120, 400, 20)]
 edge_lengths_test = [torch.arange(300, 2085, 85), torch.arange(200, 620, 20)]
@@ -34,7 +34,7 @@ for j, p in enumerate(projects):
     for mode in modes:
         t_before = time.time()
         pred_err_vfs, pred_ir_vfs = [], []
-        exp_err_vfs, exp_ir_vfs = [], []
+        # exp_err_vfs, exp_ir_vfs = [], []
         # pred_err_sas, pred_ir_sas = [], []
         # exp_err_sas, exp_ir_sas = [], []
         # dims_i = [0] if mode == '3D' else [0,1,2]  # for 2D and 3D comparison
@@ -44,14 +44,16 @@ for j, p in enumerate(projects):
             img_dims = img_dims_3d if mode == '3D' else img_dims_2d
             print(f'{j}/{len(projects)} done')
             
-            lf = 20 if mode=='3D' else 50
+            lf = 20 if mode=='3D' else 70
             img = util.generate_image(netG, p, dim_i, lf=lf, threed=mode=='3D', reps=1)
             print(mode)
             print(img.size())
             if img.any():
                 # testing single image of edge length l
-                print(img.size())
+                
                 l = img.size()[-1] if mode=='2D' else 450
+                print(img.size())
+                print(l)
                 n = p.split('/')[-1]
                 # make the sa images.
                 print(n)
@@ -60,13 +62,13 @@ for j, p in enumerate(projects):
                 
                 print(f'{j} vf = {vf}')
                 testimg = [img[0, :l, :l].cpu() if mode=='2D' else img[0, :l, :l, :l].cpu() for img in img]
-                pred_err_vf, _, tpc_vf_dist, tpc_vf, pred_ir_vf = util.make_error_prediction(testimg, model_error=False, correction=False)
+                pred_err_vf, _, tpc_vf_dist, tpc_vf, pred_ir_vf = util.make_error_prediction(testimg, model_error=False, correction=False, mxtpc=100)
                 compared_shape = [np.array(testimg[0].size())]
-                exp_err_vf, exp_ir_vf = util.stat_analysis_error(img[0], edge_lengths, img_dims, compared_shape, conf=0.95)
+                # exp_err_vf, exp_ir_vf = util.stat_analysis_error(img[0], edge_lengths, img_dims, compared_shape, conf=0.95)
                 pred_err_vfs.append(pred_err_vf)
                 pred_ir_vfs.append(pred_ir_vf)
-                exp_err_vfs.append(exp_err_vf)
-                exp_ir_vfs.append(exp_ir_vf)
+                # exp_err_vfs.append(exp_err_vf)
+                # exp_ir_vfs.append(exp_ir_vf)
                 # print(f'{j} pred error vf = {pred_err_vf*100}')
                 # print(f'{j} experiment error vf = {err_exp_vf}')
                 # print(f'% diff vf = {(err_exp_vf-pred_err_vf*100)/err_exp_vf}')
@@ -145,16 +147,16 @@ for j, p in enumerate(projects):
             #     print(f'dim variation = {np.var(pred_ir_sas)/np.mean(pred_ir_sas)}')
             # datafin[f'validation_data{mode}'][n]['pred_err_sa'] = np.mean(pred_err_sas).astype(np.float64)*100
 
-            print(exp_ir_vfs)
-            print(f'mean ir = {np.mean(exp_ir_vfs)}')
-            datafin[f'validation_data{mode}'][n]['exp_ir_vf'] = np.mean(exp_ir_vfs)
-            datafin[f'validation_data{mode}'][n]['exp_ir_vf'] = np.mean(exp_ir_vfs)
-            if mode=='3D':
-                datafin[f'validation_data{mode}'][n]['exp_dim_variation'] = 0
-            else:
-                datafin[f'validation_data{mode}'][n]['exp_dim_variation'] = np.var(exp_ir_vfs)/np.mean(exp_ir_vfs)
-                print(f'dim variation = {np.var(exp_ir_vfs)/np.mean(exp_ir_vfs)}')
-            datafin[f'validation_data{mode}'][n]['exp_err_vf'] = np.mean(exp_err_vfs).astype(np.float64)
+            # print(exp_ir_vfs)
+            # print(f'mean ir = {np.mean(exp_ir_vfs)}')
+            # datafin[f'validation_data{mode}'][n]['exp_ir_vf'] = np.mean(exp_ir_vfs)
+            # datafin[f'validation_data{mode}'][n]['exp_ir_vf'] = np.mean(exp_ir_vfs)
+            # if mode=='3D':
+            #     datafin[f'validation_data{mode}'][n]['exp_dim_variation'] = 0
+            # else:
+            #     datafin[f'validation_data{mode}'][n]['exp_dim_variation'] = np.var(exp_ir_vfs)/np.mean(exp_ir_vfs)
+            #     print(f'dim variation = {np.var(exp_ir_vfs)/np.mean(exp_ir_vfs)}')
+            # datafin[f'validation_data{mode}'][n]['exp_err_vf'] = np.mean(exp_err_vfs).astype(np.float64)
 
             # print(exp_ir_sas)
             # print(f'mean ir = {np.mean(exp_ir_sas)}')
@@ -172,7 +174,7 @@ for j, p in enumerate(projects):
             # datafin[f'validation_data{mode}'][n]['tpc_vf'] = tpc_vf
             
             print()
-            with open(f"datafin_sg1_fft.json", "w") as fp:
+            with open(f"datafin_sg1_fft_w_pad.json", "w") as fp:
                 json.dump(datafin, fp) 
             print(f'time for one micro {mode} = {np.round((time.time()-t_before)/60)} minutes')
 
