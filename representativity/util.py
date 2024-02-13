@@ -4,6 +4,7 @@ import slicegan
 from scipy.optimize import minimize
 from scipy import stats
 from matplotlib import pyplot as plt
+from itertools import product
 import time
 from scipy import ndimage
 
@@ -203,6 +204,8 @@ def tpc_radial(img_list, mx=100, w_fft=True, threed=False):
         img = img_list[i]
         if w_fft:
             tpc_radial = two_point_correlation(img, desired_length=mx, periodic=True, threed=threed)
+            tpcfin_list.append(tpc_radial)
+            break
         else:
             img = torch.tensor(img, device=torch.device("cuda:0")).float()
         tpc = {i:[0,0] for i in range(mx+1)}
@@ -407,23 +410,22 @@ def tpc_to_ir(tpc_dist, tpc_list, threed=False):
     pred_irs = []
     for tpc in tpc_list:
         tpc, tpc_dist = np.array(tpc), np.array(tpc_dist)
-        vf = tpc[0]
+        vf = tpc[0,0,0] if threed else tpc[0,0]
         print(f'vf squared = {vf**2}')
-        n_mean = 10
-        print(f'end of tpc = {np.mean(tpc[-n_mean:])}')
-        vf_squared = np.mean(tpc[-n_mean:])  # mean of vf**2 and the end of the tpc because the volume fraction is not exact.
-        omega_n = 2*np.pi
+        dist_arr = np.indices(tpc.shape)
+        dist_arr = np.sqrt(np.sum(dist_arr**2, axis=0))
+        vf_squared = np.mean(tpc[(dist_arr>=90) & (dist_arr<=100)])
+        print(f'end of tpc = {vf_squared}')
+        omega_n = 4
         vf_squared = (vf_squared + vf**2)/2
-        multiplyer  = tpc_dist + 1
         if threed:
-            omega_n = 4*np.pi
-            multiplyer = multiplyer**2
-        pred_ir = omega_n/(vf-vf_squared)*np.trapz(multiplyer*(tpc - vf_squared), x=tpc_dist)
+            omega_n = 8
+        pred_ir = omega_n/(vf-vf_squared)*np.sum((tpc[dist_arr<=100] - vf_squared))
         if pred_ir < 1:
             print(f'pred ir = {pred_ir} CHANGING TPC TO POSITIVE VALUES')
             negatives = np.where(tpc - vf_squared < 0)
             tpc[negatives] += (vf_squared - tpc[negatives])/2
-            pred_ir = omega_n/(vf-vf_squared)*np.trapz(multiplyer*(tpc - vf_squared), x=tpc_dist)
+            pred_ir = omega_n/(vf-vf_squared)*np.sum((tpc[dist_arr<=100] - vf_squared))
         pred_ir = pred_ir**(1/3) if threed else pred_ir**(1/2)
         pred_irs.append(pred_ir)
         # else:  
@@ -564,26 +566,62 @@ def cld(img):
     cld = np.array(cld)
     return cld / np.sum(cld)
 
-def two_point_correlation(img, desired_length=100, periodic=True, threed=False):
+
+def calc_autocorrelation_orthant(img, numel_large, dims, desired_length=100):
+    """Calculates the autocorrelation function of an image using the FFT method
+    Calculates over a single orthant, in all directions right and down from the origin."""
+    ax = list(range(0, len(img.shape)))
+    img_FFT = np.fft.rfftn(img, axes=ax)
+    tpc = np.fft.irfftn(img_FFT.conjugate() * img_FFT, s=img.shape, axes=ax).real / numel_large
+    return tpc[tuple(map(slice, (desired_length,)*dims))]
+
+
+def two_point_correlation_orthant(img, dims, desired_length=100, periodic=True):
     """
-    Calculates the two point correlation function of an image.
+    Calculates the two point correlation function of an image along an orthant.
     If the image is not periodic, it pads the image with desired_length number of zeros, before
     before calculating the 2PC function using the FFT method. After the FFT calculation, it 
     normalises the result by the number of possible occurences of the 2PC function.
     """
-    dims = 3 if threed else 2
     if not periodic:  # padding the image with zeros, then calculates the normaliser.
         indices_img = np.indices(img.shape) + 1
         normaliser = np.flip(np.prod(indices_img, axis=0))
         img = np.pad(img, [(0, desired_length) for _ in range(dims)], 'constant')
     numel_large = np.product(img.shape)
-    ax = list(range(0, len(img.shape)))
-    img_FFT = np.fft.rfftn(img, axes=ax)
-    tpc = np.fft.irfftn(img_FFT.conjugate() * img_FFT, s=img.shape, axes=ax).real / numel_large
-    tpc_desired = tpc[tuple(map(slice, (desired_length,)*dims))]
+    tpc_desired = calc_autocorrelation_orthant(img, numel_large, dims, desired_length)
     if not periodic:  # normalising the result
         normaliser = normaliser[tuple(map(slice, tpc_desired.shape))]
         normaliser = numel_large/normaliser
         return normaliser*tpc_desired
     else:
         return tpc_desired  
+    
+
+def two_point_correlation(img, desired_length=100, periodic=True, threed=False):
+    """ 
+    Calculates the two point correlation function of an image using the FFT method. 
+    The crosscorrelation function is calculated in all directions, where the middle of the output
+    is the origin f(0,0,0) (or f(0,0) in 2D). 
+    :param img: the image to calculate the 2PC function of.
+    :param desired_length: the length of the 2PC function to calculate. Preferably even.
+    :param periodic: whether the image is periodic or not, and whether the FFT calculation is done
+    with the periodic assumption.
+    :param threed: whether the image is 3D or not.
+    """
+    img = np.array(img)
+    dims = 3 if threed else 2
+    orthants = {}
+    for axis in product((1, 0), repeat=dims-1):
+        flip_list = np.arange(dims-1)[~np.array(axis, dtype=bool)]
+        flipped_img = np.flip(img, flip_list)
+        tpc_orthant = two_point_correlation_orthant(flipped_img, dims, desired_length+1, periodic)
+        backflip_orthant = np.flip(tpc_orthant, flip_list)
+        orthants[axis + (1,)] = backflip_orthant
+        opposite_axis = tuple(1 - np.array(axis)) + (0,)
+        orthants[opposite_axis] = np.flip(backflip_orthant)  # flipping the orthant to the opposite side
+    res = np.zeros((desired_length*2+1,)*dims)
+    for axis in orthants.keys():
+        axis_idx = np.array(axis)*desired_length
+        slice_to_input = tuple(map(slice, axis_idx, axis_idx+desired_length+1))
+        res[slice_to_input] = orthants[axis]
+    return res

@@ -44,7 +44,7 @@ for j, p in enumerate(projects):
             img_dims = img_dims_3d if mode == '3D' else img_dims_2d
             print(f'{j}/{len(projects)} done')
             
-            lf = 20 if mode=='3D' else 70
+            lf = 16 if mode=='3D' else 70
             img = util.generate_image(netG, p, dim_i, lf=lf, threed=mode=='3D', reps=1)
             print(mode)
             print(img.size())
