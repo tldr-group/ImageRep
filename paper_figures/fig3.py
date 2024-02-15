@@ -11,7 +11,7 @@ import math
 import os
 
 print(os.getcwd())
-with open("../datafin_sg1_fft_w_pad.json", "r") as fp:
+with open("../microlib_rep_data.json", "r") as fp:
     datafull = json.load(fp)
 
 def objective_function(beta, y_true, y_pred):
@@ -21,9 +21,9 @@ def objective_function(beta, y_true, y_pred):
 # a = 2.5
 # Slope and intercept for tpc to stat.analysis error fit, that have 0 mean: 
 slope_and_intercept = {'2D':
-                       {'Volume fraction': (0.95, 0), 'Surface area': (0.82, 0)},
+                       {'Volume fraction': (1, 0), 'Surface area': (0.82, 0)},
                        '3D':
-                       {'Volume fraction': (1, 0), 'Surface area': (1, 0)}
+                       {'Volume fraction': (0.95, 0), 'Surface area': (1, 0)}
 }
 
 periodic_micros = np.load('../periodicity_list.npy')

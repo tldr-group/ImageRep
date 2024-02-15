@@ -128,61 +128,61 @@ def make_sa(img, batch=True):
     return sa
 
 
-def make_sa_old(img, batch=True):
-    if not batch:
-        img = np.expand_dims(img, 0)
-        sa = np.zeros_like(img)
-    else:
-        sa = torch.zeros_like(img)
-    dims = len(img.shape)
-    sa[:, 1:] += img[:, 1:] * (1 - img[:, :-1])
-    sa[:, :, 1:] += img[:, :, 1:] * (1 - img[:, :, :-1])
-    sa[:, :-1] += (1 - img[:, 1:]) * img[:, :-1]
-    sa[:, :, :-1] += (1 - img[:, :, 1:]) * img[:, :, :-1]
-    if dims == 4:
-        sa[:, :, :, 1:] += img[:, :, :, 1:] * (1 - img[:, :, :, :-1])
-        sa[:, :, :, :-1] += (1 - img[:, :, :, 1:]) * img[:, :, :, :-1]
-    if not batch:
-        sa = sa[0]
-    return sa
+# def make_sa_old(img, batch=True):
+#     if not batch:
+#         img = np.expand_dims(img, 0)
+#         sa = np.zeros_like(img)
+#     else:
+#         sa = torch.zeros_like(img)
+#     dims = len(img.shape)
+#     sa[:, 1:] += img[:, 1:] * (1 - img[:, :-1])
+#     sa[:, :, 1:] += img[:, :, 1:] * (1 - img[:, :, :-1])
+#     sa[:, :-1] += (1 - img[:, 1:]) * img[:, :-1]
+#     sa[:, :, :-1] += (1 - img[:, :, 1:]) * img[:, :, :-1]
+#     if dims == 4:
+#         sa[:, :, :, 1:] += img[:, :, :, 1:] * (1 - img[:, :, :, :-1])
+#         sa[:, :, :, :-1] += (1 - img[:, :, :, 1:]) * img[:, :, :, :-1]
+#     if not batch:
+#         sa = sa[0]
+#     return sa
 
 
-def conjunction_img_for_tpc(img, x, y, z, threed):
-    if threed:
-        if x == 0:
-            if y == 0:
-                if z == 0:
-                    con_img = img * img
-                else:
-                    con_img = img[..., :-z] * img[..., z:]
-            else:
-                if z == 0:
-                    con_img = img[..., :-y, :] * img[..., y:, :]
-                else:
-                    con_img = img[..., :-y, :-z] * img[..., y:, z:]
-        else:
-            if y == 0:
-                if z == 0:
-                    con_img = img[..., :-x, :, :] * img[..., x:, :, :]
-                else:
-                    con_img = img[..., :-x, :, :-z] * img[..., x:, :, z:]
-            else:
-                if z == 0:
-                    con_img = img[..., :-x, :-y, :] * img[..., x:, y:, :]
-                else:
-                    con_img = img[..., :-x, :-y, :-z] * img[..., x:, y:, z:]
-    else:
-        if x == 0:
-            if y == 0:
-                con_img = img * img
-            else:
-                con_img = img[..., :-y] * img[..., y:]
-        else:
-            if y == 0:
-                con_img = img[..., :-x, :] * img[..., x:, :]
-            else:
-                con_img = img[..., :-x, :-y] * img[..., x:, y:]
-    return con_img
+# def conjunction_img_for_tpc(img, x, y, z, threed):
+#     if threed:
+#         if x == 0:
+#             if y == 0:
+#                 if z == 0:
+#                     con_img = img * img
+#                 else:
+#                     con_img = img[..., :-z] * img[..., z:]
+#             else:
+#                 if z == 0:
+#                     con_img = img[..., :-y, :] * img[..., y:, :]
+#                 else:
+#                     con_img = img[..., :-y, :-z] * img[..., y:, z:]
+#         else:
+#             if y == 0:
+#                 if z == 0:
+#                     con_img = img[..., :-x, :, :] * img[..., x:, :, :]
+#                 else:
+#                     con_img = img[..., :-x, :, :-z] * img[..., x:, :, z:]
+#             else:
+#                 if z == 0:
+#                     con_img = img[..., :-x, :-y, :] * img[..., x:, y:, :]
+#                 else:
+#                     con_img = img[..., :-x, :-y, :-z] * img[..., x:, y:, z:]
+#     else:
+#         if x == 0:
+#             if y == 0:
+#                 con_img = img * img
+#             else:
+#                 con_img = img[..., :-y] * img[..., y:]
+#         else:
+#             if y == 0:
+#                 con_img = img[..., :-x, :] * img[..., x:, :]
+#             else:
+#                 con_img = img[..., :-x, :-y] * img[..., x:, y:]
+#     return con_img
 
 # def tpc_radial_fft(img_list, mx=100, threed=False):
 #     """Calculates the radial tpc using fft"""
@@ -198,82 +198,40 @@ def conjunction_img_for_tpc(img, x, y, z, threed):
 #     return tpcfin_list
 
 
-def tpc_radial(img_list, mx=100, w_fft=True, threed=False):
+def tpc_radial(img_list, mx=100, threed=False):
     tpcfin_list = []
     for i in range(len(img_list)):
         img = img_list[i]
-        if w_fft:
-            tpc_radial = two_point_correlation(img, desired_length=mx, periodic=True, threed=threed)
-            tpcfin_list.append(tpc_radial)
-            break
-        else:
-            img = torch.tensor(img, device=torch.device("cuda:0")).float()
-        tpc = {i:[0,0] for i in range(mx+1)}
-        for x in range(0, mx):
-            for y in range(0, mx):
-                for z in range(0, mx if threed else 1):
-                    d = (x**2 + y**2 + z**2) ** 0.5
-                    if d < mx:
-                        remainder = d%1
-                        if w_fft:
-                            cur_tpc = tpc_radial[x,y,z] if threed else tpc_radial[x,y]
-                        else:
-                            con_img = conjunction_img_for_tpc(img, x, y, z, threed)
-                            cur_tpc = torch.mean(con_img).cpu()
-                        weight_floor = 1-remainder
-                        weight_ceil = remainder
-                        tpc[int(d)][0] += weight_floor 
-                        tpc[int(d)][1] += cur_tpc*weight_floor
-                        tpc[int(d)+1][0] += weight_ceil 
-                        tpc[int(d)+1][1] += cur_tpc*weight_ceil
+        
+        tpc_radial = two_point_correlation(img, desired_length=mx, periodic=True, threed=threed)
+        tpcfin_list.append(tpc_radial)
+        
+        # else:
+        #     img = torch.tensor(img, device=torch.device("cuda:0")).float()
+        # tpc = {i:[0,0] for i in range(mx+1)}
+        # for x in range(0, mx):
+        #     for y in range(0, mx):
+        #         for z in range(0, mx if threed else 1):
+        #             d = (x**2 + y**2 + z**2) ** 0.5
+        #             if d < mx:
+        #                 remainder = d%1
+        #                 if w_fft:
+        #                     cur_tpc = tpc_radial[x,y,z] if threed else tpc_radial[x,y]
+        #                 else:
+        #                     con_img = conjunction_img_for_tpc(img, x, y, z, threed)
+        #                     cur_tpc = torch.mean(con_img).cpu()
+        #                 weight_floor = 1-remainder
+        #                 weight_ceil = remainder
+        #                 tpc[int(d)][0] += weight_floor 
+        #                 tpc[int(d)][1] += cur_tpc*weight_floor
+        #                 tpc[int(d)+1][0] += weight_ceil 
+        #                 tpc[int(d)+1][1] += cur_tpc*weight_ceil
     
-        tpcfin = [tpc[key][1]/tpc[key][0] for key in tpc.keys()]
-        tpcfin = np.array(tpcfin, dtype=np.float64)
-        tpcfin_list.append(tpcfin)
+        # tpcfin = [tpc[key][1]/tpc[key][0] for key in tpc.keys()]
+        # tpcfin = np.array(tpcfin, dtype=np.float64)
+        # tpcfin_list.append(tpcfin)
     return np.arange(mx+1, dtype=np.float64), tpcfin_list  
 
-
-def old_tpc_radial(img, mx=100, threed=False):
-    img = torch.tensor(img, device=torch.device("cuda:0")).float()
-    tpc = {i: [] for i in range(1, mx)}
-    for x in range(1, mx):
-        for y in range(1, mx):
-            for z in range(1, mx if threed else 2):
-                d = int((x**2 + y**2 + z**2) ** 0.5)
-                if d < mx:
-                    if threed:
-                        tpc[d].append(
-                            torch.mean(
-                                img[..., :-x, :-y, :-z] * img[..., x:, y:, z:]
-                            ).cpu()
-                        )
-                    else:
-                        tpc[d].append(
-                            torch.mean(img[..., :-x, :-y] * img[..., x:, y:]).cpu()
-                        )
-
-    tpcfin = []
-    for key in tpc.keys():
-        tpcfin.append(np.mean(tpc[key]).item())
-    tpcfin = np.array(tpcfin, dtype=np.float64)
-    return tpcfin  
-
-def tpc_horizontal(img_list, mx=100, threed=False):
-    tpcfin_list = []
-    for i in range(len(img_list)):
-        img = img_list[i]
-        img = torch.tensor(img, device=torch.device("cuda:0")).float()
-        tpc = [torch.mean(img).cpu()]  # vf is tpc[0]
-        for d in range(1, mx):
-            tpc_1 = torch.mean(img[..., :-d] * img[..., d:]).cpu()
-            tpc_2 = torch.mean(img[..., :-d, :] * img[..., d:, :]).cpu()
-            if threed:
-                tpc_3 = torch.mean(img[..., :-d, :, :] * img[..., d:, :, :]).cpu()
-                tpc.append((tpc_1 + tpc_2 + tpc_3) / 3)
-            else:
-                tpc.append((tpc_1 + tpc_2) / 2)
-        tpcfin_list.append(np.array(tpc, dtype=np.float64))
-    return np.arange(mx, dtype=np.float64), tpcfin_list  
 
 def stat_analysis_error(img, edge_lengths, img_dims, compared_shape, conf=0.95):  # TODO see if to delete this or not
     vf = torch.mean(img).cpu().item()
@@ -390,42 +348,26 @@ def mape_linear_objective(params, y_pred, y_true):
 def linear_fit(x, m, b):
     return m * x + b 
 
-# def tpc_to_ir_from_fft(tpc_list, threed=False):
-#     pred_irs = []
-#     for tpc in tpc_list:
-#         if threed:
-#             vf = tpc[0,0,0]
-#             vf_squared = np.mean([np.mean(tpc[-10:, ...]),np.mean(tpc[:, -10:, :]), np.mean(tpc[..., -10:])])
-#             omega_n = 1
-#         else:
-#             vf = tpc[0,0]
-#             vf_squared = np.mean([np.mean(tpc[-10:, :]),np.mean(tpc[:, -10:])])
-#             omega_n = 1
-#         pred_irs.append(omega_n/(vf-vf_squared)*np.sum(tpc - vf_squared))
-#     print(f'pred irs = {pred_irs}')
-#     print(f'sum of pred irs = {np.sum(pred_irs)}')
-#     return np.sum(pred_irs)  
 
 def tpc_to_ir(tpc_dist, tpc_list, threed=False):
     pred_irs = []
     for tpc in tpc_list:
         tpc, tpc_dist = np.array(tpc), np.array(tpc_dist)
-        vf = tpc[0,0,0] if threed else tpc[0,0]
+        middle_idx = np.array(tpc.shape)//2
+        vf = tpc[tuple(map(slice, middle_idx, middle_idx+1))].item()
         print(f'vf squared = {vf**2}')
         dist_arr = np.indices(tpc.shape)
+        dist_arr = np.abs((dist_arr.T - middle_idx.T).T)
         dist_arr = np.sqrt(np.sum(dist_arr**2, axis=0))
         vf_squared = np.mean(tpc[(dist_arr>=90) & (dist_arr<=100)])
         print(f'end of tpc = {vf_squared}')
-        omega_n = 4
         vf_squared = (vf_squared + vf**2)/2
-        if threed:
-            omega_n = 8
-        pred_ir = omega_n/(vf-vf_squared)*np.sum((tpc[dist_arr<=100] - vf_squared))
+        pred_ir = 1/(vf-vf_squared)*np.sum((tpc[dist_arr<=100] - vf_squared))
         if pred_ir < 1:
             print(f'pred ir = {pred_ir} CHANGING TPC TO POSITIVE VALUES')
             negatives = np.where(tpc - vf_squared < 0)
             tpc[negatives] += (vf_squared - tpc[negatives])/2
-            pred_ir = omega_n/(vf-vf_squared)*np.sum((tpc[dist_arr<=100] - vf_squared))
+            pred_ir = 1/(vf-vf_squared)*np.sum((tpc[dist_arr<=100] - vf_squared))
         pred_ir = pred_ir**(1/3) if threed else pred_ir**(1/2)
         pred_irs.append(pred_ir)
         # else:  
@@ -536,35 +478,35 @@ def get_model_params_old(imtype):  # see model_param.py for the appropriate code
     return params[imtype]
 
 
-def cld(img):
-    """
-    Calculating the chord length distribution function
-    """
-    iterations = 150
-    return_length = 150
-    sums = torch.zeros(iterations)
+# def cld(img):
+#     """
+#     Calculating the chord length distribution function
+#     """
+#     iterations = 150
+#     return_length = 150
+#     sums = torch.zeros(iterations)
 
-    # for ang in torch.linspace(0,180, 20):
-    sm = []
-    # cur_im = rotate(torch.tensor(img), ang.item())
-    # cur_im = torch.round(cur_im[0,0,280:-280, 280:-280])
-    cur_im = torch.tensor(img, device=torch.device("cuda:0"))
-    for i in range(1, iterations):
-        sm.append(
-            torch.sum(cur_im)
-        )  # sum of all current "live" pixels that are part of an i length chord
-        cur_im = (
-            cur_im[1:] * cur_im[:-1]
-        )  # deleting 1 pixel for each chord, leaving all pixels that are part of an i+1 length chords
-    sm.append(torch.sum(cur_im))
-    sums += torch.tensor(sm)
+#     # for ang in torch.linspace(0,180, 20):
+#     sm = []
+#     # cur_im = rotate(torch.tensor(img), ang.item())
+#     # cur_im = torch.round(cur_im[0,0,280:-280, 280:-280])
+#     cur_im = torch.tensor(img, device=torch.device("cuda:0"))
+#     for i in range(1, iterations):
+#         sm.append(
+#             torch.sum(cur_im)
+#         )  # sum of all current "live" pixels that are part of an i length chord
+#         cur_im = (
+#             cur_im[1:] * cur_im[:-1]
+#         )  # deleting 1 pixel for each chord, leaving all pixels that are part of an i+1 length chords
+#     sm.append(torch.sum(cur_im))
+#     sums += torch.tensor(sm)
 
-    cld = sums.clone()
-    cld[-1] = 0  # the assumption is that the last sum is 0
-    for i in range(1, iterations):  # calculation of the chord lengths by the sums
-        cld[-(i + 1)] = (sums[-(i + 1)] - sums[-i] - sum(cld[-i:])).cpu().item()
-    cld = np.array(cld)
-    return cld / np.sum(cld)
+#     cld = sums.clone()
+#     cld[-1] = 0  # the assumption is that the last sum is 0
+#     for i in range(1, iterations):  # calculation of the chord lengths by the sums
+#         cld[-(i + 1)] = (sums[-(i + 1)] - sums[-i] - sum(cld[-i:])).cpu().item()
+#     cld = np.array(cld)
+#     return cld / np.sum(cld)
 
 
 def calc_autocorrelation_orthant(img, numel_large, dims, desired_length=100):

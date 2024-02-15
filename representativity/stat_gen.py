@@ -6,8 +6,17 @@ import json
 import numpy as np
 import time
 
+'''
+File: stat_gen.py
 
-with open("datafin_sg1_fft.json", "r") as fp:
+Description: This script is used to generate the statistics for the representativity of 
+microstructures from the microlib dataset. 
+The statistics generated are then saved in a json file, to be analyzed and used for 
+representativity prediction of a new microstructure or micrograph.
+'''
+
+
+with open("microlib_statistics.json", "r") as fp:
     datafin = json.load(fp)
 # Dataset path and list of subfolders
 with open("micro_names.json", "r") as fp:
@@ -17,21 +26,22 @@ projects = [f'/home/amir/microlibDataset/{p}/{p}' for p in micro_names]
 netG = util.load_generator(projects[0])
 imgs = []
 
-modes = ['2D']
-# Edge lengths to test
-edge_lengths_exp = [torch.arange(500, 1000, 20), torch.arange(120, 400, 20)]
-edge_lengths_test = [torch.arange(300, 2085, 85), torch.arange(200, 620, 20)]
-# Corresponding dims
+modes = ['3D']
 
-img_dims_2d = [np.array((l, l)) for l in edge_lengths_exp[0]]
-img_dims_3d = [np.array((l, l, l)) for l in edge_lengths_exp[1]]
+# Edge lengths for the experimental statistical analysis:
+datafin['validation_data2D']['edge_lengths_exp'] = torch.arange(500, 1000, 20)
+datafin['validation_data3D']['edge_lengths_exp'] = torch.arange(120, 400, 20)
 
-num_projects = len(projects)
-projects = projects[:num_projects]
+# Edge lengths for the predicted integral range:
+datafin['validation_data2D']['edge_lengths_pred'] = torch.arange(8, 65, 4)*32
+datafin['validation_data3D']['edge_lengths_pred'] = torch.arange(4, 19, 1)*32
 
 # data_val = {}
 for j, p in enumerate(projects):
     for mode in modes:
+        n_dims = 3 if mode == '3D' else 2
+        edge_lengths_exp = datafin[f'validation_data{mode}']['edge_lengths_exp']
+        img_dims = [np.array((l,)*n_dims) for l in edge_lengths_exp]
         t_before = time.time()
         pred_err_vfs, pred_ir_vfs = [], []
         # exp_err_vfs, exp_ir_vfs = [], []
@@ -44,14 +54,14 @@ for j, p in enumerate(projects):
             img_dims = img_dims_3d if mode == '3D' else img_dims_2d
             print(f'{j}/{len(projects)} done')
             
-            lf = 16 if mode=='3D' else 70
+            lf = 21 if mode=='3D' else 70
             img = util.generate_image(netG, p, dim_i, lf=lf, threed=mode=='3D', reps=1)
             print(mode)
             print(img.size())
             if img.any():
                 # testing single image of edge length l
                 
-                l = img.size()[-1] if mode=='2D' else 450
+                l = img.size()[-1] 
                 print(img.size())
                 print(l)
                 n = p.split('/')[-1]
@@ -174,7 +184,7 @@ for j, p in enumerate(projects):
             # datafin[f'validation_data{mode}'][n]['tpc_vf'] = tpc_vf
             
             print()
-            with open(f"datafin_sg1_fft_w_pad.json", "w") as fp:
+            with open(f"microlib_rep_data.json", "w") as fp:
                 json.dump(datafin, fp) 
             print(f'time for one micro {mode} = {np.round((time.time()-t_before)/60)} minutes')
 
