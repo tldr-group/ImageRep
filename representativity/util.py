@@ -230,16 +230,16 @@ def tpc_radial(img_list, mx=100, threed=False):
         # tpcfin = [tpc[key][1]/tpc[key][0] for key in tpc.keys()]
         # tpcfin = np.array(tpcfin, dtype=np.float64)
         # tpcfin_list.append(tpcfin)
-    return np.arange(mx+1, dtype=np.float64), tpcfin_list  
+    return tpcfin_list  
 
 
-def stat_analysis_error(img, edge_lengths, compared_shape, conf=0.95):  # TODO see if to delete this or not
+def stat_analysis_error(img, vf, edge_lengths):  # TODO see if to delete this or not
     img_dims = [np.array((l,)*len(img.shape)) for l in edge_lengths]
     vf = torch.mean(img).cpu().item()
     err_exp = real_image_stats(img, edge_lengths, vf)
     real_ir = fit_ir(err_exp, img_dims, vf)
     # TODO different size image 1000 vs 1500
-    return bernouli(vf, ns_from_dims(compared_shape, real_ir), conf=conf), real_ir
+    return real_ir
 
 
 def real_image_stats(img, ls, vf, repeats=4000, z_score=1.96):  
@@ -350,10 +350,10 @@ def linear_fit(x, m, b):
     return m * x + b 
 
 
-def tpc_to_ir(tpc_dist, tpc_list, threed=False):
+def tpc_to_ir(tpc_list, threed=False):
     pred_irs = []
     for tpc in tpc_list:
-        tpc, tpc_dist = np.array(tpc), np.array(tpc_dist)
+        tpc = np.array(tpc)
         middle_idx = np.array(tpc.shape)//2
         vf = tpc[tuple(map(slice, middle_idx, middle_idx+1))].item()
         print(f'vf squared = {vf**2}')
@@ -378,13 +378,13 @@ def tpc_to_ir(tpc_dist, tpc_list, threed=False):
     return np.sum(pred_irs)  
 
 
-def make_error_prediction(images, conf=0.95, err_targ=0.05,  model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
+def make_error_prediction(images, conf=0.95, err_targ=0.05, model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
     vf = np.mean([torch.mean(i).cpu().item() for i in images])
     dims = len(images[0].shape)
     print(f'starting tpc radial')
-    tpc_dist, tpc_list = tpc_radial(images, threed=dims == 3, mx=mxtpc)
+    tpc_list = tpc_radial(images, threed=dims == 3, mx=mxtpc)
     print(f'starting tpc to ir')
-    ir = tpc_to_ir(tpc_dist, tpc_list, threed=dims==3)
+    ir = tpc_to_ir(tpc_list, threed=dims==3)
     print(f'pred ir = {ir}')
     n = ns_from_dims([np.array(images[0].shape)], ir)
     # print(n, ir)
@@ -408,7 +408,7 @@ def make_error_prediction(images, conf=0.95, err_targ=0.05,  model_error=True, c
 
         # print(n_for_err_targ, n, ir)
     l_for_err_targ = dims_from_n(n_for_err_targ, shape, ir, dims)
-    return err_for_img, l_for_err_targ, tpc_dist, tpc_list, ir
+    return err_for_img, l_for_err_targ, ir
 
 
 def make_error_prediction_old(img, conf=0.95, err_targ=0.05,  model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
