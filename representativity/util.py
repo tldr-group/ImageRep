@@ -233,7 +233,8 @@ def tpc_radial(img_list, mx=100, threed=False):
     return np.arange(mx+1, dtype=np.float64), tpcfin_list  
 
 
-def stat_analysis_error(img, edge_lengths, img_dims, compared_shape, conf=0.95):  # TODO see if to delete this or not
+def stat_analysis_error(img, edge_lengths, compared_shape, conf=0.95):  # TODO see if to delete this or not
+    img_dims = [np.array((l,)*len(img.shape)) for l in edge_lengths]
     vf = torch.mean(img).cpu().item()
     err_exp = real_image_stats(img, edge_lengths, vf)
     real_ir = fit_ir(err_exp, img_dims, vf)
@@ -242,7 +243,7 @@ def stat_analysis_error(img, edge_lengths, img_dims, compared_shape, conf=0.95):
 
 
 def real_image_stats(img, ls, vf, repeats=4000, z_score=1.96):  
-    dims = len(img.shape) - 1
+    dims = len(img[0].shape) - 1
     print(f'repeats = {repeats}')
     errs = []
     for l in ls:
