@@ -32,7 +32,7 @@ def load_generator(Project_path):
     netG = netG.cuda()
     return netG
 
-def generate_image(netG, Project_path, slice_dim, lf=50, threed=False, reps=50):
+def generate_image(netG, Project_path, slice_dim=0, lf=50, threed=False, reps=50):
     try:
         netG.load_state_dict(torch.load(Project_path + "_Gen.pt"))
     except:  # if the image is greayscale it's excepting because there's only 1 channel
