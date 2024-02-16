@@ -198,13 +198,9 @@ def make_sa(img, batch=True):
 #     return tpcfin_list
 
 
-def tpc_radial(img_list, mx=100, threed=False):
-    tpcfin_list = []
-    for i in range(len(img_list)):
-        img = img_list[i]
-        
-        tpc_radial = two_point_correlation(img, desired_length=mx, periodic=True, threed=threed)
-        tpcfin_list.append(tpc_radial)
+def tpc_radial(img, mx=100, threed=False):
+    
+    return two_point_correlation(img, desired_length=mx, periodic=True, threed=threed)
         
         # else:
         #     img = torch.tensor(img, device=torch.device("cuda:0")).float()
@@ -230,7 +226,7 @@ def tpc_radial(img_list, mx=100, threed=False):
         # tpcfin = [tpc[key][1]/tpc[key][0] for key in tpc.keys()]
         # tpcfin = np.array(tpcfin, dtype=np.float64)
         # tpcfin_list.append(tpcfin)
-    return tpcfin_list  
+    
 
 
 def stat_analysis_error(img, vf, edge_lengths):  # TODO see if to delete this or not
@@ -350,43 +346,35 @@ def linear_fit(x, m, b):
     return m * x + b 
 
 
-def tpc_to_ir(tpc_list, threed=False):
-    pred_irs = []
-    for tpc in tpc_list:
-        tpc = np.array(tpc)
-        middle_idx = np.array(tpc.shape)//2
-        vf = tpc[tuple(map(slice, middle_idx, middle_idx+1))].item()
-        print(f'vf squared = {vf**2}')
-        dist_arr = np.indices(tpc.shape)
-        dist_arr = np.abs((dist_arr.T - middle_idx.T).T)
-        dist_arr = np.sqrt(np.sum(dist_arr**2, axis=0))
-        vf_squared = np.mean(tpc[(dist_arr>=90) & (dist_arr<=100)])
-        print(f'end of tpc = {vf_squared}')
-        vf_squared = (vf_squared + vf**2)/2
+def tpc_to_ir(tpc, threed=False):
+    
+    tpc = np.array(tpc)
+    middle_idx = np.array(tpc.shape)//2
+    vf = tpc[tuple(map(slice, middle_idx, middle_idx+1))].item()
+    print(f'vf squared = {vf**2}')
+    dist_arr = np.indices(tpc.shape)
+    dist_arr = np.abs((dist_arr.T - middle_idx.T).T)
+    dist_arr = np.sqrt(np.sum(dist_arr**2, axis=0))
+    vf_squared = np.mean(tpc[(dist_arr>=90) & (dist_arr<=100)])
+    print(f'end of tpc = {vf_squared}')
+    vf_squared = (vf_squared + vf**2)/2
+    pred_ir = 1/(vf-vf_squared)*np.sum((tpc[dist_arr<=100] - vf_squared))
+    if pred_ir < 1:
+        print(f'pred ir = {pred_ir} CHANGING TPC TO POSITIVE VALUES')
+        negatives = np.where(tpc - vf_squared < 0)
+        tpc[negatives] += (vf_squared - tpc[negatives])/2
         pred_ir = 1/(vf-vf_squared)*np.sum((tpc[dist_arr<=100] - vf_squared))
-        if pred_ir < 1:
-            print(f'pred ir = {pred_ir} CHANGING TPC TO POSITIVE VALUES')
-            negatives = np.where(tpc - vf_squared < 0)
-            tpc[negatives] += (vf_squared - tpc[negatives])/2
-            pred_ir = 1/(vf-vf_squared)*np.sum((tpc[dist_arr<=100] - vf_squared))
-        pred_ir = pred_ir**(1/3) if threed else pred_ir**(1/2)
-        pred_irs.append(pred_ir)
-        # else:  
-            # pred_irs.append(omega_n/(vf-vf_squared)*np.trapz(tpc - vf_squared, x=tpc_dist))
-    print(f'pred irs = {pred_irs}')
-    print(f'sum of pred irs = {np.sum(pred_irs)}')
-    return np.sum(pred_irs)  
+    return pred_ir**(1/3) if threed else pred_ir**(1/2)
 
 
-def make_error_prediction(images, conf=0.95, err_targ=0.05, model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
-    vf = np.mean([torch.mean(i).cpu().item() for i in images])
-    dims = len(images[0].shape)
+def make_error_prediction(img, conf=0.95, err_targ=0.05, model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
+    vf = torch.mean(img).item()
+    dims = len(img.shape)
     print(f'starting tpc radial')
-    tpc_list = tpc_radial(images, threed=dims == 3, mx=mxtpc)
+    tpc = tpc_radial(img, threed=dims == 3, mx=mxtpc)
     print(f'starting tpc to ir')
-    ir = tpc_to_ir(tpc_list, threed=dims==3)
-    print(f'pred ir = {ir}')
-    n = ns_from_dims([np.array(images[0].shape)], ir)
+    ir = tpc_to_ir(tpc, threed=dims==3)
+    n = ns_from_dims([np.array(img.shape)], ir)
     # print(n, ir)
     std_bern = ((1 / n[0]) * (vf * (1 - vf))) ** 0.5
     std_model, slope, intercept = get_model_params(f'{dims}d{met}') 
