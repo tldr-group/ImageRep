@@ -11,7 +11,7 @@ import math
 import os
 
 print(os.getcwd())
-with open("../microlib_rep_data.json", "r") as fp:
+with open("../microlib_statistics.json", "r") as fp:
     datafull = json.load(fp)
 
 def objective_function(beta, y_true, y_pred):
@@ -19,11 +19,11 @@ def objective_function(beta, y_true, y_pred):
     return(np.mean(np.abs((y_true - y_pred) / (y_true+y_pred))) * 100)
 
 # a = 2.5
-# Slope and intercept for tpc to stat.analysis error fit, that have 0 mean: 
-slope_and_intercept = {'2D':
-                       {'Volume fraction': (1, 0), 'Surface area': (0.82, 0)},
+# Slope for tpc to stat.analysis error fit, that have 0 mean: 
+slope_to_fit = {'2D':
+                       {'Volume fraction': 1, 'Surface area': 0.82},
                        '3D':
-                       {'Volume fraction': (0.95, 0), 'Surface area': (1, 0)}
+                       {'Volume fraction': 0.95, 'Surface area': 1}
 }
 
 periodic_micros = np.load('../periodicity_list.npy')
@@ -59,10 +59,8 @@ for i, data in enumerate(dims):
     sa_results[0], sa_results[1] = np.array(sa_results[0]), np.array(sa_results[1])
     # sa_results = [err_exp_sa[pred_err_sa!=math.isnan], pred_err_sa[pred_err_sa!=math.nan]]
     for j, (met, res) in enumerate(zip(['Volume fraction', 'Surface area'], [vf_results, sa_results])):
-
-        
         ax = axs[i, j]
-        end_idx = 78
+        end_idx = 20
         res[0], res[1] = res[0][:end_idx], res[1][:end_idx]
         colors = colors[:end_idx]
     
@@ -74,16 +72,9 @@ for i, data in enumerate(dims):
         # print(result)
         # y_data = result.x[0]*res[1] + result.x[1]
 
-        # if data == '3D':
-        #     res[1] = res[1]**(1/3)
-        # else:
-        #     res[1] = np.sqrt(res[1])
-
-        slope, intercept = slope_and_intercept[dims[i]][met]
-        y_data = slope*res[1] + intercept
+        slope = slope_to_fit[dims[i]][met]
+        y_data = slope*res[1] 
         
-        
-
         without_last_outlier = np.logical_and(y_data > 0, res[0] > 0)
         ax.scatter(res[0][without_last_outlier], y_data[without_last_outlier], s=7, label='Predictions', c=colors[without_last_outlier])
         

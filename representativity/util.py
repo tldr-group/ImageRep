@@ -32,11 +32,8 @@ def load_generator(Project_path):
     netG = netG.cuda()
     return netG
 
-def generate_image(netG, Project_path, slice_dim=0, lf=50, threed=False, reps=50):
-    try:
-        netG.load_state_dict(torch.load(Project_path + "_Gen.pt"))
-    except:  # if the image is greayscale it's excepting because there's only 1 channel
-        return torch.tensor(0)
+def generate_image(netG, slice_dim=0, lf=50, threed=False, reps=50):
+    
     netG.eval()
     imgs = []
     # z_channels = 16
@@ -230,8 +227,7 @@ def tpc_radial(img, mx=100, threed=False):
 
 
 def stat_analysis_error(img, vf, edge_lengths):  # TODO see if to delete this or not
-    img_dims = [np.array((l,)*len(img.shape)) for l in edge_lengths]
-    vf = torch.mean(img).cpu().item()
+    img_dims = [np.array((l,)*(len(img.shape)-1)) for l in edge_lengths]
     err_exp = real_image_stats(img, edge_lengths, vf)
     real_ir = fit_ir(err_exp, img_dims, vf)
     # TODO different size image 1000 vs 1500
@@ -239,7 +235,7 @@ def stat_analysis_error(img, vf, edge_lengths):  # TODO see if to delete this or
 
 
 def real_image_stats(img, ls, vf, repeats=4000, z_score=1.96):  
-    dims = len(img[0].shape) - 1
+    dims = len(img[0].shape)
     print(f'repeats = {repeats}')
     errs = []
     for l in ls:
@@ -396,7 +392,7 @@ def make_error_prediction(img, conf=0.95, err_targ=0.05, model_error=True, corre
 
         # print(n_for_err_targ, n, ir)
     l_for_err_targ = dims_from_n(n_for_err_targ, shape, ir, dims)
-    return err_for_img, l_for_err_targ, ir
+    return err_for_img*100, l_for_err_targ, ir
 
 
 def make_error_prediction_old(img, conf=0.95, err_targ=0.05,  model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
