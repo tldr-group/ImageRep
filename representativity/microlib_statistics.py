@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import json
 import numpy as np
 import time
+from scipy.stats import norm
+
 
 '''
 File: microlib_statistics.py
@@ -40,7 +42,7 @@ def run_statistical_fit_analysis(netG, n, mode, edge_lengths_fit, datafin):
     
     imsize = 448 if mode=='3D' else 1600
     lf = imsize//32 + 2  # the size of G's input
-    many_imgs = util.generate_image(netG, lf=lf, threed=mode=='3D', reps=100)
+    many_imgs = util.generate_image(netG, lf=lf, threed=mode=='3D', reps=50)
     vf = torch.mean(many_imgs).cpu().item()
     print(f'{n} vf = {vf}')
     datafin[f'data_gen_{mode}'][n]['vf'] = vf
@@ -142,102 +144,59 @@ def run_microlib_statistics():
 
         print(f'{j+1}/{len(micros)} microstructures done')
     print(f'total time = {np.round((time.time()-total_time_0)/60, 2)} minutes')
+
+def error_by_size_estimation(dim):
+    data_dim, micro_names, slope_to_fit = data_micros_and_slope(dim)
+    edge_lengths_pred = data_dim['edge_lengths_pred']
+    stds = []
+    for edge_length in edge_lengths_pred:
+        ir_results, err_results = comparison_results(data_dim, micro_names, str(edge_length))
+
+        slope = slope_to_fit[dim]["Integral Range"]
+        y_data = slope*ir_results[1] 
+        
+        errs = (y_data-ir_results[0])/y_data 
+        errs = np.sort(errs)  # easier to see the distribution of errors
+
+        std = np.std(errs) 
+        stds.append(std)
+        z = norm.interval(0.9)[1]
+        err = std*z
+        print(f'Integral Range {dim} {edge_length} std = {np.round(std,4)}')
+        print(f'mean = {np.mean(errs)}')
+        print(f'mape = {np.mean(np.abs(errs))}')
+        print(f'error = {err}')
+    print(f'stds = {stds}')
+
+def data_micros_and_slope(dim):
+    with open("microlib_statistics.json", "r") as fp:
+        datafull = json.load(fp)
+
+    with open("micro_names.json", "r") as fp:
+        micro_names = json.load(fp)
+
+    data_dim = datafull[f'data_gen_{dim}']
     
+    # Slope for tpc to stat.analysis error fit, that have 0 mean: 
+    slope_to_fit = {'2D': {'Integral Range': 1},
+                    '3D': {'Integral Range': 0.95}}
+    
+    return data_dim, micro_names, slope_to_fit
 
+def comparison_results(data_dim, micro_names, edge_length):
+    
+    fit_ir_vf = np.array([data_dim[n]['fit_ir_vf'] for n in micro_names])
+    fit_err_vf = np.array([data_dim[n]['fit_err_vf'][edge_length] for n in micro_names])
+    pred_ir_vf = np.array([data_dim[n]['pred_ir_vf'][edge_length] for n in micro_names])
+    pred_err_vf = np.array([data_dim[n]['pred_err_vf'][edge_length] for n in micro_names])
+    
+    ir_results = [fit_ir_vf, pred_ir_vf]
+    err_results = [fit_err_vf, pred_err_vf]
+    return ir_results, err_results
 
+    
+        
 
 if __name__ == '__main__':
-    run_microlib_statistics()
-
-# fit_err_vfs.append(fit_err_vf)
-                # fit_ir_vfs.append(fit_ir_vf)
-                # print(f'{j} pred error vf = {pred_err_vf}')
-                # print(f'{j} experiment error vf = {err_fit_vf}')
-                # print(f'% diff vf = {(err_fit_vf-pred_err_vf)/err_fit_vf}')
-                # print()
-                
-                # print(f'{j} starting to sa')
-                # sa_images = util.make_sas(img[0])
-                # # Do calcs on single image
-                # print(f'{j} starting to testing error')
-                # sa = torch.mean(util.sa_map_from_sas(sa_images)).cpu().item()
-                # print(f'{j} sa = {sa}')
-                # sa_testimg = [sa_img[0, :l, :l].cpu() if mode=='2D' else sa_img[0, :l, :l, :l].cpu() for sa_img in sa_images]
-                # pred_err_sa, _, tpc_sa_dist, tpc_sa, pred_ir_sa = util.make_error_prediction(sa_testimg, sa, model_error=False, correction=False)
-                # compared_shape = [np.array(sa_testimg[0].size())]
-                # err_fit_sa, fit_ir_sa = util.stat_analysis_error(util.sa_map_from_sas(sa_images), edge_lengths, img_dims, compared_shape, conf=0.95)
-                # print(f'{j} pred error = {pred_err_sa}')
-                # print(f'{j} experiment error = {err_fit_sa}')
-                # print(f'% diff = {(err_fit_sa-pred_err_sa)/err_fit_sa}')
-
-                # pred_err_sas.append(pred_err_sa)
-                # pred_ir_sas.append(pred_ir_sa)
-                # fit_err_sas.append(err_fit_sa)
-                # fit_ir_sas.append(fit_ir_sa)
-
-                # print(f'{j} starting real image stats')
-                # Do stats on the full generated image
-                
-                # err_fit_vf = util.real_image_stats(img[0], edge_lengths, vf)[0]  
-                # err_fit_sa = util.real_image_stats(util.sa_map_from_sas(sa_images), edge_lengths, sa)[0]  # TODO calc with new sa
-                
-                # tpc_vf = [list(tpc) for tpc in tpc_vf]
-                # tpc_sa = [list(tpc) for tpc in tpc_sa]
-                # data_val[n] = {'pred_err_vf': pred_err_vf.astype(np.float64),
-                        #    'pred_err_sa':pred_err_sa.astype(np.float64),
-                        #    'err_fit_vf':err_fit_vf.item(),
-                        #    'err_fit_sa':err_fit_sa.item(),
-                            # 'tpc_vf_dist':list(tpc_vf_dist),
-                            # 'tpc_vf':tpc_vf,
-                            # 'tpc_sa_dist':list(tpc_sa_dist),
-                            # 'tpc_sa':tpc_sa
-                            # }
-
-# print(errs_ir_vf)
-            # fit_ir_vf = np.mean(errs_ir_vf)
-        #     print(f'mean ir = {fit_ir_vf}')
-            # datafin[f'data_gen_{mode}'] = data_val
-            # datafin[f'data_gen_{mode}'][n]['sa'] = sa
-            # datafin[f'data_gen_{mode}'][n]['pred_err_sa'] = pred_err_sa.astype(np.float64)
-            # datafin[f'data_gen_{mode}'][n]['pred_ir_sa'] = pred_ir_sa
-            # datafin[f'data_gen_{mode}'][n]['err_fit_sa'] = err_fit_sa.item()
-            # datafin[f'data_gen_{mode}'][n]['fit_ir_sa'] = fit_ir_sa
-
-            # datafin[f'data_gen_{mode}'][n]['tpc_sa_dist'] = list(tpc_sa_dist)
-            # datafin[f'data_gen_{mode}'][n]['tpc_sa'] = tpc_sa
-
-# print(pred_ir_sas)
-            # print(f'mean ir = {np.mean(pred_ir_sas)}')
-            # datafin[f'data_gen_{mode}'][n]['pred_ir_sa'] = np.mean(pred_ir_sas)
-            # if mode=='3D':
-            #     datafin[f'data_gen_{mode}'][n]['dim_variation'] = 0
-            # else:
-            #     datafin[f'data_gen_{mode}'][n]['dim_variation'] = np.var(pred_ir_sas)/np.mean(pred_ir_sas)
-            #     print(f'dim variation = {np.var(pred_ir_sas)/np.mean(pred_ir_sas)}')
-            # datafin[f'data_gen_{mode}'][n]['pred_err_sa'] = np.mean(pred_err_sas).astype(np.float64)
-
-            # print(fit_ir_vfs)
-            # print(f'mean ir = {np.mean(fit_ir_vfs)}')
-            # datafin[f'data_gen_{mode}'][n]['fit_ir_vf'] = np.mean(fit_ir_vfs)
-            # datafin[f'data_gen_{mode}'][n]['fit_ir_vf'] = np.mean(fit_ir_vfs)
-            # if mode=='3D':
-            #     datafin[f'data_gen_{mode}'][n]['fit_dim_variation'] = 0
-            # else:
-            #     datafin[f'data_gen_{mode}'][n]['fit_dim_variation'] = np.var(fit_ir_vfs)/np.mean(fit_ir_vfs)
-            #     print(f'dim variation = {np.var(fit_ir_vfs)/np.mean(fit_ir_vfs)}')
-            # datafin[f'data_gen_{mode}'][n]['fit_err_vf'] = np.mean(fit_err_vfs).astype(np.float64)
-
-            # print(fit_ir_sas)
-            # print(f'mean ir = {np.mean(fit_ir_sas)}')
-            # datafin[f'data_gen_{mode}'][n]['fit_ir_sa'] = np.mean(fit_ir_sas)
-            # if mode=='3D':
-            #     datafin[f'data_gen_{mode}'][n]['fit_dim_variation'] = 0
-            # else:
-            #     datafin[f'data_gen_{mode}'][n]['fit_dim_variation'] = np.var(fit_ir_sas)/np.mean(fit_ir_sas)
-            #     print(f'dim variation = {np.var(fit_ir_sas)/np.mean(fit_ir_sas)}')
-            # datafin[f'data_gen_{mode}'][n]['fit_err_sa'] = np.mean(fit_err_sas).astype(np.float64)
-
-            # datafin[f'data_gen_{mode}'][n]['err_fit_vf'] = err_fit_vf.item()
-            # datafin[f'data_gen_{mode}'][n]['fit_ir_vf'] = fit_ir_vf
-            # datafin[f'data_gen_{mode}'][n]['tpc_vf_dist'] = list(tpc_vf_dist)
-            # datafin[f'data_gen_{mode}'][n]['tpc_vf'] = tpc_vf
+    error_by_size_estimation('2D')
+    # run_microlib_statistics()

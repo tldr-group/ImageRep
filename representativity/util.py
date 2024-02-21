@@ -144,43 +144,6 @@ def make_sa(img, batch=True):
 #     return sa
 
 
-# def conjunction_img_for_tpc(img, x, y, z, threed):
-#     if threed:
-#         if x == 0:
-#             if y == 0:
-#                 if z == 0:
-#                     con_img = img * img
-#                 else:
-#                     con_img = img[..., :-z] * img[..., z:]
-#             else:
-#                 if z == 0:
-#                     con_img = img[..., :-y, :] * img[..., y:, :]
-#                 else:
-#                     con_img = img[..., :-y, :-z] * img[..., y:, z:]
-#         else:
-#             if y == 0:
-#                 if z == 0:
-#                     con_img = img[..., :-x, :, :] * img[..., x:, :, :]
-#                 else:
-#                     con_img = img[..., :-x, :, :-z] * img[..., x:, :, z:]
-#             else:
-#                 if z == 0:
-#                     con_img = img[..., :-x, :-y, :] * img[..., x:, y:, :]
-#                 else:
-#                     con_img = img[..., :-x, :-y, :-z] * img[..., x:, y:, z:]
-#     else:
-#         if x == 0:
-#             if y == 0:
-#                 con_img = img * img
-#             else:
-#                 con_img = img[..., :-y] * img[..., y:]
-#         else:
-#             if y == 0:
-#                 con_img = img[..., :-x, :] * img[..., x:, :]
-#             else:
-#                 con_img = img[..., :-x, :-y] * img[..., x:, y:]
-#     return con_img
-
 # def tpc_radial_fft(img_list, mx=100, threed=False):
 #     """Calculates the radial tpc using fft"""
 #     tpcfin_list = []
@@ -199,6 +162,34 @@ def tpc_radial(img, mx=100, threed=False):
     
     return two_point_correlation(img, desired_length=mx, periodic=True, threed=threed)
         
+        
+        # else:
+        #     img = torch.tensor(img, device=torch.device("cuda:0")).float()
+        # tpc = {i:[0,0] for i in range(mx+1)}
+        # for x in range(0, mx):
+        #     for y in range(0, mx):
+        #         for z in range(0, mx if threed else 1):
+        #             d = (x**2 + y**2 + z**2) ** 0.5
+        #             if d < mx:
+        #                 remainder = d%1
+        #                 if w_fft:
+        #                     cur_tpc = tpc_radial[x,y,z] if threed else tpc_radial[x,y]
+        #                 else:
+        #                     con_img = conjunction_img_for_tpc(img, x, y, z, threed)
+        #                     cur_tpc = torch.mean(con_img).cpu()
+        #                 weight_floor = 1-remainder
+        #                 weight_ceil = remainder
+        #                 tpc[int(d)][0] += weight_floor 
+        #                 tpc[int(d)][1] += cur_tpc*weight_floor
+        #                 tpc[int(d)+1][0] += weight_ceil 
+        #                 tpc[int(d)+1][1] += cur_tpc*weight_ceil
+    
+        # tpcfin = [tpc[key][1]/tpc[key][0] for key in tpc.keys()]
+        # tpcfin = np.array(tpcfin, dtype=np.float64)
+        # tpcfin_list.append(tpcfin)
+    
+
+    
         # else:
         #     img = torch.tensor(img, device=torch.device("cuda:0")).float()
         # tpc = {i:[0,0] for i in range(mx+1)}
@@ -236,7 +227,6 @@ def stat_analysis_error(img, vf, edge_lengths):  # TODO see if to delete this or
 
 def real_image_stats(img, ls, vf, repeats=4000, z_score=1.96):  
     dims = len(img[0].shape)
-    print(f'repeats = {repeats}')
     errs = []
     for l in ls:
         vfs = []
@@ -368,7 +358,6 @@ def make_error_prediction(img, conf=0.95, err_targ=0.05, model_error=True, corre
     dims = len(img.shape)
     print(f'starting tpc radial')
     tpc = tpc_radial(img, threed=dims == 3, mx=mxtpc)
-    print(f'starting tpc to ir')
     ir = tpc_to_ir(tpc, threed=dims==3)
     n = ns_from_dims([np.array(img.shape)], ir)
     # print(n, ir)
