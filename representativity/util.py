@@ -337,12 +337,12 @@ def tpc_to_ir(tpc, threed=False):
     tpc = np.array(tpc)
     middle_idx = np.array(tpc.shape)//2
     vf = tpc[tuple(map(slice, middle_idx, middle_idx+1))].item()
-    print(f'vf squared = {vf**2}')
+    print(f'vf squared = {np.round(vf**2, 5)}')
     dist_arr = np.indices(tpc.shape)
     dist_arr = np.abs((dist_arr.T - middle_idx.T).T)
     dist_arr = np.sqrt(np.sum(dist_arr**2, axis=0))
     vf_squared = np.mean(tpc[(dist_arr>=90) & (dist_arr<=100)])
-    print(f'end of tpc = {vf_squared}')
+    print(f'end of tpc = {np.round(vf_squared, 5)}')
     vf_squared = (vf_squared + vf**2)/2
     pred_ir = 1/(vf-vf_squared)*np.sum((tpc[dist_arr<=100] - vf_squared))
     if pred_ir < 1:
