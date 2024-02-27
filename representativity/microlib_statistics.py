@@ -163,16 +163,18 @@ def run_microlib_statistics(cur_modes=['2D', '3D'], run_s=False, run_p=True, run
         print(f'{j+1}/{len(micros)} microstructures done')
     print(f'total time = {np.round((time.time()-total_time_0)/60, 2)} minutes')
 
-def main_run_microlib_statistics(cur_modes=['2D', '3D'], num_runs=5):
+def main_run_microlib_statistics(cur_modes=['2D', '3D'], run_s=False, run_p=True, num_runs=5):
     # first run the statistical analysis on the microlib dataset
-    print(f'Running statistical analysis fit on {cur_modes} mode(s)')
-    run_microlib_statistics(cur_modes=cur_modes, run_s=True, run_p=False)
+    if run_s:
+        print(f'Running statistical analysis fit on {cur_modes} mode(s)')
+        run_microlib_statistics(cur_modes=cur_modes, run_s=True, run_p=False)
     # then run the integral range prediction multiple times
-    print(f'Running integral range prediction on {cur_modes} mode(s)')
-    for run_number in range(num_runs):
-        print(f'Run number {run_number}\n')
-        run_microlib_statistics(cur_modes, run_s=False, run_p=True, run_number=run_number)
+    if run_p:
+        print(f'Running integral range prediction on {cur_modes} mode(s)')
+        for run_number in range(num_runs):
+            print(f'Run number {run_number}\n')
+            run_microlib_statistics(cur_modes, run_s=False, run_p=True, run_number=run_number)
 
 
 if __name__ == '__main__':
-    main_run_microlib_statistics(cur_modes=['3D'], num_runs=5)
+    main_run_microlib_statistics(cur_modes=['3D'], run_s=False, run_p=True, num_runs=5)
