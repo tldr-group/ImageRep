@@ -61,8 +61,8 @@ def tpc_check():
         mean_tpc_results = np.mean(np.stack(tpc_results,axis=0), axis=0)
         plt.plot(mean_tpc_results, label='mean tpc')
         real_vf_squared = np.mean(vfs)**2
-        print(f'real vf squared = {np.round(real_vf_squared, 6)}')
-        print(f'vf squared = {np.round(np.mean(vf_squares), 6)}')
+        # print(f'real vf squared = {np.round(real_vf_squared, 6)}')
+        # print(f'vf squared = {np.round(np.mean(vf_squares), 6)}')
         plt.plot([real_vf_squared]*len(mean_tpc_results), label='real vf squared')
         plt.plot([np.mean(vf_squares)]*len(mean_tpc_results), label='vf squared')
         plt.xlabel('Growing Radius')
@@ -133,21 +133,23 @@ if __name__ == '__main__':
     circle_size = 20
     vf = 0.1
     args = (imsize, circle_size, vf)    
-    run_tests = 4000
+    run_tests = 6000
     tpc_results, vfs, vf_squares, dist_len = tpcs_radius(make_circles_tpc, run_tests, args=args)
     dist_len = np.array(dist_len)
-    plt.plot(np.mean(tpc_results, axis=0), label='mean tpc')
+    plt.plot(np.mean(tpc_results, axis=0), label='Mean TPC')
 
     vf_squared = np.mean(vf_squares)
     label_vf_squared = f'$E[\Phi^2]$ = {np.round(vf_squared, 4)}'
     plt.plot([vf_squared]*len(tpc_results[0]), label=label_vf_squared)
-    print(f'vf squared = {np.round(vf_squared, 7)}')
+    # print(f'vf squared = {np.round(vf_squared, 7)}')
 
     true_vf_squared = np.mean(vfs)**2   
     label_true_vf_squared = f'$E[\Phi]^2$ = {np.round(true_vf_squared, 4)}'
     plt.plot([true_vf_squared]*len(tpc_results[0]), label=label_true_vf_squared)
-    print(f'true vf squared = {np.round(true_vf_squared, 7)}')
+    # print(f'true vf squared = {np.round(true_vf_squared, 7)}')
     
+    plt.axvline(x=np.where(dist_len==circle_size*2)[0][0], color='black', linestyle='--', label='Circle Diameter')
+
     fill_1 = plt.fill_between(np.arange(len(tpc_results[0])), np.mean(tpc_results, axis=0),[vf_squared]*len(tpc_results[0]), alpha=0.2, 
                               where=np.mean(tpc_results, axis=0)>=vf_squared,label = f'Area A')
     fill_2 = plt.fill_between(np.arange(len(tpc_results[0])),[vf_squared]*len(tpc_results[0]), np.mean(tpc_results, axis=0), alpha=0.2, 
@@ -156,22 +158,31 @@ if __name__ == '__main__':
                               where=np.mean(tpc_results, axis=0)>=vf_squared,label = f'Area C')
 
     plt.text(2.5, 0.02, 'A', fontsize=12)
-    plt.text(2.5, 0.01045, 'C', fontsize=12)
-    plt.text(40, 0.01045, 'B', fontsize=12)
-    plt.text(10, 0.035, '$Var[\Phi]=E[\Phi^2]-E[\Phi]^2=B+C$', fontsize=12)
-    plt.text(10, 0.029, '$Var[\Phi]=(len(C+B)/len(B))\cdot B$', fontsize=12)
-    plt.text(10, 0.024, '$A$ computed (by our model)', fontsize=12)
-    plt.text(10, 0.0205, '$A=B$', fontsize=12)
-    plt.text(10, 0.0173, '$Var[\Phi]=(len(A+B)/len(B))\cdot A$', fontsize=12)
+    plt.text(2.5, 0.01046, 'C', fontsize=12)
+    plt.text(40, 0.01046, 'B', fontsize=12)
+    plt.text(10, 0.079, '$\Phi$ calculates phase fraction.', fontsize=12)
+    plt.text(10, 0.068, 'The variance of $\Phi$ is:', fontsize=12)
+    plt.text(10, 0.058, '$Var[\Phi]=E[\Phi^2]-E[\Phi]^2$', fontsize=12)
+    plt.text(10, 0.049, '$Var[\Phi]=Area(C)+Area(B)$', fontsize=12)
+    plt.text(10, 0.041, '$Area(C)=(40/160)\cdot Area(B)$', fontsize=12)
+    plt.text(10, 0.0335, 'So,', fontsize=12)
+    plt.text(10, 0.0285, '$Var[\Phi]=(200/160)\cdot Area(B)$', fontsize=12)
+    plt.text(10, 0.024, '$Area(A)$ is computed by our model.', fontsize=12)
+    plt.text(10, 0.0205, '$Area(A)=Area(B)$', fontsize=12)
+    plt.text(10, 0.0175, 'Which result in:', fontsize=12)
+    plt.text(10, 0.0150, '$Var[\Phi]=(200/160)\cdot Area(A)$', fontsize=12)
 
-    plt.title(f'VF = {vf}, Circle Radius = {circle_size}, Image Size = {imsize}')
+    plt.title(f'PF = {vf}, Circle Diameter = {circle_size*2}, Image Size = {imsize}')
+    
     plt.ylim(true_vf_squared-0.001, vf+0.01)
+   
     plt.xticks(np.arange(0,len(tpc_results[0]),5), dist_len[::5])
-    plt.xlabel('Growing Radius')
+    plt.xlabel('TPC distance')
     plt.ylabel('TPC (log scale)')
     plt.yscale('log')
+    plt.yticks([0.01, 0.1], [0.01, 0.1])
     plt.legend()
-    plt.savefig(f'tpc_results/circles_tpc.png')
+    plt.savefig(f'tpc_results/circles_tpc_test.png')
 
     
 

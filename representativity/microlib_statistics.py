@@ -1,5 +1,5 @@
 import os
-import util
+from representativity import util
 import torch
 import matplotlib.pyplot as plt
 import json
@@ -23,16 +23,16 @@ def insert_v_names_in_all_data(all_data, mode, n, v_names, run_v_names, run_numb
     dim_data = all_data[f'data_gen_{mode}']
     if n not in dim_data:
         dim_data[n] = {}
-        for v_name in v_names:
-            if v_name not in dim_data[n]:
-                dim_data[n][v_name] = {}
+    for v_name in v_names:
+        if v_name not in dim_data[n]:
+            dim_data[n][v_name] = {}
     micro_data = dim_data[n]
     if f'run_{run_number}' not in micro_data:
         micro_data[f'run_{run_number}'] = {}
-        run_data = micro_data[f'run_{run_number}']
-        for run_v_name in run_v_names:
-            if run_v_name not in run_data:
-                run_data[run_v_name] = {}
+    run_data = micro_data[f'run_{run_number}']
+    for run_v_name in run_v_names:
+        if run_v_name not in run_data:
+            run_data[run_v_name] = {}
 
 
 def run_ir_prediction(netG, n, mode, imsize, all_data, conf, run_number=0):
@@ -45,8 +45,14 @@ def run_ir_prediction(netG, n, mode, imsize, all_data, conf, run_number=0):
     if single_img.any():
         single_img = single_img.cpu()[0]
         pred_err_vf, _, pred_ir_vf = util.make_error_prediction(single_img, 
-                    conf=conf, model_error=False, correction=False, mxtpc=100)
+                    conf=conf, model_error=False, correction=False, mxtpc=200)
         print(f'pred ir {imsize} = {np.round(pred_ir_vf, 3)}')
+        im_vf = single_img.mean().cpu().item()
+        one_im_stat_pred = util.one_img_stat_analysis_error(single_img, im_vf)
+        print(f'one im stat pred ir = {one_im_stat_pred}')
+        if 'pred_ir_one_im_fit_vf' not in run_data:
+            run_data['pred_ir_one_im_fit_vf'] = {}
+        run_data['pred_ir_one_im_fit_vf'][str(imsize)] = one_im_stat_pred
         run_data['pred_ir_vf'][str(imsize)] = pred_ir_vf
         run_data['pred_err_vf'][str(imsize)] = pred_err_vf
 
@@ -57,11 +63,16 @@ def run_statistical_fit_analysis(netG, n, mode, edge_lengths_fit, all_data):
     '''
     imsize = 448 if mode=='3D' else 1600
     lf = imsize//32 + 2  # the size of G's input
-    many_imgs = util.generate_image(netG, lf=lf, threed=mode=='3D', reps=50)
+    reps = 50 if mode=='3D' else 150
+    many_imgs = util.generate_image(netG, lf=lf, threed=mode=='3D', reps=reps)
     vf = torch.mean(many_imgs).cpu().item()
     print(f'{n} vf = {vf}')
     all_data[f'data_gen_{mode}'][n]['vf'] = vf
     fit_ir_vf = util.stat_analysis_error(many_imgs, vf, edge_lengths_fit)
+    print(f'{n} fit ir vf = {fit_ir_vf}')
+    # fit_ir_vf_oi = util.stat_analysis_error(many_imgs[0].unsqueeze(0), vf, edge_lengths_fit)
+    # fit_ir_vf_classic = util.stat_analysis_error_classic(many_imgs, vf)
+    # print(f'{n} fit ir vf classic = {fit_ir_vf_oi}')
     all_data[f'data_gen_{mode}'][n]['fit_ir_vf'] = fit_ir_vf
     return fit_ir_vf, vf
 
@@ -83,7 +94,7 @@ def json_preprocessing():
     '''
 
     # Load the statistics file
-    with open("microlib_statistics_final.json", "r") as fp:
+    with open("microlib_statistics_periodic.json", "r") as fp:
         all_data = json.load(fp)
 
     # Dataset path and list of subfolders
@@ -94,7 +105,7 @@ def json_preprocessing():
     netG = util.load_generator(micros[0])
 
     v_names = ['vf', 'fit_err_vf']
-    run_v_names = ['pred_ir_vf', 'pred_err_vf']
+    run_v_names = ['pred_ir_vf', 'pred_err_vf', 'pred_ir_one_im_fit_vf']
 
     modes = ['2D', '3D']
     for mode in modes:
@@ -155,7 +166,7 @@ def run_microlib_statistics(cur_modes=['2D', '3D'], run_s=False, run_p=True, run
                 fit_ir_vf, vf = run_statistical_fit_analysis(netG, n, mode, edge_lengths_fit, all_data)
                 compare_statistical_fit_error(n, mode, edge_lengths_pred, fit_ir_vf, vf, all_data, conf)
             
-            with open(f"microlib_statistics_final.json", "w") as fp:
+            with open(f"microlib_statistics_periodic.json", "w") as fp:
                 json.dump(all_data, fp) 
 
         print(f'\ntime for micro {n} {cur_modes} = {np.round((time.time()-t_micro)/60, 2)} minutes\n')
@@ -177,4 +188,4 @@ def main_run_microlib_statistics(cur_modes=['2D', '3D'], run_s=False, run_p=True
 
 
 if __name__ == '__main__':
-    main_run_microlib_statistics(cur_modes=['3D'], run_s=False, run_p=True, num_runs=5)
+    main_run_microlib_statistics(cur_modes=['2D'], run_s=False, run_p=True, num_runs=5)

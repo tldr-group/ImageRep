@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import time
+import util
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
@@ -19,13 +20,13 @@ def error_by_size_estimation(dim, run_number=0, after_slope_calc=True):
     edge_lengths_pred = data_dim['edge_lengths_pred']
     stds = []
     for edge_length in edge_lengths_pred:
-        _, _, _, std = comparison_results(data_dim, micro_names, slope, dim,
+        _, _, err, std = comparison_results(data_dim, micro_names, slope, dim,
                                           str(edge_length), run_number, after_slope_calc)
         stds.append(std)
     return stds
 
 def data_micros_and_slope(dim, after_slope_calc=True):
-    with open("microlib_statistics_final.json", "r") as fp:
+    with open("microlib_statistics_periodic.json", "r") as fp:
         datafull = json.load(fp)
 
     with open("micro_names.json", "r") as fp:
@@ -48,8 +49,11 @@ def comparison_results(data_dim, micro_names, slope, dim, edge_length, run_numbe
     fit_ir_vf = np.array([m_data['fit_ir_vf'] for m_data in micros_data])
     fit_err_vf = np.array([m_data['fit_err_vf'][edge_length] for m_data in micros_data])
     pred_ir_vf = np.array([m_data[f'run_{run_number}']['pred_ir_vf'][edge_length] for m_data in micros_data])
+    # pred_ir_oi_vf = np.array([m_data[f'run_{run_number}']['pred_ir_one_im_fit_vf'][edge_length] for m_data in micros_data])
+
     pred_err_vf = np.array([m_data[f'run_{run_number}']['pred_err_vf'][edge_length] for m_data in micros_data])
     
+    # ir_results = [fit_ir_vf, pred_ir_vf, pred_ir_oi_vf]
     ir_results = [fit_ir_vf, pred_ir_vf]
     err_results = [fit_err_vf, pred_err_vf]
 
@@ -70,18 +74,23 @@ def comparison_results(data_dim, micro_names, slope, dim, edge_length, run_numbe
     # print(f'mean = {np.mean(errs)}')
     # print(f'mape = {np.mean(np.abs(errs))}')
     # print(f'error = {err}')
-    return pred_data, fit_data, errs, std
+    return pred_data, fit_data, err, std
 
 def pred_vs_fit_all_data(dim, edge_length, num_runs=5, after_slope_calc=True):
     pred_data_all = []
+    pred_data_oi_all = []
     fit_data_all = []
     stds = []
     for i in range(num_runs):
-        pred_data, fit_data, _, std = comparison_results(*data_micros_and_slope(dim, after_slope_calc), dim, edge_length, i, after_slope_calc)
+        data_micro_slope = data_micros_and_slope(dim, after_slope_calc)
+        pred_data, fit_data, _, std = comparison_results(*data_micro_slope, dim, edge_length, 
+                                                         i, after_slope_calc)
         pred_data_all.append(pred_data)
+        # pred_data_oi_all.append(pred_oi_data)
         fit_data_all.append(fit_data)
         stds.append(std)
     pred_data_all = np.concatenate(pred_data_all)
+    # pred_data_oi_all = np.concatenate(pred_data_oi_all)
     fit_data_all = np.concatenate(fit_data_all)
     std = np.array(stds).sum(axis=0)/num_runs
     return pred_data_all, fit_data_all, std
@@ -99,13 +108,15 @@ def plot_pred_vs_fit(dim, edge_length, num_runs=5, after_slope_calc=True):
     print(f'mape = {np.mean(np.abs(errs))}')
     print(f'error = {err}')
     
-    plt.scatter(fit_data_all, pred_data_all, s=0.2)
+    plt.scatter(fit_data_all, pred_data_all, s=0.2, c='b')
+    # plt.scatter(fit_data_all, pred_data_oi_all, s=0.2, c='r')
+    plt.plot(np.arange(np.max(fit_data_all)), np.arange(np.max(fit_data_all)), c='k')
     plt.xlabel('Fit Data')
     plt.ylabel('Pred Data')
     plt.title(f'Prediction vs. Fit Data {dim}')
     ax = plt.gca()
     ax.set_aspect('equal', adjustable='box')
-    plt.savefig(f'pred_vs_fit_{dim}.png')
+    plt.savefig(f'pred_vs_fit_all_runs_periodic_cut/pred_vs_fit_{dim}_{edge_length}.png')
     plt.show()
     plt.close()
 
@@ -115,13 +126,20 @@ def plot_std_error_by_size(dim, edge_lengths, num_runs=5, after_slope_calc=True)
         stds.append(error_by_size_estimation(dim, i, after_slope_calc))
     stds = np.array(stds).sum(axis=0)/num_runs
     popt, pcov = curve_fit(partial(fit_to_errs_function, dim), edge_lengths, stds)
+    img_sizes = [(l,)*2 for l in edge_lengths]
+    vfs, irs = [0.1, 0.2, 0.4], [40, 40, 40]
+    for i in range(len(vfs)):
+        erros_inherent = util.bernouli(vfs[i], util.ns_from_dims(img_sizes, irs[i]),conf=0.95)
+        plt.plot(edge_lengths, erros_inherent, label=f'Inherent error IR = {irs[i]}, VF = {vfs[i]}')
     print(f'popt: {popt}')
-    plt.scatter(edge_lengths_pred, stds)
-    plt.plot(edge_lengths_pred, fit_to_errs_function(dim, edge_lengths_pred, *popt), label='Fit')
+    plt.scatter(edge_lengths_pred, stds*100, label='Prediction error std')
+    prediction_error = fit_to_errs_function(dim, edge_lengths, *popt)*100
+    plt.plot(edge_lengths_pred, prediction_error, label='Prediction error fit')
     plt.xlabel('Edge Length')
-    plt.ylabel('Error')
+    plt.ylabel('Error (%)')
     plt.title(f'Error by Edge Length {dim}')
-    plt.savefig(f'error_by_size_{dim}.png')
+    plt.legend()
+    plt.savefig(f'error_by_size_{dim}_vf.png')
     plt.show()
 
 
@@ -149,7 +167,7 @@ def optimal_slopes(dim, num_runs=5, after_slope_calc=True):
 
 def fit_to_errs_function(dim, edge_lengths, a):
     edge_lengths = np.array(edge_lengths)
-    power = 2 if dim == '2D' else 3
+    # power = 2 if dim == '2D' else 3
     return a / edge_lengths 
 
 def fit_to_slope_function(dim, edge_lengths, a, b):
@@ -194,17 +212,17 @@ def plot_optimal_slopes(dim, num_runs=5, after_slope_calc=False):
 
 if __name__ == '__main__':
     dim = '2D'
-    after_slope_calc=True
-    run_data, _, _ = data_micros_and_slope(dim, after_slope_calc)
-    edge_lengths_pred = run_data['edge_lengths_pred']
-    plot_std_error_by_size(dim, edge_lengths_pred, num_runs=10, after_slope_calc=after_slope_calc)
-    
+    after_slope_calc=False
     # run_data, _, _ = data_micros_and_slope(dim, after_slope_calc)
     # edge_lengths_pred = run_data['edge_lengths_pred']
-    # for edge_length in edge_lengths_pred:
-    #     plot_pred_vs_fit(dim, str(edge_length), num_runs=10, after_slope_calc=after_slope_calc)
+    # plot_std_error_by_size(dim, edge_lengths_pred, num_runs=10, after_slope_calc=after_slope_calc)
+    
+    run_data, _, _ = data_micros_and_slope(dim, after_slope_calc)
+    edge_lengths_pred = run_data['edge_lengths_pred']
+    for edge_length in edge_lengths_pred:
+        plot_pred_vs_fit(dim, str(edge_length), num_runs=3, after_slope_calc=after_slope_calc)
 
-    # plot_optimal_slopes(dim, num_runs=10, after_slope_calc=False)
+    plot_optimal_slopes(dim, num_runs=3, after_slope_calc=False)
     
     
     
