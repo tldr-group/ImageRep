@@ -125,22 +125,24 @@ def plot_std_error_by_size(dim, edge_lengths, num_runs=5, after_slope_calc=True)
     for i in range(num_runs):
         stds.append(error_by_size_estimation(dim, i, after_slope_calc))
     stds = np.array(stds).sum(axis=0)/num_runs
-    popt, pcov = curve_fit(partial(fit_to_errs_function, dim), edge_lengths, stds)
-    img_sizes = [(l,)*2 for l in edge_lengths]
-    vfs, irs = [0.1, 0.2, 0.4], [40, 40, 40]
-    for i in range(len(vfs)):
-        erros_inherent = util.bernouli(vfs[i], util.ns_from_dims(img_sizes, irs[i]),conf=0.95)
-        plt.plot(edge_lengths, erros_inherent, label=f'Inherent error IR = {irs[i]}, VF = {vfs[i]}')
+    n_voxels = np.array([edge**int(dim[0]) for edge in edge_lengths])
+    popt, pcov = curve_fit(partial(util.fit_to_errs_function, dim), n_voxels, stds)
+    # img_sizes = [(l,)*2 for l in edge_lengths]
+    # vfs, irs = [0.1, 0.2, 0.4], [40, 40, 40]
+    # for i in range(len(vfs)):
+        # erros_inherent = util.bernouli(vfs[i], util.ns_from_dims(img_sizes, irs[i]),conf=0.95)
+        # plt.plot(edge_lengths, erros_inherent, label=f'Inherent error IR = {irs[i]}, VF = {vfs[i]}')
     print(f'popt: {popt}')
-    plt.scatter(edge_lengths_pred, stds*100, label='Prediction error std')
-    prediction_error = fit_to_errs_function(dim, edge_lengths, *popt)*100
-    plt.plot(edge_lengths_pred, prediction_error, label='Prediction error fit')
+    plt.scatter(edge_lengths, stds*100, label='Prediction error std')
+    prediction_error = util.fit_to_errs_function(dim, n_voxels, *popt)*100
+    plt.plot(edge_lengths, prediction_error, label='Prediction error fit')
     plt.xlabel('Edge Length')
-    plt.ylabel('Error (%)')
+    plt.ylabel('MPE std (%)')
     plt.title(f'Error by Edge Length {dim}')
     plt.legend()
     plt.savefig(f'error_by_size_{dim}_vf.png')
     plt.show()
+    plt.close()
 
 
 def find_optimal_slope(pred_data, fit_data):
@@ -164,11 +166,6 @@ def optimal_slopes(dim, num_runs=5, after_slope_calc=True):
         slopes.append(optimal_slope)
     
     return edge_lengths_pred, slopes, stds
-
-def fit_to_errs_function(dim, edge_lengths, a):
-    edge_lengths = np.array(edge_lengths)
-    # power = 2 if dim == '2D' else 3
-    return a / edge_lengths 
 
 def fit_to_slope_function(dim, edge_lengths, a, b):
     edge_lengths = np.array(edge_lengths)
@@ -211,18 +208,19 @@ def plot_optimal_slopes(dim, num_runs=5, after_slope_calc=False):
     plt.show()
 
 if __name__ == '__main__':
-    dim = '2D'
+    dim = '3D'
     after_slope_calc=False
-    # run_data, _, _ = data_micros_and_slope(dim, after_slope_calc)
-    # edge_lengths_pred = run_data['edge_lengths_pred']
-    # plot_std_error_by_size(dim, edge_lengths_pred, num_runs=10, after_slope_calc=after_slope_calc)
+    num_runs_cur = 4
+    run_data, _, _ = data_micros_and_slope(dim, after_slope_calc)
+    edge_lengths_pred = run_data['edge_lengths_pred']
+    plot_std_error_by_size(dim, edge_lengths_pred, num_runs=num_runs_cur, after_slope_calc=after_slope_calc)
     
     run_data, _, _ = data_micros_and_slope(dim, after_slope_calc)
     edge_lengths_pred = run_data['edge_lengths_pred']
     for edge_length in edge_lengths_pred:
-        plot_pred_vs_fit(dim, str(edge_length), num_runs=3, after_slope_calc=after_slope_calc)
+        plot_pred_vs_fit(dim, str(edge_length), num_runs=num_runs_cur, after_slope_calc=after_slope_calc)
 
-    plot_optimal_slopes(dim, num_runs=3, after_slope_calc=False)
+    plot_optimal_slopes(dim, num_runs=num_runs_cur, after_slope_calc=False)
     
     
     

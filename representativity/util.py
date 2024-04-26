@@ -247,24 +247,37 @@ def tpc_to_ir(tpc, im, im_shape):
     
     # calculate the coefficient for the ir prediction:
     coeff = calc_coeff_for_ir_prediction(norm_vol, dist_arr, end_dist, img_volume, bool_array)
-    
+    # print(f'ir pred coefficient = {coeff}')
     pred_ir = calc_pred_ir(coeff, tpc, vf, vf_squared, bool_array, im_shape)
-    while pred_ir_is_small(pred_ir, im, vf):
-        print(f'pred ir = {pred_ir} is small, CHANGING TPC TO POSITIVE VALUES')
-        tpc, pred_ir = make_pred_ir_positive(coeff, tpc, vf, vf_squared, bool_array, im_shape)
+    pred_is_off, sign = pred_ir_is_off(pred_ir, im, vf)
+    while pred_is_off:
+        how_off = 'negative' if sign > 0 else 'positive'
+        print(f'pred ir = {pred_ir} is too {how_off}, CHANGING TPC VALUES')
+        tpc, pred_ir = change_pred_ir(coeff, tpc, vf, vf_squared, bool_array, im_shape, sign)
+        pred_is_off, sign = pred_ir_is_off(pred_ir, im, vf)
     return pred_ir
 
 
 def calc_coeff_for_ir_prediction(norm_vol, dist_arr, end_dist, img_volume, bool_array):
-    sum_of_small_radii = np.sum(norm_vol[dist_arr<end_dist*1.5])
+    sum_of_small_radii = np.sum(norm_vol[dist_arr<end_dist])
     coeff_1 = img_volume/(img_volume - sum_of_small_radii)
     coeff_2 = (1/img_volume)*(np.sum(bool_array)-np.sum(norm_vol[bool_array]))
-    return coeff_1/(1-coeff_2*coeff_1)
+    coeff_product = coeff_1*coeff_2
+    while coeff_product > 1:
+        print(f'coeff product = {coeff_product}')
+        coeff_product /= 1.1
+    return coeff_1/(1-coeff_product)
 
 
-def make_pred_ir_positive(coeff, tpc, vf, vf_squared, bool_array, im_shape):
-    negatives = np.where(tpc - vf_squared < 0)
-    tpc[negatives] += (vf_squared - tpc[negatives])/10
+def change_pred_ir(coeff, tpc, vf, vf_squared, bool_array, im_shape, sign):
+    '''Changes the tpc function to be more positive or more negative, compared
+    to the fast stat. analysis ir pred. of the single img.'''
+    if sign > 0:
+        negatives = np.where(tpc - vf_squared < 0)
+        tpc[negatives] += (vf_squared - tpc[negatives])/10
+    else:
+        positives = np.where(tpc - vf_squared > 0)
+        tpc[positives] -= (tpc[positives] - vf_squared)/10
     pred_ir = calc_pred_ir(coeff, tpc, vf, vf_squared, bool_array, im_shape)
     return tpc, pred_ir
 
@@ -276,13 +289,21 @@ def calc_pred_ir(coeff, tpc, vf, vf_squared, bool_array, im_shape):
     return pred_ir
 
 
-def pred_ir_is_small(pred_ir, img, vf):
+def pred_ir_is_off(pred_ir, img, vf):
     if pred_ir < 1:
-        return True
+        return True, 1
     one_im_stat_pred = one_img_stat_analysis_error(img, vf)
-    if pred_ir / one_im_stat_pred < 2/3:
-        return True
-    return False
+    if one_im_stat_pred > 1:  # could be erroneous stat. analysis prediction
+        if pred_ir / one_im_stat_pred < 2/3:
+            return True, 1
+        if pred_ir / one_im_stat_pred > 2:
+            return True, -1
+    return False, 0
+
+
+def fit_to_errs_function(dim, n_voxels, a, b):
+
+    return a / n_voxels**b 
 
 
 def make_error_prediction(img, conf=0.95, err_targ=0.05, model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
@@ -294,55 +315,53 @@ def make_error_prediction(img, conf=0.95, err_targ=0.05, model_error=True, corre
     n = ns_from_dims([np.array(img.shape)], ir)
     # print(n, ir)
     std_bern = ((1 / n[0]) * (vf * (1 - vf))) ** 0.5
-    std_model, slope, intercept = get_model_params(f'{dims}d{met}') 
+    std_model, slope = get_model_params(dims, torch.numel(img))
     if not correction:
-        slope, intercept = 1, 0
+        slope = 1 
     if model_error:
         # print(std_bern)
         bounds = [(conf*1.001, 1)]
-        args = (conf, std_bern, std_model, vf, slope, intercept)
+        args = (conf, std_bern, std_model, vf, slope)
         err_for_img = minimize(optimize_error_conf_pred, conf**0.5, args, bounds=bounds).fun
-        args = (conf, std_model, vf, slope, intercept, err_targ)
+        args = (conf, std_model, vf, slope, err_targ)
         n_for_err_targ = minimize(optimize_error_n_pred, conf**0.5, args, bounds=bounds).fun
         # print(n, n_for_err_targ, ir)
     else:
         z = stats.norm.interval(conf)[1]
-        err_for_img = (z*std_bern/vf)*slope+intercept
+        err_for_img = (z*std_bern/vf)*slope
         # print(stats.norm.interval(conf, scale=std_bern)[1], std_bern)
-        n_for_err_targ = vf * (1 - vf) * (z/ ((err_targ -intercept)/slope * vf)) ** 2
+        n_for_err_targ = vf * (1 - vf) * (z/ (err_targ/slope * vf)) ** 2
 
         # print(n_for_err_targ, n, ir)
     l_for_err_targ = dims_from_n(n_for_err_targ, shape, ir, dims)
     return err_for_img*100, l_for_err_targ, ir
 
 
-def optimize_error_conf_pred(bern_conf, total_conf, std_bern, std_model, vf, slope, intercept):
+def optimize_error_conf_pred(bern_conf, total_conf, std_bern, std_model, vf, slope):
     model_conf = total_conf/bern_conf
-    err_bern = ((stats.norm.interval(bern_conf, scale=std_bern)[1]*slope)/vf)+intercept
+    err_bern = ((stats.norm.interval(bern_conf, scale=std_bern)[1]*slope)/vf)
     err_model = stats.norm.interval(model_conf, scale=std_model)[1]
-    # print(stats.norm.interval(bern_conf, scale=std_bern)[1], slope, intercept, vf , err_model, err_bern)
+    # print(stats.norm.interval(bern_conf, scale=std_bern)[1], slope, vf , err_model, err_bern)
     # print(err_bern, err_model, err_bern * (1 + err_model))
     # print(err_bern * (1 + err_model))
     return err_bern * (1 + err_model)
 
 
-def optimize_error_n_pred(bern_conf, total_conf, std_model, vf, slope, intercept, err_targ):
+def optimize_error_n_pred(bern_conf, total_conf, std_model, vf, slope, err_targ):
     # print(bern_conf)
     model_conf = total_conf/bern_conf
     z1 = stats.norm.interval(bern_conf)[1]
     err_model = stats.norm.interval(model_conf, scale=std_model)[1]
     # print(err_model)
     num = -(err_model+1)**2 * slope**2 * (vf-1) * z1**2
-    den = (-intercept * err_model + err_targ - intercept)**2 * vf
+    den = (err_model + err_targ)**2 * vf
     return num/den
 
 
-def get_model_params(imtype):  # see model_param.py for the appropriate code that was used.
-    params= {'2dvf':[0.34014036731289116, 1.61, 0],
-             '2dsa':[0.2795574424176512, 1.61, 0],
-             '3dvf':[0.5584825884176943, 6, 0.4217],  # TODO needs to be changed according to fig3.py
-             '3dsa':[0.4256621550262103, 17.7, 0]}  # TODO needs to be changed according to fig3.py
-    return params[imtype]
+def get_model_params(dim, n_voxels):  # see model_param.py for the appropriate code that was used.
+    params= {f'{dim}d': [fit_to_errs_function(dim, n_voxels, 48.20175315, 0.4297919), 1],
+             f'{dim}d': [0.5584825884176943, 6]}  # TODO needs to be changed according to the fit in prediction_error.py
+    return params[f'{dim}d']
 
 
 def calc_autocorrelation_orthant(img, numel_large, dims, desired_length=100):
