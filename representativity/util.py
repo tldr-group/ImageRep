@@ -77,7 +77,8 @@ def tpc_radial(img, mx=100, threed=False):
 def stat_analysis_error_classic(img, vf):  # TODO see if to delete this or not
     ratios = [2**i for i in np.arange(1, int(np.log2(img.shape[1]))-5)]
     ratios.reverse()
-    ratios.append(1)
+    if img.shape[0] > 1:
+        ratios.append(1)
     ratios = ratios[-4:]
     edge_lengths = [img.shape[1]//r for r in ratios]
     img_dims = [np.array((l,)*(len(img.shape)-1)) for l in edge_lengths]
@@ -434,7 +435,7 @@ def calc_std_from_ratio(img, ratio):
     """Calculates the standard deviation of the subimages of an image, divided by a certain ratio."""
     divided_img = divide_img_to_subimages(img, ratio).cpu().numpy()
     along_axis = tuple(np.arange(1, len(img.shape)))
-    return np.std(np.mean(divided_img, axis=along_axis))
+    return np.std(np.mean(divided_img, axis=along_axis), ddof=1)
 
 
 def image_stats(img, vf, ratios, z_score=1.96):  
