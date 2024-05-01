@@ -210,7 +210,7 @@ def plot_optimal_slopes(dim, num_runs=5, after_slope_calc=False):
 if __name__ == '__main__':
     dim = '3D'
     after_slope_calc=False
-    num_runs_cur = 9
+    num_runs_cur = 8
     run_data, _, _ = data_micros_and_slope(dim, after_slope_calc)
     edge_lengths_pred = run_data['edge_lengths_pred']
     plot_std_error_by_size(dim, edge_lengths_pred, num_runs=num_runs_cur, after_slope_calc=after_slope_calc)

@@ -63,16 +63,18 @@ def run_statistical_fit_analysis(netG, n, mode, edge_lengths_fit, all_data):
     '''
     imsize = 448 if mode=='3D' else 1600
     lf = imsize//32 + 2  # the size of G's input
-    reps = 50 if mode=='3D' else 150
+    reps = 70 if mode=='3D' else 150
     many_imgs = util.generate_image(netG, lf=lf, threed=mode=='3D', reps=reps)
     vf = torch.mean(many_imgs).cpu().item()
     print(f'{n} vf = {vf}')
     all_data[f'data_gen_{mode}'][n]['vf'] = vf
     fit_ir_vf = util.stat_analysis_error(many_imgs, vf, edge_lengths_fit)
+    cur_fit_ir_vf = all_data[f'data_gen_{mode}'][n]['fit_ir_vf']
+    print(f'{n} cur fit ir vf = {cur_fit_ir_vf}')
     print(f'{n} fit ir vf = {fit_ir_vf}')
     # fit_ir_vf_oi = util.stat_analysis_error(many_imgs[0].unsqueeze(0), vf, edge_lengths_fit)
-    # fit_ir_vf_classic = util.stat_analysis_error_classic(many_imgs, vf)
-    # print(f'{n} fit ir vf classic = {fit_ir_vf_oi}')
+    fit_ir_vf_classic = util.stat_analysis_error_classic(many_imgs, vf)
+    print(f'{n} fit ir vf classic = {fit_ir_vf_classic}')
     all_data[f'data_gen_{mode}'][n]['fit_ir_vf'] = fit_ir_vf
     return fit_ir_vf, vf
 
@@ -136,7 +138,7 @@ def run_microlib_statistics(cur_modes=['2D', '3D'], run_s=False, run_p=True, run
 
     total_time_0 = time.time()
     # run the statistical analysis on the microlib dataset
-    for _, p in enumerate(micros[41:47]):
+    for _, p in enumerate(micros):
 
         try:
             netG.load_state_dict(torch.load(p + "_Gen.pt"))
@@ -188,4 +190,4 @@ def main_run_microlib_statistics(cur_modes=['2D', '3D'], run_s=False, run_p=True
 
 
 if __name__ == '__main__':
-    main_run_microlib_statistics(cur_modes=['3D'], run_s=False, run_p=True, num_runs=2)
+    main_run_microlib_statistics(cur_modes=['3D'], run_s=True, run_p=False, num_runs=1)

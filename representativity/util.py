@@ -101,6 +101,9 @@ def real_image_stats(img, ls, vf, repeats=4000, z_score=1.96):
     errs = []
     for l in ls:
         vfs = []
+        n_pos_ims = int(np.prod(img.shape)/l**dims)
+        repeats = n_pos_ims*2
+        print(f'one im repeats = {repeats} for l = {l}')
         if dims == 1:
             for _ in range(repeats):
                 bm, xm = img.shape
@@ -117,9 +120,7 @@ def real_image_stats(img, ls, vf, repeats=4000, z_score=1.96):
                 crop = img[b, x : x + l, y : y + l]
                 vfs.append(torch.mean(crop).cpu())
         else:  # 3D
-            cur_repeats = repeats - l*10
-            print(cur_repeats)
-            for _ in range(cur_repeats):
+            for _ in range(repeats):
                 bm, xm, ym, zm = img.shape
                 x = torch.randint(0, xm - l, (1,))
                 y = torch.randint(0, ym - l, (1,))
@@ -128,7 +129,9 @@ def real_image_stats(img, ls, vf, repeats=4000, z_score=1.96):
                 crop = img[b, x : x + l, y : y + l, z : z + l]
                 vfs.append(torch.mean(crop).cpu())
         vfs = np.array(vfs)
-        std = np.std(vfs)
+        ddof = np.ceil(repeats/img.shape[0])
+        print(f'ddof = {ddof}')
+        std = np.std(vfs, ddof=ddof)
         errs.append(100 * ((z_score * std) / vf))
     return errs
 
@@ -152,11 +155,12 @@ def fit_ir(err_exp, img_dims, vf, max_ir=150):
 def ns_from_dims(img_dims, ir):
     n_dims = len(img_dims[0])
     den = ir ** n_dims
-    return [np.prod(i) / den for i in img_dims]
+    # return [np.prod(np.array(i)) / den for i in img_dims]
+    return [np.prod(np.array(i)) / den for i in img_dims]
     # if n_dims == 3:  # 2ir length
     #     return [np.prod(i + 2*(ir - 1)) / den for i in img_dims]
     # else:  # n_dims == 2
-    #     return [np.prod(i + 2*(ir - 1)) * (1 + 2*(ir - 1)) / (den * ir) for i in img_dims]
+    #     return [np.prod(i + ir - 1) / den for i in img_dims]
 
 def dims_from_n(n, shape, ir, dims):
     den = ir ** dims
@@ -435,7 +439,8 @@ def calc_std_from_ratio(img, ratio):
     """Calculates the standard deviation of the subimages of an image, divided by a certain ratio."""
     divided_img = divide_img_to_subimages(img, ratio).cpu().numpy()
     along_axis = tuple(np.arange(1, len(img.shape)))
-    return np.std(np.mean(divided_img, axis=along_axis), ddof=1)
+    ddof = np.prod(np.array(img.shape[1:])//np.array(divided_img.shape[1:]))
+    return np.std(np.mean(divided_img, axis=along_axis), ddof=ddof)
 
 
 def image_stats(img, vf, ratios, z_score=1.96):  
