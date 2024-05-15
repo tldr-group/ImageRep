@@ -40,7 +40,7 @@ def data_micros_and_slope(dim, after_slope_calc=True):
                         '3D': {'Integral Range': 0.95}}
     else:
         slope_to_fit = {'2D': {'Integral Range': 1},
-                        '3D': {'Integral Range': 0.95}}
+                        '3D': {'Integral Range': 1}}
     
     return dim_data, micro_names, slope_to_fit
 
@@ -98,15 +98,17 @@ def pred_vs_fit_all_data(dim, edge_length, num_runs=5, after_slope_calc=True):
 def plot_pred_vs_fit(dim, edge_length, num_runs=5, after_slope_calc=True):
     pred_data_all, fit_data_all, _ = pred_vs_fit_all_data(dim, edge_length, num_runs, after_slope_calc)
     
-    errs = (pred_data_all-fit_data_all)/pred_data_all  # percentage error of the prediction
+    errs = (fit_data_all-pred_data_all)/pred_data_all  # percentage error of the prediction
     errs = np.sort(errs)  # easier to see the distribution of errors
     std = np.std(errs) 
-    z = norm.interval(0.9)[1]
+    z = norm.interval(0.95)[1]
     err = std*z
     print(f'Integral Range {dim} {edge_length} std = {np.round(std,4)}')
     print(f'mean = {np.mean(errs)}')
     print(f'mape = {np.mean(np.abs(errs))}')
     print(f'error = {err}')
+    print(f'total shift = {np.round(np.mean(errs) + err,5)}')
+    print(f'error in shift = {100*np.round(np.mean(errs)/(np.mean(errs) + err),5)}%')
     
     plt.scatter(fit_data_all, pred_data_all, s=0.2, c='b')
     # plt.scatter(fit_data_all, pred_data_oi_all, s=0.2, c='r')
@@ -125,6 +127,7 @@ def plot_std_error_by_size(dim, edge_lengths, num_runs=5, after_slope_calc=True)
     for i in range(num_runs):
         stds.append(error_by_size_estimation(dim, i, after_slope_calc))
     stds = np.array(stds).sum(axis=0)/num_runs
+    stds, edge_lengths = stds[2:], edge_lengths[2:]
     n_voxels = np.array([edge**int(dim[0]) for edge in edge_lengths])
     popt, pcov = curve_fit(partial(util.fit_to_errs_function, dim), n_voxels, stds)
     # img_sizes = [(l,)*2 for l in edge_lengths]
@@ -210,7 +213,7 @@ def plot_optimal_slopes(dim, num_runs=5, after_slope_calc=False):
 if __name__ == '__main__':
     dim = '3D'
     after_slope_calc=False
-    num_runs_cur = 8
+    num_runs_cur = 10
     run_data, _, _ = data_micros_and_slope(dim, after_slope_calc)
     edge_lengths_pred = run_data['edge_lengths_pred']
     plot_std_error_by_size(dim, edge_lengths_pred, num_runs=num_runs_cur, after_slope_calc=after_slope_calc)

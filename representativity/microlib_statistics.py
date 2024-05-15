@@ -61,9 +61,9 @@ def run_statistical_fit_analysis(netG, n, mode, edge_lengths_fit, all_data):
     This function is used to run the statistical fit analysis on the microstructure, 
     and find the "true" integral range of the microstructure.
     '''
-    imsize = 448 if mode=='3D' else 1600
+    imsize = 512 if mode=='3D' else 1600
     lf = imsize//32 + 2  # the size of G's input
-    reps = 70 if mode=='3D' else 150
+    reps = 50 if mode=='3D' else 150
     many_imgs = util.generate_image(netG, lf=lf, threed=mode=='3D', reps=reps)
     vf = torch.mean(many_imgs).cpu().item()
     print(f'{n} vf = {vf}')
@@ -115,8 +115,8 @@ def json_preprocessing():
             all_data[f'data_gen_{mode}'] = {}
 
     # Edge lengths for the experimental statistical analysis:
-    all_data['data_gen_2D']['edge_lengths_fit'] = list(range(500, 1000, 20))
-    all_data['data_gen_3D']['edge_lengths_fit'] = list(range(120, 400, 20))
+    all_data['data_gen_2D']['edge_lengths_fit'] = list(range(500, 1000, 20))  # TODO change back to 500
+    all_data['data_gen_3D']['edge_lengths_fit'] = list(range(350, 450, 10))
 
     # Edge lengths for the predicted integral range:
     all_data['data_gen_2D']['edge_lengths_pred'] = list(range(8*32, 65*32, 4*32))
@@ -184,10 +184,10 @@ def main_run_microlib_statistics(cur_modes=['2D', '3D'], run_s=False, run_p=True
     # then run the integral range prediction multiple times
     if run_p:
         print(f'Running integral range prediction on {cur_modes} mode(s)')
-        for run_number in range(10-num_runs, 10):
+        for run_number in range(num_runs):
             print(f'Run number {run_number}\n')
             run_microlib_statistics(cur_modes, run_s=False, run_p=True, run_number=run_number)
 
 
 if __name__ == '__main__':
-    main_run_microlib_statistics(cur_modes=['3D'], run_s=True, run_p=False, num_runs=1)
+    main_run_microlib_statistics(cur_modes=['2D'], run_s=True, run_p=False, num_runs=1)

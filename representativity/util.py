@@ -180,7 +180,8 @@ def test_ir_set(err_exp, vf, irs, img_dims):
     for ir in irs:
         ns = ns_from_dims(img_dims, ir)
         err_model = bernouli(vf, ns)
-        err = np.mean(abs(err_exp - err_model))
+        difference = abs(err_exp - err_model)
+        err = np.mean(difference)
         err_fit.append(err)
     ir = irs[np.argmin(err_fit)].item()
     return ir
@@ -439,7 +440,10 @@ def calc_std_from_ratio(img, ratio):
     """Calculates the standard deviation of the subimages of an image, divided by a certain ratio."""
     divided_img = divide_img_to_subimages(img, ratio).cpu().numpy()
     along_axis = tuple(np.arange(1, len(img.shape)))
-    ddof = np.prod(np.array(img.shape[1:])//np.array(divided_img.shape[1:]))
+    if img.shape[0] > 1:
+        ddof = np.prod(np.array(img.shape[1:])//np.array(divided_img.shape[1:]))
+    else:
+        ddof = 0
     return np.std(np.mean(divided_img, axis=along_axis), ddof=ddof)
 
 
