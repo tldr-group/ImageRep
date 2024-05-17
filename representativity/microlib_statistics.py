@@ -138,7 +138,7 @@ def run_microlib_statistics(cur_modes=['2D', '3D'], run_s=False, run_p=True, run
 
     total_time_0 = time.time()
     # run the statistical analysis on the microlib dataset
-    for _, p in enumerate(micros):
+    for _, p in enumerate(micros[24:]):
 
         try:
             netG.load_state_dict(torch.load(p + "_Gen.pt"))
@@ -184,10 +184,10 @@ def main_run_microlib_statistics(cur_modes=['2D', '3D'], run_s=False, run_p=True
     # then run the integral range prediction multiple times
     if run_p:
         print(f'Running integral range prediction on {cur_modes} mode(s)')
-        for run_number in range(num_runs):
+        for run_number in range(num_runs, 10):
             print(f'Run number {run_number}\n')
             run_microlib_statistics(cur_modes, run_s=False, run_p=True, run_number=run_number)
 
 
 if __name__ == '__main__':
-    main_run_microlib_statistics(cur_modes=['2D'], run_s=True, run_p=False, num_runs=1)
+    main_run_microlib_statistics(cur_modes=['3D'], run_s=False, run_p=True, num_runs=9)
