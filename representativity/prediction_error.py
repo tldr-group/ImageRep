@@ -119,12 +119,13 @@ def plot_pred_vs_fit(dim, edge_length, num_runs=5, std_not_cls=True):
     plt.show()
     plt.close()
 
-def std_error_by_size(dim, edge_lengths, num_runs=5, std_not_cld=True):
+def std_error_by_size(dim, edge_lengths, num_runs=5, start_idx=0, std_not_cld=True):
     stds = []
     for i in range(num_runs):
-        stds.append(error_by_size_estimation(dim, i))
+        stds.append(error_by_size_estimation(dim, i, std_not_cls=std_not_cld))
     stds = np.array(stds).sum(axis=0)/num_runs
     n_voxels = np.array([edge**int(dim[0]) for edge in edge_lengths])
+    stds, n_voxels = stds[start_idx:], n_voxels[start_idx:]
     popt, pcov = curve_fit(partial(util.fit_to_errs_function, dim), n_voxels, stds)
     # img_sizes = [(l,)*2 for l in edge_lengths]
     # vfs, irs = [0.1, 0.2, 0.4], [40, 40, 40]
@@ -135,8 +136,8 @@ def std_error_by_size(dim, edge_lengths, num_runs=5, std_not_cld=True):
     prediction_error = util.fit_to_errs_function(dim, n_voxels, *popt)*100
     return prediction_error, stds
 
-def plot_std_error_by_size(dim, edge_lengths, num_runs=5):
-    pred_error, stds = std_error_by_size(dim, edge_lengths, num_runs=5)
+def plot_std_error_by_size(dim, edge_lengths, start_idx=0, num_runs=5):
+    pred_error, stds = std_error_by_size(dim, edge_lengths, start_idx=start_idx, num_runs=5)
     plt.scatter(edge_lengths, stds*100, label='Prediction error std')
     plt.plot(edge_lengths, pred_error, label='Prediction error fit')
     plt.xlabel('Edge Length')
@@ -175,7 +176,7 @@ if __name__ == '__main__':
     num_runs_cur = 10
     run_data, _ = data_micros(dim)
     edge_lengths_pred = run_data['edge_lengths_pred']
-    plot_std_error_by_size(dim, edge_lengths_pred, num_runs=num_runs_cur)
+    plot_std_error_by_size(dim, edge_lengths_pred, start_idx=0, num_runs=num_runs_cur)
     
     run_data, _ = data_micros(dim)
     edge_lengths_pred = run_data['edge_lengths_pred']
