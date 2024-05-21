@@ -83,7 +83,7 @@ for i, dim in enumerate(dims):
             ax.legend(loc='upper left')        
 
     # Fit a normal distribution to the data:
-    errs = (fit_cls_all-pred_cls_all)/pred_cls_all*100
+    errs = (fit_std_all-pred_std_all)/pred_std_all*100
     mu, std = norm.fit(errs)
 
     ax_idx = 1 + with_cls
@@ -137,7 +137,7 @@ for i, dim in enumerate(dims):
         ax3.legend(loc='upper right')
 
 plt.tight_layout()
-fig.savefig('SI_fig1.pdf', format='pdf')         
+fig.savefig('fig_model_error.pdf', format='pdf')         
 
 
 

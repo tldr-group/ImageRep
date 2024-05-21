@@ -4,7 +4,7 @@ import tifffile
 import json
 import numpy as np
 import torch
-import util
+from representativity import util
 from torch.nn.functional import interpolate
 
 def sample_error(img, ls, vf=0.5):

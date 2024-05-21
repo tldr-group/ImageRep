@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import json
 import numpy as np
 from representativity import microlib_statistics as ms
+from scipy.spatial.distance import cdist
+import time
 
 def generate_sg_tpc(netG, mode, imsize):
     '''
@@ -111,19 +113,22 @@ def make_circles_2D(imsize, circle_radius, vf):
     # circle around it):
     p_of_center_circle = 1 - (1-vf)**(1/circle_area)
     circle_centers = np.random.rand(*img.shape) < p_of_center_circle
-    for coordinate in zip(*np.where(circle_centers)):
-        img = fill_img_with_circle(img, circle_radius, coordinate)
+    circle_centers = np.array(np.where(circle_centers))
+    time_before_circles = time.time()
+    fill_img_with_circles(img, circle_radius, circle_centers)
     return img[circle_radius:-circle_radius, circle_radius:-circle_radius]
 
-def fill_img_with_circle(img, circle_radius, coordinates):
-    '''
-    This function is used to fill an image with a circle of a certain size.
-    '''
-    coordinates = np.array(coordinates)
+def fill_img_with_circles(img, circle_radius, circle_centers):
+    '''Fills the image with circles of the same size given by the cicle_radius,
+    with the centers given in circle_centers.'''
     dist_arr = np.indices(img.shape)
-    dist_arr = np.abs((dist_arr.T - coordinates.T).T)
-    dist_arr = np.sqrt(np.sum(dist_arr**2, axis=0))
-    img[dist_arr<=circle_radius] = 1
+    dist_arr_T = dist_arr.T
+    dist_arr_reshape = dist_arr_T.reshape(np.product(dist_arr_T.shape[:2]), dist_arr_T.shape[-1])
+    distances = cdist(dist_arr_reshape, circle_centers.T)
+    if distances.size == 0:
+        return img
+    min_distances = np.min(distances, axis=1).reshape(img.shape)
+    img[min_distances<=circle_radius] = 1
     return img
 
 if __name__ == '__main__':
