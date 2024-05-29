@@ -1,6 +1,6 @@
 from representativity import prediction_error
 import matplotlib.pyplot as plt
-from scipy.stats import norm
+from scipy import stats 
 import math
 import numpy as np
 
@@ -27,7 +27,7 @@ def scatter_plot(ax, res, title, xlabel, ylabel):
     errs = np.sort(errs) 
     std = np.std(errs) 
     
-    z = norm.interval(0.9)[1]
+    z = stats.norm.interval(0.9)[1]
     err = std*z
     print(f'std = {std}')
     print(f'mean = {np.mean(errs)}')
@@ -84,7 +84,7 @@ for i, dim in enumerate(dims):
 
     # Fit a normal distribution to the data:
     errs = (fit_std_all-pred_std_all)/pred_std_all*100
-    mu, std = norm.fit(errs)
+    mu, std = stats.norm.fit(errs)
 
     ax_idx = 1 + with_cls
     ax2 = axs[i, ax_idx]
@@ -95,12 +95,15 @@ for i, dim in enumerate(dims):
     max_val = np.max([np.max(errs), -np.min(errs)])
     y, x, _ = ax2.hist(errs, range=[-max_val, max_val], bins=50, alpha=0.6, density=True)
 
+    print(f'Is the hist normal: {stats.normaltest(errs)}')
+    print(f'mean = {errs.mean()}')
+    print(f'median = {np.median(errs)}')
     # Plot the PDF.
     xmin, xmax = x.min(), x.max()
     print(xmin, xmax)
     max_abs = max(np.abs(np.array([xmin, xmax])))
     x = np.linspace(xmin, xmax, 100)
-    p = norm.pdf(x, mu, std)
+    p = stats.norm.pdf(x, mu, std)
     
     print(fill_color)
     
@@ -108,7 +111,7 @@ for i, dim in enumerate(dims):
     title = f'{dim} std PE distribution, {title_suffix}' 
     ax2.set_title(title)
     ax2.set_xlabel(r'Prediction Percentage Error ($\frac{\sigma_{%s}-\tilde{\sigma_{%s}}}{\tilde{\sigma_{%s}}}\cdot100$)' %(dim_str, dim_str, dim_str))
-    err = std*norm.interval(0.9)[1]
+    err = std*stats.norm.interval(0.9)[1]
     ax2.vlines(0, ymin=0, ymax=y.max(), color='black')
     ax2.vlines(std, ymin=0, ymax=y.max(), ls='--', color=sigma_color, label = r'$\sigma_{mod}$')
     ax2.vlines(err, ymin=0, ymax=y.max(), ls='--', color=fill_color_dark, label = r'$\sigma_{mod}\cdot Z_{90\%}$')

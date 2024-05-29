@@ -138,7 +138,7 @@ def run_microlib_statistics(cur_modes=['2D', '3D'], run_s=False, run_p=True, run
 
     total_time_0 = time.time()
     # run the statistical analysis on the microlib dataset
-    for _, p in enumerate(micros[24:]):
+    for _, p in enumerate(micros):
 
         try:
             netG.load_state_dict(torch.load(p + "_Gen.pt"))

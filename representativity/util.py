@@ -69,9 +69,11 @@ def angular_img(img):
     return img_rot
 
 
-def tpc_radial(img, mx=100, threed=False):
+def tpc_radial(img, mx=100, threed=False, periodic=True):
     desired_length = img.shape[0]//2
-    return two_point_correlation(img, desired_length=desired_length, periodic=True, threed=threed)
+    if not periodic:
+        desired_length = img.shape[0]-1
+    return two_point_correlation(img, desired_length=desired_length, periodic=periodic, threed=threed)
 
 
 def stat_analysis_error_classic(img, vf):  # TODO see if to delete this or not
