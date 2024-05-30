@@ -20,7 +20,7 @@ def error_by_size_estimation(dim, run_number=0, std_not_cls=True):
     edge_lengths_pred = data_dim['edge_lengths_pred']
     stds = []
     for edge_length in edge_lengths_pred:
-        _, _, err, std, vfs = comparison_results(data_dim, micro_names, dim,
+        _, _, err, std, pfs = comparison_results(data_dim, micro_names, dim,
                                           str(edge_length), run_number, std_not_cls=std_not_cls)
         stds.append(std)
     return stds
@@ -39,23 +39,23 @@ def data_micros(dim):
 
 def comparison_results(data_dim, micro_names, dim, edge_length, run_number, std_not_cls=False):
     micros_data = [data_dim[n] for n in micro_names]
-    vfs = np.array([m_data['vf'] for m_data in micros_data])
+    pfs = np.array([m_data['vf'] for m_data in micros_data])
     fit_data_all = np.array([m_data['fit_ir_vf'] for m_data in micros_data])
-    fit_err_vf = np.array([m_data['fit_err_vf'][edge_length] for m_data in micros_data])
+    fit_err_pf = np.array([m_data['fit_err_vf'][edge_length] for m_data in micros_data])
     pred_data_all = np.array([m_data[f'run_{run_number}']['pred_ir_vf'][edge_length] for m_data in micros_data])
-    # pred_ir_oi_vf = np.array([m_data[f'run_{run_number}']['pred_ir_one_im_fit_vf'][edge_length] for m_data in micros_data])
+    # pred_ir_oi_pf = np.array([m_data[f'run_{run_number}']['pred_ir_one_im_fit_vf'][edge_length] for m_data in micros_data])
 
-    pred_err_vf = np.array([m_data[f'run_{run_number}']['pred_err_vf'][edge_length] for m_data in micros_data])
+    pred_err_pf = np.array([m_data[f'run_{run_number}']['pred_err_vf'][edge_length] for m_data in micros_data])
     if std_not_cls:
-        vfs = np.array(vfs)
-        vfs_one_minus_vfs = vfs*(1-vfs)  
+        pfs = np.array(pfs)
+        pfs_one_minus_pfs = pfs*(1-pfs)  
         dim_int = int(dim[0])
         edge_length = int(edge_length)
-        pred_data_all = ((pred_data_all/edge_length)**dim_int*vfs_one_minus_vfs)**0.5
-        fit_data_all = ((fit_data_all/edge_length)**dim_int*vfs_one_minus_vfs)**0.5
-    # ir_results = [fit_ir_vf, pred_ir_vf, pred_ir_oi_vf]
+        pred_data_all = ((pred_data_all/edge_length)**dim_int*pfs_one_minus_pfs)**0.5
+        fit_data_all = ((fit_data_all/edge_length)**dim_int*pfs_one_minus_pfs)**0.5
+    # ir_results = [fit_ir_pf, pred_ir_pf, pred_ir_oi_pf]
     ir_results = [fit_data_all, pred_data_all]
-    err_results = [fit_err_vf, pred_err_vf]
+    err_results = [fit_err_pf, pred_err_pf]
     pred_data = ir_results[1] 
     fit_data = ir_results[0]
 
@@ -68,31 +68,31 @@ def comparison_results(data_dim, micro_names, dim, edge_length, run_number, std_
     # print(f'mean = {np.mean(errs)}')
     # print(f'mape = {np.mean(np.abs(errs))}')
     # print(f'error = {err}')
-    return pred_data, fit_data, err, std, vfs
+    return pred_data, fit_data, err, std, pfs
 
 def pred_vs_fit_all_data(dim, edge_length, num_runs=5, std_not_cls=True):
     pred_data_all = []
     pred_data_oi_all = []
     fit_data_all = []
     stds = []
-    vfs_all = []
+    pfs_all = []
     for i in range(num_runs):
         data_micro = data_micros(dim)
-        pred_data, fit_data, _, std, vfs = comparison_results(*data_micro, dim, edge_length, i, std_not_cls=std_not_cls)
+        pred_data, fit_data, _, std, pfs = comparison_results(*data_micro, dim, edge_length, i, std_not_cls=std_not_cls)
         pred_data_all.append(pred_data)
         # pred_data_oi_all.append(pred_oi_data)
         fit_data_all.append(fit_data)
         stds.append(std)
-        vfs_all.append(vfs) 
+        pfs_all.append(pfs) 
     pred_data_all = np.concatenate(pred_data_all)
     # pred_data_oi_all = np.concatenate(pred_data_oi_all)
     fit_data_all = np.concatenate(fit_data_all)
-    vfs_all = np.concatenate(vfs_all)
+    pfs_all = np.concatenate(pfs_all)
     std = np.array(stds).sum(axis=0)/num_runs
-    return pred_data_all, fit_data_all, std, vfs_all
+    return pred_data_all, fit_data_all, std, pfs_all
 
 def plot_pred_vs_fit(dim, edge_length, num_runs=5, std_not_cls=True):
-    pred_data_all, fit_data_all, _, vfs = pred_vs_fit_all_data(dim, edge_length, num_runs, std_not_cls=std_not_cls)
+    pred_data_all, fit_data_all, _, pfs = pred_vs_fit_all_data(dim, edge_length, num_runs, std_not_cls=std_not_cls)
     pred_data_all, fit_data_all = np.array(pred_data_all), np.array(fit_data_all)
     
     errs = (fit_data_all-pred_data_all)/pred_data_all  # percentage error of the prediction
@@ -119,32 +119,33 @@ def plot_pred_vs_fit(dim, edge_length, num_runs=5, std_not_cls=True):
     plt.show()
     plt.close()
 
-def std_error_by_size(dim, edge_lengths, num_runs=5, start_idx=0, std_not_cld=True):
+def std_error_by_size(dim, edge_lengths, num_runs=5, start_idx=0, std_not_cls=True):
     stds = []
     for i in range(num_runs):
-        stds.append(error_by_size_estimation(dim, i, std_not_cls=std_not_cld))
+        stds.append(error_by_size_estimation(dim, i, std_not_cls=std_not_cls))
     stds = np.array(stds).sum(axis=0)/num_runs
     n_voxels = np.array([edge**int(dim[0]) for edge in edge_lengths])
     stds, n_voxels = stds[start_idx:], n_voxels[start_idx:]
     popt, pcov = curve_fit(partial(util.fit_to_errs_function, dim), n_voxels, stds)
     # img_sizes = [(l,)*2 for l in edge_lengths]
-    # vfs, irs = [0.1, 0.2, 0.4], [40, 40, 40]
-    # for i in range(len(vfs)):
-        # erros_inherent = util.bernouli(vfs[i], util.ns_from_dims(img_sizes, irs[i]),conf=0.95)
-        # plt.plot(edge_lengths, erros_inherent, label=f'Inherent error IR = {irs[i]}, VF = {vfs[i]}')
+    # pfs, irs = [0.1, 0.2, 0.4], [40, 40, 40]
+    # for i in range(len(pfs)):
+        # erros_inherent = util.bernouli(pfs[i], util.ns_from_dims(img_sizes, irs[i]),conf=0.95)
+        # plt.plot(edge_lengths, erros_inherent, label=f'Inherent error IR = {irs[i]}, pf = {pfs[i]}')
     print(f'popt: {popt}')
     prediction_error = util.fit_to_errs_function(dim, n_voxels, *popt)*100
     return prediction_error, stds
 
 def plot_std_error_by_size(dim, edge_lengths, start_idx=0, num_runs=5):
     pred_error, stds = std_error_by_size(dim, edge_lengths, start_idx=start_idx, num_runs=5)
+    edge_lengths = edge_lengths[start_idx:]
     plt.scatter(edge_lengths, stds*100, label='Prediction error std')
     plt.plot(edge_lengths, pred_error, label='Prediction error fit')
     plt.xlabel('Edge Length')
     plt.ylabel('MPE std (%)')
     plt.title(f'Error by Edge Length {dim}')
     plt.legend()
-    plt.savefig(f'error_by_size_{dim}_vf.png')
+    plt.savefig(f'error_by_size_{dim}_pf.png')
     plt.show()
     plt.close()
 
@@ -164,7 +165,7 @@ def optimal_slopes(dim, num_runs=5):
     slopes = []
     stds = []
     for edge_length in edge_lengths_pred:
-        pred_data, fit_data, std, vfs = pred_vs_fit_all_data(dim, str(edge_length), num_runs)
+        pred_data, fit_data, std, pfs = pred_vs_fit_all_data(dim, str(edge_length), num_runs)
         stds.append(std)
         optimal_slope = find_optimal_slope(pred_data, fit_data)
         slopes.append(optimal_slope)
@@ -176,7 +177,7 @@ if __name__ == '__main__':
     num_runs_cur = 10
     run_data, _ = data_micros(dim)
     edge_lengths_pred = run_data['edge_lengths_pred']
-    plot_std_error_by_size(dim, edge_lengths_pred, start_idx=0, num_runs=num_runs_cur)
+    plot_std_error_by_size(dim, edge_lengths_pred, start_idx=2, num_runs=num_runs_cur)
     
     run_data, _ = data_micros(dim)
     edge_lengths_pred = run_data['edge_lengths_pred']

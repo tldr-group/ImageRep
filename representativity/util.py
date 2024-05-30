@@ -76,7 +76,7 @@ def tpc_radial(img, mx=100, threed=False, periodic=True):
     return two_point_correlation(img, desired_length=desired_length, periodic=periodic, threed=threed)
 
 
-def stat_analysis_error_classic(img, vf):  # TODO see if to delete this or not
+def stat_analysis_error_classic(img, pf):  # TODO see if to delete this or not
     ratios = [2**i for i in np.arange(1, int(np.log2(img.shape[1]))-5)]
     ratios.reverse()
     if img.shape[0] > 1:
@@ -84,25 +84,25 @@ def stat_analysis_error_classic(img, vf):  # TODO see if to delete this or not
     ratios = ratios[-4:]
     edge_lengths = [img.shape[1]//r for r in ratios]
     img_dims = [np.array((l,)*(len(img.shape)-1)) for l in edge_lengths]
-    err_exp = image_stats(img, vf, ratios)
-    real_ir = fit_ir(err_exp, img_dims, vf)
+    err_exp = image_stats(img, pf, ratios)
+    real_cls = fit_cls(err_exp, img_dims, pf)
     # TODO different size image 1000 vs 1500
-    return real_ir
+    return real_cls
 
 
-def stat_analysis_error(img, vf, edge_lengths):  # TODO see if to delete this or not
+def stat_analysis_error(img, pf, edge_lengths):  # TODO see if to delete this or not
     img_dims = [np.array((l,)*(len(img.shape)-1)) for l in edge_lengths]
-    err_exp = real_image_stats(img, edge_lengths, vf)
-    real_ir = fit_ir(err_exp, img_dims, vf)
+    err_exp = real_image_stats(img, edge_lengths, pf)
+    real_cls = fit_cls(err_exp, img_dims, pf)
     # TODO different size image 1000 vs 1500
-    return real_ir
+    return real_cls
 
 
-def real_image_stats(img, ls, vf, repeats=4000, z_score=1.96):  
+def real_image_stats(img, ls, pf, repeats=4000, z_score=1.96):  
     dims = len(img[0].shape)
     errs = []
     for l in ls:
-        vfs = []
+        pfs = []
         n_pos_ims = int(np.prod(img.shape)/l**dims)
         repeats = n_pos_ims*2
         print(f'one im repeats = {repeats} for l = {l}')
@@ -112,7 +112,7 @@ def real_image_stats(img, ls, vf, repeats=4000, z_score=1.96):
                 x = torch.randint(0, xm - l, (1,))
                 b = torch.randint(0, bm, (1,))
                 crop = img[b, x : x + l]
-                vfs.append(torch.mean(crop).cpu())
+                pfs.append(torch.mean(crop).cpu())
         elif dims == 2:
             for _ in range(repeats):
                 bm, xm, ym = img.shape
@@ -120,7 +120,7 @@ def real_image_stats(img, ls, vf, repeats=4000, z_score=1.96):
                 y = torch.randint(0, ym - l, (1,))
                 b = torch.randint(0, bm, (1,))
                 crop = img[b, x : x + l, y : y + l]
-                vfs.append(torch.mean(crop).cpu())
+                pfs.append(torch.mean(crop).cpu())
         else:  # 3D
             for _ in range(repeats):
                 bm, xm, ym, zm = img.shape
@@ -129,64 +129,64 @@ def real_image_stats(img, ls, vf, repeats=4000, z_score=1.96):
                 z = torch.randint(0, zm - l, (1,))
                 b = torch.randint(0, bm, (1,))
                 crop = img[b, x : x + l, y : y + l, z : z + l]
-                vfs.append(torch.mean(crop).cpu())
-        vfs = np.array(vfs)
+                pfs.append(torch.mean(crop).cpu())
+        pfs = np.array(pfs)
         ddof = np.ceil(repeats/img.shape[0])
         print(f'ddof = {ddof}')
-        std = np.std(vfs, ddof=ddof)
-        errs.append(100 * ((z_score * std) / vf))
+        std = np.std(pfs, ddof=ddof)
+        errs.append(100 * ((z_score * std) / pf))
     return errs
 
 
-def bernouli(vf, ns, conf=0.95):
+def bernouli(pf, ns, conf=0.95):
     errs = []
     for n in ns:
-        std_theo = ((1 / n) * (vf * (1 - vf))) ** 0.5
-        errs.append(100 * (stats.norm.interval(conf, scale=std_theo)[1] / vf))
+        std_theo = ((1 / n) * (pf * (1 - pf))) ** 0.5
+        errs.append(100 * (stats.norm.interval(conf, scale=std_theo)[1] / pf))
     return np.array(errs, dtype=np.float64)
 
 
-def fit_ir(err_exp, img_dims, vf, max_ir=150):
+def fit_cls(err_exp, img_dims, pf, max_cls=150):
     err_exp = np.array(err_exp)
-    ir = test_ir_set(err_exp, vf, np.arange(1, max_ir, 1), img_dims)
-    ir = test_ir_set(err_exp, vf, np.linspace(ir - 1, ir + 1, 50), img_dims)
-    # print(f'real ir = {ir}')
-    return ir
+    cls = test_cls_set(err_exp, pf, np.arange(1, max_cls, 1), img_dims)
+    cls = test_cls_set(err_exp, pf, np.linspace(cls - 1, cls + 1, 50), img_dims)
+    # print(f'real cls = {cls}')
+    return cls
 
 
-def ns_from_dims(img_dims, ir):
+def ns_from_dims(img_dims, cls):
     n_dims = len(img_dims[0])
-    den = ir ** n_dims
+    den = cls ** n_dims
     # return [np.prod(np.array(i)) / den for i in img_dims]
     return [np.prod(np.array(i)) / den for i in img_dims]
-    # if n_dims == 3:  # 2ir length
-    #     return [np.prod(i + 2*(ir - 1)) / den for i in img_dims]
+    # if n_dims == 3:  # 2cls length
+    #     return [np.prod(i + 2*(cls - 1)) / den for i in img_dims]
     # else:  # n_dims == 2
-    #     return [np.prod(i + ir - 1) / den for i in img_dims]
+    #     return [np.prod(i + cls - 1) / den for i in img_dims]
 
-def dims_from_n(n, shape, ir, dims):
-    den = ir ** dims
+def dims_from_n(n, shape, cls, dims):
+    den = cls ** dims
     if shape=='equal':
-        return (n*den)**(1/dims)-ir+1
+        return (n*den)**(1/dims)
     else:
         if dims==len(shape):
             raise ValueError('cannot define all the dimensions')
         if len(shape)==1:
-            return ((n*den)/(shape[0]+ir-1))**(1/(dims-1))-ir+1
+            return ((n*den)/(shape[0]+cls-1))**(1/(dims-1))-cls+1
         else:
-            return ((n*den)/((shape[0]+ir-1) * (shape[1]+ir-1)))-ir+1
+            return ((n*den)/((shape[0]+cls-1) * (shape[1]+cls-1)))-cls+1
 
 
-def test_ir_set(err_exp, vf, irs, img_dims):
+def test_cls_set(err_exp, pf, clss, img_dims):
     err_fit = []
-    for ir in irs:
-        ns = ns_from_dims(img_dims, ir)
-        err_model = bernouli(vf, ns)
+    for cls in clss:
+        ns = ns_from_dims(img_dims, cls)
+        err_model = bernouli(pf, ns)
         difference = abs(err_exp - err_model)
         err = np.mean(difference)
         err_fit.append(err)
-    ir = irs[np.argmin(err_fit)].item()
-    return ir
+    cls = clss[np.argmin(err_fit)].item()
+    return cls
 
 
 def tpc_fit(x, a, b, c):
@@ -209,34 +209,33 @@ def mape_linear_objective(params, y_pred, y_true):
 def linear_fit(x, m, b):
     return m * x + b 
 
-def find_end_dist_tpc(vf, tpc, dist_arr):
-    # print(f'vf^2 = {vf**2}')
+def find_end_dist_tpc(pf, tpc, dist_arr):
+    # print(f'pf^2 = {pf**2}')
     distances = np.concatenate([np.arange(0, np.max(dist_arr), 100)])
-    # check the tpc change and the comparison to vf^2
+    # check the tpc change and the comparison to pf^2
     # over bigger and bigger discs:
-    return find_end_dist_idx(vf, tpc, dist_arr, distances)
+    return find_end_dist_idx(pf, tpc, dist_arr, distances)
     
 
-def find_end_dist_idx(vf, tpc, dist_arr, distances):
+def find_end_dist_idx(pf, tpc, dist_arr, distances):
     """Finds the distance before the tpc function plateaus."""
     percentage = 0.05
-    small_change = (vf-vf**2)*percentage 
+    small_change = (pf-pf**2)*percentage 
     for dist_i in np.arange(1, len(distances)-1):
         start_dist, end_dist = distances[dist_i], distances[dist_i+1] 
         bool_array = (dist_arr>=start_dist) & (dist_arr<end_dist)
-        sum_dev = np.sum(tpc[bool_array] - vf**2 > small_change)
+        sum_dev = np.sum(tpc[bool_array] - pf**2 > small_change)
         deviation = sum_dev/np.sum(bool_array)
         if deviation < 0.05:
             return distances[dist_i]
     return distances[1]
 
 
-def tpc_to_ir(tpc, im, im_shape):
+def tpc_to_cls(tpc, im, im_shape):
     '''Calculates the integral range from the tpc function.'''
     tpc = np.array(tpc)
     middle_idx = np.array(tpc.shape)//2
-    vf = tpc[tuple(map(slice, middle_idx, middle_idx+1))].item()
-    # print(f'vf squared = {np.round(vf**2, 5)}')
+    pf = tpc[tuple(map(slice, middle_idx, middle_idx+1))].item()
     dist_arr_before = np.indices(tpc.shape)
     dist_arr_before = np.abs((dist_arr_before.T - middle_idx.T).T)
     img_volume = np.prod(im_shape)
@@ -245,28 +244,26 @@ def tpc_to_ir(tpc, im, im_shape):
     norm_vol = (np.array(im_shape).T - dist_arr_before.T).T
     norm_vol = np.prod(norm_vol, axis=0)/img_volume
     dist_arr = np.sqrt(np.sum(dist_arr_before**2, axis=0))
-    end_dist = find_end_dist_tpc(vf, tpc, dist_arr)
+    end_dist = find_end_dist_tpc(pf, tpc, dist_arr)
     print(f'end dist = {end_dist}')
-    vf_squared_end = np.mean(tpc[(dist_arr>=end_dist-10) & (dist_arr<=end_dist)])
+    pf_squared_end = np.mean(tpc[(dist_arr>=end_dist-10) & (dist_arr<=end_dist)])
     
-    # print(f'end of tpc = {np.round(vf_squared_end, 5)}')
-    vf_squared = (vf_squared_end + vf**2)/2  
+    pf_squared = (pf_squared_end + pf**2)/2  
     bool_array = dist_arr<end_dist 
     
-    # calculate the coefficient for the ir prediction:
-    coeff = calc_coeff_for_ir_prediction(norm_vol, dist_arr, end_dist, img_volume, bool_array)
-    # print(f'ir pred coefficient = {coeff}')
-    pred_ir = calc_pred_ir(coeff, tpc, vf, vf_squared, bool_array, im_shape)
-    pred_is_off, sign = pred_ir_is_off(pred_ir, im, vf)
+    # calculate the coefficient for the cls prediction:
+    coeff = calc_coeff_for_cls_prediction(norm_vol, dist_arr, end_dist, img_volume, bool_array)
+    pred_cls = calc_pred_cls(coeff, tpc, pf, pf_squared, bool_array, im_shape)
+    pred_is_off, sign = pred_cls_is_off(pred_cls, im, pf)
     while pred_is_off:
         how_off = 'negative' if sign > 0 else 'positive'
-        print(f'pred ir = {pred_ir} is too {how_off}, CHANGING TPC VALUES')
-        tpc, pred_ir = change_pred_ir(coeff, tpc, vf, vf_squared, bool_array, im_shape, sign)
-        pred_is_off, sign = pred_ir_is_off(pred_ir, im, vf)
-    return pred_ir
+        print(f'pred cls = {pred_cls} is too {how_off}, CHANGING TPC VALUES')
+        tpc, pred_cls = change_pred_cls(coeff, tpc, pf, pf_squared, bool_array, im_shape, sign)
+        pred_is_off, sign = pred_cls_is_off(pred_cls, im, pf)
+    return pred_cls
 
 
-def calc_coeff_for_ir_prediction(norm_vol, dist_arr, end_dist, img_volume, bool_array):
+def calc_coeff_for_cls_prediction(norm_vol, dist_arr, end_dist, img_volume, bool_array):
     sum_of_small_radii = np.sum(norm_vol[dist_arr<end_dist])
     coeff_1 = img_volume/(img_volume - sum_of_small_radii)
     coeff_2 = (1/img_volume)*(np.sum(bool_array)-np.sum(norm_vol[bool_array]))
@@ -277,34 +274,34 @@ def calc_coeff_for_ir_prediction(norm_vol, dist_arr, end_dist, img_volume, bool_
     return coeff_1/(1-coeff_product)
 
 
-def change_pred_ir(coeff, tpc, vf, vf_squared, bool_array, im_shape, sign):
+def change_pred_cls(coeff, tpc, pf, pf_squared, bool_array, im_shape, sign):
     '''Changes the tpc function to be more positive or more negative, compared
-    to the fast stat. analysis ir pred. of the single img.'''
+    to the fast stat. analysis cls pred. of the single img.'''
     if sign > 0:
-        negatives = np.where(tpc - vf_squared < 0)
-        tpc[negatives] += (vf_squared - tpc[negatives])/10
+        negatives = np.where(tpc - pf_squared < 0)
+        tpc[negatives] += (pf_squared - tpc[negatives])/10
     else:
-        positives = np.where(tpc - vf_squared > 0)
-        tpc[positives] -= (tpc[positives] - vf_squared)/10
-    pred_ir = calc_pred_ir(coeff, tpc, vf, vf_squared, bool_array, im_shape)
-    return tpc, pred_ir
+        positives = np.where(tpc - pf_squared > 0)
+        tpc[positives] -= (tpc[positives] - pf_squared)/10
+    pred_cls = calc_pred_cls(coeff, tpc, pf, pf_squared, bool_array, im_shape)
+    return tpc, pred_cls
 
 
-def calc_pred_ir(coeff, tpc, vf, vf_squared, bool_array, im_shape):
-    pred_ir = coeff/(vf-vf_squared)*np.sum(tpc[bool_array] - vf_squared)
-    if pred_ir > 0:
-        pred_ir = pred_ir**(1/3) if len(im_shape)==3 else pred_ir**(1/2)
-    return pred_ir
+def calc_pred_cls(coeff, tpc, pf, pf_squared, bool_array, im_shape):
+    pred_cls = coeff/(pf-pf_squared)*np.sum(tpc[bool_array] - pf_squared)
+    if pred_cls > 0:
+        pred_cls = pred_cls**(1/3) if len(im_shape)==3 else pred_cls**(1/2)
+    return pred_cls
 
 
-def pred_ir_is_off(pred_ir, img, vf):
-    if pred_ir < 1:
+def pred_cls_is_off(pred_cls, img, pf):
+    if pred_cls < 1:
         return True, 1
-    one_im_stat_pred = one_img_stat_analysis_error(img, vf)
+    one_im_stat_pred = one_img_stat_analysis_error(img, pf)
     if one_im_stat_pred > 1:  # could be erroneous stat. analysis prediction
-        if pred_ir / one_im_stat_pred < 2/3:
+        if pred_cls / one_im_stat_pred < 2/3:
             return True, 1
-        if pred_ir / one_im_stat_pred > 2:
+        if pred_cls / one_im_stat_pred > 2:
             return True, -1
     return False, 0
 
@@ -314,62 +311,51 @@ def fit_to_errs_function(dim, n_voxels, a, b):
     return a / n_voxels**b 
 
 
-def make_error_prediction(img, conf=0.95, err_targ=0.05, model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
-    vf = torch.mean(img).item()
+def make_error_prediction(img, conf=0.95, err_targ=0.05, model_error=True, mxtpc=100, shape='equal'):
+    pf = torch.mean(img).item()
     dims = len(img.shape)
     # print(f'starting tpc radial')
     tpc = tpc_radial(img, threed=dims == 3, mx=mxtpc)
-    ir = tpc_to_ir(tpc, img, img.shape)
-    n = ns_from_dims([np.array(img.shape)], ir)
-    # print(n, ir)
-    std_bern = ((1 / n[0]) * (vf * (1 - vf))) ** 0.5
-    std_model, slope = get_model_params(dims, torch.numel(img))
-    if not correction:
-        slope = 1 
+    cls = tpc_to_cls(tpc, img, img.shape)
+    n = ns_from_dims([np.array(img.shape)], cls)
+    # print(n, cls)
+    std_bern = ((1 / n[0]) * (pf * (1 - pf))) ** 0.5
+    std_model = get_std_model(dims, torch.numel(img))
     if model_error:
-        # print(std_bern)
         bounds = [(conf*1.001, 1)]
-        args = (conf, std_bern, std_model, vf, slope)
+        args = (conf, std_bern, std_model, pf)
         err_for_img = minimize(optimize_error_conf_pred, conf**0.5, args, bounds=bounds).fun
-        args = (conf, std_model, vf, slope, err_targ)
+        args = (conf, std_model, pf, err_targ)
         n_for_err_targ = minimize(optimize_error_n_pred, conf**0.5, args, bounds=bounds).fun
-        # print(n, n_for_err_targ, ir)
     else:
         z = stats.norm.interval(conf)[1]
-        err_for_img = (z*std_bern/vf)*slope
-        # print(stats.norm.interval(conf, scale=std_bern)[1], std_bern)
-        n_for_err_targ = vf * (1 - vf) * (z/ (err_targ/slope * vf)) ** 2
+        err_for_img = (z*std_bern/pf)
+        n_for_err_targ = pf * (1 - pf) * (z/ (err_targ * pf)) ** 2
 
-        # print(n_for_err_targ, n, ir)
-    l_for_err_targ = dims_from_n(n_for_err_targ, shape, ir, dims)
-    return err_for_img*100, l_for_err_targ, ir
+    l_for_err_targ = dims_from_n(n_for_err_targ, shape, cls, dims)
+    return err_for_img*100, l_for_err_targ, cls
 
 
-def optimize_error_conf_pred(bern_conf, total_conf, std_bern, std_model, vf, slope):
+def optimize_error_conf_pred(bern_conf, total_conf, std_bern, std_model, pf):
     model_conf = total_conf/bern_conf
-    err_bern = ((stats.norm.interval(bern_conf, scale=std_bern)[1]*slope)/vf)
+    err_bern = stats.norm.interval(bern_conf, scale=std_bern)[1]/pf
     err_model = stats.norm.interval(model_conf, scale=std_model)[1]
-    # print(stats.norm.interval(bern_conf, scale=std_bern)[1], slope, vf , err_model, err_bern)
-    # print(err_bern, err_model, err_bern * (1 + err_model))
-    # print(err_bern * (1 + err_model))
     return err_bern * (1 + err_model)
 
 
-def optimize_error_n_pred(bern_conf, total_conf, std_model, vf, slope, err_targ):
-    # print(bern_conf)
+def optimize_error_n_pred(bern_conf, total_conf, std_model, pf, err_targ):
     model_conf = total_conf/bern_conf
     z1 = stats.norm.interval(bern_conf)[1]
     err_model = stats.norm.interval(model_conf, scale=std_model)[1]
-    # print(err_model)
-    num = -(err_model+1)**2 * slope**2 * (vf-1) * z1**2
-    den = (err_model + err_targ)**2 * vf
+    num = (err_model+1)**2 * (1-pf) * z1**2
+    den = (err_model + err_targ)**2 * pf  # TODO I think this is wrong, it should be only err_targ?
     return num/den
 
 
-def get_model_params(dim, n_voxels):  # see model_param.py for the appropriate code that was used.
-    params= {f'{dim}d': [fit_to_errs_function(dim, n_voxels, 48.20175315, 0.4297919), 1],
-             f'{dim}d': [0.5584825884176943, 6]}  # TODO needs to be changed according to the fit in prediction_error.py
-    return params[f'{dim}d']
+def get_std_model(dim, n_voxels): 
+    popt = {f'{dim}d': [48.20175315, 0.4297919],
+            f'{dim}d': [444.803518, 0.436974444]} 
+    return fit_to_errs_function(dim, n_voxels, *popt[f'{dim}d'])
 
 
 def calc_autocorrelation_orthant(img, numel_large, dims, desired_length=100):
@@ -434,8 +420,8 @@ def two_point_correlation(img, desired_length=100, periodic=True, threed=False):
     return res
 
 
-def one_img_stat_analysis_error(img, vf): 
-    return stat_analysis_error_classic(img.unsqueeze(0), vf)
+def one_img_stat_analysis_error(img, pf): 
+    return stat_analysis_error_classic(img.unsqueeze(0), pf)
     
 
 def calc_std_from_ratio(img, ratio):
@@ -449,11 +435,11 @@ def calc_std_from_ratio(img, ratio):
     return np.std(np.mean(divided_img, axis=along_axis), ddof=ddof)
 
 
-def image_stats(img, vf, ratios, z_score=1.96):  
+def image_stats(img, pf, ratios, z_score=1.96):  
     errs = []
     for ratio in ratios:
         std_ratio = calc_std_from_ratio(img, ratio)
-        errs.append(100 * ((z_score * std_ratio) / vf))
+        errs.append(100 * ((z_score * std_ratio) / pf))
     return errs
     
 
@@ -479,7 +465,7 @@ if __name__ == '__main__':
     div_im = divide_img_to_subimages(img, 2)
     print('hi')
 
-# def cld(img):
+# def cls(img):
 #     """
 #     Calculating the chord length distribution function
 #     """
@@ -502,44 +488,44 @@ if __name__ == '__main__':
 #     sm.append(torch.sum(cur_im))
 #     sums += torch.tensor(sm)
 
-#     cld = sums.clone()
-#     cld[-1] = 0  # the assumption is that the last sum is 0
+#     cls = sums.clone()
+#     cls[-1] = 0  # the assumption is that the last sum is 0
 #     for i in range(1, iterations):  # calculation of the chord lengths by the sums
-#         cld[-(i + 1)] = (sums[-(i + 1)] - sums[-i] - sum(cld[-i:])).cpu().item()
-#     cld = np.array(cld)
-#     return cld / np.sum(cld)
+#         cls[-(i + 1)] = (sums[-(i + 1)] - sums[-i] - sum(cls[-i:])).cpu().item()
+#     cls = np.array(cls)
+#     return cls / np.sum(cls)
 
 
-# def make_error_prediction_old(img, conf=0.95, err_targ=0.05,  model_error=True, correction=True, mxtpc=100, shape='equal', met='vf'):
-#     vf = img.mean()
+# def make_error_prediction_old(img, conf=0.95, err_targ=0.05,  model_error=True, correction=True, mxtpc=100, shape='equal', met='pf'):
+#     pf = img.mean()
 #     dims = len(img.shape)
 #     tpc = tpc_radial(img, threed=dims == 3, mx=mxtpc)
 #     cut = max(20, np.argmin(tpc))
 #     tpc = tpc[:cut]
 #     x = np.arange(len(tpc))
-#     ir = tpc_to_ir(x, tpc)
-#     n = ns_from_dims([np.array(img.shape)], ir)
-#     # print(n, ir)
-#     std_bern = ((1 / n[0]) * (vf * (1 - vf))) ** 0.5
+#     cls = tpc_to_cls(x, tpc)
+#     n = ns_from_dims([np.array(img.shape)], cls)
+#     # print(n, cls)
+#     std_bern = ((1 / n[0]) * (pf * (1 - pf))) ** 0.5
 #     std_model, slope, intercept = get_model_params(f'{dims}d{met}') 
 #     if not correction:
 #         slope, intercept = 1, 0
 #     if model_error:
 #         # print(std_bern)
 #         bounds = [(conf*1.001, 1)]
-#         args = (conf, std_bern, std_model, vf, slope, intercept)
+#         args = (conf, std_bern, std_model, pf, slope, intercept)
 #         err_for_img = minimize(optimize_error_conf_pred, conf**0.5, args, bounds=bounds).fun
-#         args = (conf, std_model, vf, slope, intercept, err_targ)
+#         args = (conf, std_model, pf, slope, intercept, err_targ)
 #         n_for_err_targ = minimize(optimize_error_n_pred, conf**0.5, args, bounds=bounds).fun
-#         # print(n, n_for_err_targ, ir)
+#         # print(n, n_for_err_targ, cls)
 #     else:
 #         z = stats.norm.interval(conf)[1]
-#         err_for_img = (z*std_bern/vf)*slope+intercept
+#         err_for_img = (z*std_bern/pf)*slope+intercept
 #         # print(stats.norm.interval(conf, scale=std_bern)[1], std_bern)
-#         n_for_err_targ = vf * (1 - vf) * (z/ ((err_targ -intercept)/slope * vf)) ** 2
+#         n_for_err_targ = pf * (1 - pf) * (z/ ((err_targ -intercept)/slope * pf)) ** 2
 
-#         # print(n_for_err_targ, n, ir)
-#     l_for_err_targ = dims_from_n(n_for_err_targ, shape, ir, dims)
+#         # print(n_for_err_targ, n, cls)
+#     l_for_err_targ = dims_from_n(n_for_err_targ, shape, cls, dims)
 #     return err_for_img, l_for_err_targ, tpc
 
 #  Calc tpc radial the old way without fft:
