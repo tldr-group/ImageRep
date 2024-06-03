@@ -327,7 +327,7 @@ def make_error_prediction(img, conf=0.95, err_targ=0.05, model_error=True, mxtpc
         err_for_img = minimize(optimize_error_conf_pred, conf**0.5, args, bounds=bounds).fun
         args = (conf, std_model, pf, err_targ)
         n_for_err_targ = minimize(optimize_error_n_pred, conf**0.5, args, bounds=bounds).fun
-    else:
+    else:  # TODO what is this useful for.. for when CLS is known?
         z = stats.norm.interval(conf)[1]
         err_for_img = (z*std_bern/pf)
         n_for_err_targ = pf * (1 - pf) * (z/ (err_targ * pf)) ** 2
@@ -348,7 +348,7 @@ def optimize_error_n_pred(bern_conf, total_conf, std_model, pf, err_targ):
     z1 = stats.norm.interval(bern_conf)[1]
     err_model = stats.norm.interval(model_conf, scale=std_model)[1]
     num = (err_model+1)**2 * (1-pf) * z1**2
-    den = (err_model + err_targ)**2 * pf  # TODO I think this is wrong, it should be only err_targ?
+    den = (err_targ)**2 * pf  # TODO go over the calcs and see if this is right
     return num/den
 
 
