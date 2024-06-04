@@ -133,13 +133,13 @@ def std_error_by_size(dim, edge_lengths, num_runs=5, start_idx=0, std_not_cls=Tr
         # erros_inherent = util.bernouli(pfs[i], util.ns_from_dims(img_sizes, irs[i]),conf=0.95)
         # plt.plot(edge_lengths, erros_inherent, label=f'Inherent error IR = {irs[i]}, pf = {pfs[i]}')
     print(f'popt: {popt}')
-    prediction_error = util.fit_to_errs_function(dim, n_voxels, *popt)*100
+    prediction_error = util.fit_to_errs_function(dim, n_voxels, *popt)
     return prediction_error, stds
 
 def plot_std_error_by_size(dim, edge_lengths, start_idx=0, num_runs=5):
     pred_error, stds = std_error_by_size(dim, edge_lengths, start_idx=start_idx, num_runs=5)
     edge_lengths = edge_lengths[start_idx:]
-    plt.scatter(edge_lengths, stds*100, label='Prediction error std')
+    plt.scatter(edge_lengths, stds, label='Prediction error std')
     plt.plot(edge_lengths, pred_error, label='Prediction error fit')
     plt.xlabel('Edge Length')
     plt.ylabel('MPE std (%)')
@@ -173,7 +173,7 @@ def optimal_slopes(dim, num_runs=5):
     return edge_lengths_pred, slopes, stds
 
 if __name__ == '__main__':
-    dim = '3D'
+    dim = '2D'
     num_runs_cur = 10
     run_data, _ = data_micros(dim)
     edge_lengths_pred = run_data['edge_lengths_pred']

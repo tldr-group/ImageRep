@@ -131,8 +131,7 @@ def real_image_stats(img, ls, pf, repeats=4000, z_score=1.96):
                 crop = img[b, x : x + l, y : y + l, z : z + l]
                 pfs.append(torch.mean(crop).cpu())
         pfs = np.array(pfs)
-        ddof = np.ceil(repeats/img.shape[0])
-        print(f'ddof = {ddof}')
+        ddof = 1  # for unbiased std
         std = np.std(pfs, ddof=ddof)
         errs.append(100 * ((z_score * std) / pf))
     return errs
@@ -321,24 +320,27 @@ def make_error_prediction(img, conf=0.95, err_targ=0.05, model_error=True, mxtpc
     # print(n, cls)
     std_bern = ((1 / n[0]) * (pf * (1 - pf))) ** 0.5
     std_model = get_std_model(dims, torch.numel(img))
+    abs_err_target = err_targ * pf
     if model_error:
-        bounds = [(conf*1.001, 1)]
+        bounds = [(conf*1.0001, 1)]
         args = (conf, std_bern, std_model, pf)
-        err_for_img = minimize(optimize_error_conf_pred, conf**0.5, args, bounds=bounds).fun
-        args = (conf, std_model, pf, err_targ)
+        # calculate the absolute error for the image:
+        abs_err_for_img = minimize(optimize_error_conf_pred, conf**0.5, args, bounds=bounds).fun
+        args = (conf, std_model, pf, abs_err_target)
         n_for_err_targ = minimize(optimize_error_n_pred, conf**0.5, args, bounds=bounds).fun
     else:  # TODO what is this useful for.. for when CLS is known?
         z = stats.norm.interval(conf)[1]
-        err_for_img = (z*std_bern/pf)
-        n_for_err_targ = pf * (1 - pf) * (z/ (err_targ * pf)) ** 2
+        abs_err_for_img = (z*std_bern/pf)
+        n_for_err_targ = pf * (1 - pf) * (z/ (abs_err_target * pf)) ** 2
 
     l_for_err_targ = dims_from_n(n_for_err_targ, shape, cls, dims)
-    return err_for_img*100, l_for_err_targ, cls
+    percentage_err_for_img = abs_err_for_img/pf
+    return percentage_err_for_img, l_for_err_targ, cls
 
 
 def optimize_error_conf_pred(bern_conf, total_conf, std_bern, std_model, pf):
     model_conf = total_conf/bern_conf
-    err_bern = stats.norm.interval(bern_conf, scale=std_bern)[1]/pf
+    err_bern = stats.norm.interval(bern_conf, scale=std_bern)[1]
     err_model = stats.norm.interval(model_conf, scale=std_model)[1]
     return err_bern * (1 + err_model)
 
@@ -347,14 +349,14 @@ def optimize_error_n_pred(bern_conf, total_conf, std_model, pf, err_targ):
     model_conf = total_conf/bern_conf
     z1 = stats.norm.interval(bern_conf)[1]
     err_model = stats.norm.interval(model_conf, scale=std_model)[1]
-    num = (err_model+1)**2 * (1-pf) * z1**2
-    den = (err_targ)**2 * pf  # TODO go over the calcs and see if this is right
+    num = (err_model+1)**2 * (1-pf) * z1**2 * pf
+    den = (err_targ)**2  # TODO go over the calcs and see if this is right
     return num/den
 
 
 def get_std_model(dim, n_voxels): 
-    popt = {f'{dim}d': [48.20175315, 0.4297919],
-            f'{dim}d': [444.803518, 0.436974444]} 
+    popt = {'2d': [48.20175315, 0.4297919],
+            '3d': [444.803518, 0.436974444]} 
     return fit_to_errs_function(dim, n_voxels, *popt[f'{dim}d'])
 
 
@@ -428,10 +430,7 @@ def calc_std_from_ratio(img, ratio):
     """Calculates the standard deviation of the subimages of an image, divided by a certain ratio."""
     divided_img = divide_img_to_subimages(img, ratio).cpu().numpy()
     along_axis = tuple(np.arange(1, len(img.shape)))
-    if img.shape[0] > 1:
-        ddof = np.prod(np.array(img.shape[1:])//np.array(divided_img.shape[1:]))
-    else:
-        ddof = 0
+    ddof = 1  # for unbiased std
     return np.std(np.mean(divided_img, axis=along_axis), ddof=ddof)
 
 
