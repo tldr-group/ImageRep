@@ -99,6 +99,14 @@ def stat_analysis_error(img, pf, edge_lengths):  # TODO see if to delete this or
 
 
 def real_image_stats(img, ls, pf, repeats=4000, z_score=1.96):  
+    '''Calculates the error of the stat. analysis for different edge lengths.
+    The error is calculated by the std of the mean of the subimages divided by the pf.
+    params:
+    img: the image to calculate the error for (Should be a stack of images).
+    ls: the edge lengths to calculate the error for.
+    pf: the phase fraction of the image.
+    repeats: the number of repeats for each edge length.
+    z_score: the z score for the confidence interval.'''
     dims = len(img[0].shape)
     errs = []
     for l in ls:
