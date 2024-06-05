@@ -28,13 +28,19 @@ def factors_to_params(args, im_shape):
 def get_ps_generators():
     '''Returns a dictionary with the porespy generators and their arguments.'''
     ps_generators = {blobs: {'blobiness_factor_l': [100,150,200], 'porosity': list(np.arange(0.1,0.6,0.1))},
-                fractal_noise: {'frequency': list(np.arange(0.015,0.05,0.01)), 'octaves': [2,7,12], 'uniform': [True]},
-                voronoi_edges: {'r': [1,2,3], 'ncells_factor_size': np.array([100,1000,10000])}}
+                fractal_noise: {'frequency': list(np.arange(0.015,0.05,0.01)), 'octaves': [2,7,12], 'uniform': [True], 'mode': ['simplex', 'value']},
+                # voronoi_edges: {'r': [1,2,3], 'ncells_factor_size': np.array([100,1000,10000])}
+                }
     return ps_generators
 
 def get_gen_name(generator, value_comb):
     '''Returns the name of the generator with the given values.'''
-    value_comb = list(np.round(value_comb, 3).astype(str))
+    value_comb = list(value_comb)
+    for i in range(len(value_comb)):
+        value = value_comb[i]
+        if isinstance(value, float):
+            value_comb[i] = np.round(value, 3)
+    value_comb = list(np.array(value_comb).astype(str))
     value_comb = '_'.join(value_comb)
     return f'{generator.__name__}_{value_comb}'
 
@@ -114,9 +120,21 @@ def ps_error_prediction(dim, data, confidence, error_target):
             gen_name = get_gen_name(generator, value_comb)
             args = factors_to_params(args, im_shape=large_shape)
             large_im_stack = get_large_im_stack(generator, large_shape, large_im_repeats, args)
-            
-            im_err, l_for_err_target, cls = util.make_error_prediction(im, 
-                conf=confidence, err_targ=error_target, model_error=True)
+            pf = torch.mean(large_im_stack)
+            edge_lengths_fit = data[f'validation_{dim}']['edge_lengths_fit']
+            true_cls = util.stat_analysis_error(large_im_stack, pf, edge_lengths_fit)
+            print(f'True cls for {gen_name} with {args}: {true_cls}')
+            data[f'validation_{dim}'][gen_name]['true_cls'] = true_cls
+            edge_lengths_pred = data[f'validation_{dim}']['edge_lengths_pred']
+            for edge_length in edge_lengths_pred:
+                true_error = util.bernouli_from_cls(true_cls, pf, [edge_length]*int(dim[0]))
+                small_im = large_im_stack[0][edge_length:2*edge_length, edge_length:2*edge_length]
+                im_err, l_for_err_target, cls = util.make_error_prediction(small_im, 
+                        conf=confidence, err_targ=error_target, model_error=True)
+                print(f'{gen_name} cls {args}, edge_length {edge_length} cls: {cls}')
+                print(f'{gen_name} cls {args}, edge_length {edge_length} true error: {true_error[0]:.2f}')
+                print(f'{gen_name} cls {args}, edge_length {edge_length} error: {im_err*100:.2f}')
+                
             # plt.imshow(im[150:350,150:350])
             # plt.title(f'{generator.__name__} with {args}')
             print(f'Error: {100*im_err:.2f} %')

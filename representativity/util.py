@@ -98,7 +98,7 @@ def stat_analysis_error(img, pf, edge_lengths):  # TODO see if to delete this or
     return real_cls
 
 
-def real_image_stats(img, ls, pf, repeats=4000, z_score=1.96):  
+def real_image_stats(img, ls, pf, repeats=4000, conf=0.95):  
     '''Calculates the error of the stat. analysis for different edge lengths.
     The error is calculated by the std of the mean of the subimages divided by the pf.
     params:
@@ -106,14 +106,14 @@ def real_image_stats(img, ls, pf, repeats=4000, z_score=1.96):
     ls: the edge lengths to calculate the error for.
     pf: the phase fraction of the image.
     repeats: the number of repeats for each edge length.
-    z_score: the z score for the confidence interval.'''
+    conf: the confidence level for the error.'''
     dims = len(img[0].shape)
     errs = []
     for l in ls:
         pfs = []
         n_pos_ims = int(np.prod(img.shape)/l**dims)
         repeats = n_pos_ims*2
-        print(f'one im repeats = {repeats} for l = {l}')
+        # print(f'one im repeats = {repeats} for l = {l}')
         if dims == 1:
             for _ in range(repeats):
                 bm, xm = img.shape
@@ -141,9 +141,12 @@ def real_image_stats(img, ls, pf, repeats=4000, z_score=1.96):
         pfs = np.array(pfs)
         ddof = 1  # for unbiased std
         std = np.std(pfs, ddof=ddof)
-        errs.append(100 * ((z_score * std) / pf))
+        errs.append(100 * (stats.norm.interval(conf, scale=std)[1] / pf))
     return errs
 
+def bernouli_from_cls(cls, pf, img_size, conf=0.95):
+    ns = ns_from_dims([np.array(img_size)], cls)
+    return bernouli(pf, ns, conf)
 
 def bernouli(pf, ns, conf=0.95):
     errs = []
@@ -336,7 +339,7 @@ def make_error_prediction(img, conf=0.95, err_targ=0.05, model_error=True, mxtpc
         abs_err_for_img = minimize(optimize_error_conf_pred, conf**0.5, args, bounds=bounds).fun
         args = (conf, std_model, pf, abs_err_target)
         n_for_err_targ = minimize(optimize_error_n_pred, conf**0.5, args, bounds=bounds).fun
-    else:  # TODO what is this useful for.. for when CLS is known?
+    else:  # TODO what is this useful for.. for when you trust the model completely?
         z = stats.norm.interval(conf)[1]
         abs_err_for_img = (z*std_bern/pf)
         n_for_err_targ = pf * (1 - pf) * (z/ (abs_err_target * pf)) ** 2
@@ -349,14 +352,16 @@ def make_error_prediction(img, conf=0.95, err_targ=0.05, model_error=True, mxtpc
 def optimize_error_conf_pred(bern_conf, total_conf, std_bern, std_model, pf):
     model_conf = total_conf/bern_conf
     err_bern = stats.norm.interval(bern_conf, scale=std_bern)[1]
-    err_model = stats.norm.interval(model_conf, scale=std_model)[1]
+    one_side_error_model = model_conf*2 - 1
+    err_model = stats.norm.interval(one_side_error_model, scale=std_model)[1]
     return err_bern * (1 + err_model)
 
 
 def optimize_error_n_pred(bern_conf, total_conf, std_model, pf, err_targ):
     model_conf = total_conf/bern_conf
     z1 = stats.norm.interval(bern_conf)[1]
-    err_model = stats.norm.interval(model_conf, scale=std_model)[1]
+    one_side_error_model = model_conf*2 - 1
+    err_model = stats.norm.interval(one_side_error_model, scale=std_model)[1]
     num = (err_model+1)**2 * (1-pf) * z1**2 * pf
     den = (err_targ)**2  # TODO go over the calcs and see if this is right
     return num/den
