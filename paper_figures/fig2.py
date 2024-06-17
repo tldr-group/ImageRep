@@ -3,11 +3,11 @@ import matplotlib.pyplot as plt
 import tifffile
 import json
 import numpy as np
-import kneed
+# import kneed
 from scipy.optimize import curve_fit
 from scipy import stats
 import torch
-import util
+from representativity import util
 from torch.nn.functional import interpolate
 
 with open("data_gen2.json", "r") as fp:

@@ -111,7 +111,9 @@ def get_large_im_stack(generator, large_shape, large_im_repeats, args):
 def ps_error_prediction(dim, data, confidence, error_target):
     ps_generators = get_ps_generators()
     errs = []
+    true_clss = []
     clss = []
+    one_im_clss = []
     large_shape = data[f'validation_{dim}']['large_im_size']
     large_im_repeats = 1
     for generator, params in ps_generators.items():
@@ -120,39 +122,54 @@ def ps_error_prediction(dim, data, confidence, error_target):
             gen_name = get_gen_name(generator, value_comb)
             args = factors_to_params(args, im_shape=large_shape)
             large_im_stack = get_large_im_stack(generator, large_shape, large_im_repeats, args)
-            pf = torch.mean(large_im_stack)
+            true_pf = torch.mean(large_im_stack)
             edge_lengths_fit = data[f'validation_{dim}']['edge_lengths_fit']
-            true_cls = util.stat_analysis_error(large_im_stack, pf, edge_lengths_fit)
-            print(f'True cls for {gen_name} with {args}: {true_cls}')
+            true_cls = util.stat_analysis_error(large_im_stack, true_pf, edge_lengths_fit)
+            print(f'Generator {gen_name} with {args}:')
+            print(f'True cls: {true_cls}')
             data[f'validation_{dim}'][gen_name]['true_cls'] = true_cls
             edge_lengths_pred = data[f'validation_{dim}']['edge_lengths_pred']
             for edge_length in edge_lengths_pred:
-                true_error = util.bernouli_from_cls(true_cls, pf, [edge_length]*int(dim[0]))
+                true_error = util.bernouli_from_cls(true_cls, true_pf, [edge_length]*int(dim[0]))
                 small_im = large_im_stack[0][edge_length:2*edge_length, edge_length:2*edge_length]
+                one_im_stat_analysis_cls = util.one_img_stat_analysis_error(small_im, small_im.mean())
+                print(f'One image stat analysis cls: {one_im_stat_analysis_cls}')
+                one_im_clss.append(one_im_stat_analysis_cls)
                 im_err, l_for_err_target, cls = util.make_error_prediction(small_im, 
                         conf=confidence, err_targ=error_target, model_error=True)
-                print(f'{gen_name} cls {args}, edge_length {edge_length} cls: {cls}')
-                print(f'{gen_name} cls {args}, edge_length {edge_length} true error: {true_error[0]:.2f}')
-                print(f'{gen_name} cls {args}, edge_length {edge_length} error: {im_err*100:.2f}')
+                true_clss.append(true_cls)
+                clss.append(cls)
+                print(f'edge_length {edge_length}:')
+                print(f'cls: {cls}')
+                print(f'true error: {true_error[0]:.2f}')
+                print(f'error: {im_err*100:.2f}\n')
+            print('\n')
                 
             # plt.imshow(im[150:350,150:350])
             # plt.title(f'{generator.__name__} with {args}')
-            print(f'Error: {100*im_err:.2f} %')
-            print(f'Length for error target: {l_for_err_target}')
-            print(f'CLS: {cls}')
-            clss.append(cls)
-            errs.append(im_err)
+            # print(f'Error: {100*im_err:.2f} %')
+            # print(f'Length for error target: {l_for_err_target}')
+            # print(f'CLS: {cls}')
+            # clss.append(cls)
+            # errs.append(im_err)
             # plt.show()
             # plt.close()
-    return errs, clss
+    return errs, true_clss, clss, one_im_clss
 
 if __name__ == '__main__':
     shape = [1000,1000]
     all_data = json_validation_preprocessing()
     dim = '2D'
     # get porespy generators:
-    errs, clss = ps_error_prediction(dim, all_data, confidence=0.95, error_target=0.05)
-    plt.hist(errs, bins=15)
+    errs, true_clss, clss, one_im_clss = ps_error_prediction(dim, all_data, confidence=0.95, error_target=0.05)
+    plt.scatter(true_clss, clss, label='CLS')
+    plt.scatter(true_clss, one_im_clss, label='One image stat analysis')
+    max_value = max(max(true_clss), max(clss), max(one_im_clss))
+    plt.plot([0, max_value], [0, max_value], 'k--')
+    plt.xlabel('True CLS')
+    plt.ylabel('CLS')
+    plt.legend()
     plt.show()
+
 
 
