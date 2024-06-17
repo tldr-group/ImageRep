@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 def likelihood_of_phi(image_pf, pred_std, std_dist_std):
     std_dist_divisions = 101
-    num_stds = 5
+    num_stds = min(pred_std/std_dist_std - pred_std/std_dist_std/10, 6)
     # first make the "weights distribution", the normal distribution of the stds
     # where the prediction std is the mean of this distribution.
     x_std_dist_bounds = [pred_std - num_stds*std_dist_std, pred_std + num_stds*std_dist_std]
@@ -44,16 +44,33 @@ def likelihood_of_phi(image_pf, pred_std, std_dist_std):
     # plt.show()
     # print(pf_dist_integral)
     
-    sum_dist = np.sum(pf_dist, axis=0)*np.diff(pf_x_1d)[0]*np.diff(x_std_dist)[0]
-    print(sum_dist)
-    print(np.sum(sum_dist))
+    sum_dist_norm = np.sum(pf_dist, axis=0)*np.diff(x_std_dist)[0]
+    mid_std_dist = pf_dist_before_norm[std_dist_divisions//2,:]
+    cum_sum_sum_dist_norm = np.cumsum(sum_dist_norm*np.diff(pf_x_1d)[0])
+    alpha = 0.975
+    alpha_sum_dist_norm_end = np.where(cum_sum_sum_dist_norm > alpha)[0][0]
+    alpha_sum_dist_norm_beginning = np.where(cum_sum_sum_dist_norm > 1-alpha)[0][0]
+    cum_sum_mid_std_dist = np.cumsum(mid_std_dist*np.diff(pf_x_1d)[0])
+    alpha_mid_std_dist_end = np.where(cum_sum_mid_std_dist > alpha)[0][0]
+    alpha_mid_std_dist_beginning = np.where(cum_sum_mid_std_dist > 1-alpha)[0][0]
+    plt.plot(pf_x_1d, mid_std_dist, c='blue', label = 'middle normal dist')
+    plt.vlines(pf_x_1d[alpha_mid_std_dist_end], 0, np.max(mid_std_dist), color='blue', label = r'95% confidence bounds')
+    plt.vlines(pf_x_1d[alpha_mid_std_dist_beginning], 0, np.max(mid_std_dist), color='blue')
+    plt.plot(pf_x_1d, sum_dist_norm, c='orange', label = 'summed mixture dist')
+    plt.vlines(pf_x_1d[alpha_sum_dist_norm_end], 0, np.max(sum_dist_norm), color='orange', label = r'95% confidence bounds')
+    plt.vlines(pf_x_1d[alpha_sum_dist_norm_beginning], 0, np.max(sum_dist_norm), color='orange')
+
+    plt.legend()
+    plt.show()
+    print(np.trapz(sum_dist_norm, pf_x_1d))
+    print(np.trapz(pf_dist_before_norm[std_dist_divisions//2,:], pf_x_1d))
 
 
 def normal_dist(x, mean, std):
     return (1.0 / (std * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mean) / std) ** 2)
 
 if __name__ == "__main__":
-    image_pf = 0.5
-    pred_std = 0.04
-    std_dist_std = 0.005
+    image_pf = 0.3
+    pred_std = 0.3/10
+    std_dist_std = 0.3/10/4
     likelihood_of_phi(image_pf, pred_std, std_dist_std)
