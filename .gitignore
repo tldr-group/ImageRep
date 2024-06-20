@@ -11,3 +11,6 @@ fig2 copy.py
 *.pdf
 *.png
 *.npy
+.vscode
+website/node_modules
+website/dist
