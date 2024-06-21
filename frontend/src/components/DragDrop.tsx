@@ -29,7 +29,7 @@ const DragDrop = ({ loadFromFile }: DragDropProps): JSX.Element => {
         >
             <span>Drag microstructure file!</span>
         </div>
-    )
+    );
 }
 
 export default DragDrop

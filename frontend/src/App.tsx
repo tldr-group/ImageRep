@@ -1,8 +1,9 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import AppContext, { imageLoadInfo } from "./components/interfaces";
 
-import Topbar from "./components/Topbar"
+import Topbar from "./components/Topbar";
 import DragDrop from "./components/DragDrop";
+import PreviewCanvas from "./components/Canvas";
 
 import { loadFromTIFF, loadFromImage } from "./components/imageLogic";
 
@@ -17,7 +18,6 @@ const App = () => {
         userFile: [userFile, setUserFile],
     } = useContext(AppContext)!
 
-    const foo = () => { }
     const appLoadFile = async (file: File) => {
         const reader = new FileReader();
         const extension = file.name.split('.').pop()?.toLowerCase();
@@ -60,13 +60,12 @@ const App = () => {
         };
     }
 
-    useEffect(() => { }, [])
-
     return (
         <div className={`w-full h-full`}>
             <Topbar></Topbar>
             <div className={`flex`} style={{ margin: '1.5%' }} > {/*Canvas div on left, sidebar on right*/}
                 {!previewData && <DragDrop loadFromFile={appLoadFile} />}
+                {previewData && <PreviewCanvas />}
             </div>
         </div>
     );
