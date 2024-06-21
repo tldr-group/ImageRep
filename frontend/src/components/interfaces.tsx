@@ -5,6 +5,10 @@ interface contextProps {
         image: HTMLImageElement | null,
         setImage: (e: HTMLImageElement | null) => void
     ];
+    userFile: [
+        userFile: File | null,
+        setUserFile: (e: File | null) => void
+    ];
 };
 
 

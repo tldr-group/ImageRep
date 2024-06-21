@@ -6,11 +6,13 @@ const AppContextProvider = (props: {
 }) => {
 
     const [image, setImage] = useState<HTMLImageElement | null>(null);
+    const [userFile, setUserFile] = useState<File | null>(null);
 
     return (
         <AppContext.Provider
             value={{
                 image: [image, setImage],
+                userFile: [userFile, setUserFile]
             }}
         >
             {props.children}
