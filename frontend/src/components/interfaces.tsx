@@ -20,3 +20,12 @@ export interface DragDropProps {
     loadDefault: () => void;
     loadFromFile: (file: File) => void;
 }
+
+export interface imageLoadInfo {
+    previewData: ImageData; //use previewData.data to get raw arr
+    nDims: 2 | 3;
+    nPhases: number;
+    segmented: boolean;
+    height: number;
+    width: number;
+}
