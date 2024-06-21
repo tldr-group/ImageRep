@@ -1,14 +1,19 @@
 import { createContext } from "react";
 
 interface contextProps {
-    image: [
-        image: HTMLImageElement | null,
-        setImage: (e: HTMLImageElement | null) => void
+    previewData: [
+        previewData: ImageData | null,
+        setPreviewData: (e: ImageData | null) => void
     ];
     userFile: [
         userFile: File | null,
         setUserFile: (e: File | null) => void
     ];
+    selectedPhase: [
+        selectedPhase: number,
+        setSelectedPhase: (e: number) => void
+    ]
+
 };
 
 
@@ -17,7 +22,6 @@ export default AppContext;
 
 
 export interface DragDropProps {
-    loadDefault: () => void;
     loadFromFile: (file: File) => void;
 }
 

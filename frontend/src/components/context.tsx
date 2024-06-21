@@ -5,14 +5,17 @@ const AppContextProvider = (props: {
     children: React.ReactElement<any, string | React.JSXElementConstructor<any>>;
 }) => {
 
-    const [image, setImage] = useState<HTMLImageElement | null>(null);
+    const [previewData, setPreviewData] = useState<ImageData | null>(null);
     const [userFile, setUserFile] = useState<File | null>(null);
+    const [selectedPhase, setSelectedPhase] = useState<number>(1);
+
 
     return (
         <AppContext.Provider
             value={{
-                image: [image, setImage],
-                userFile: [userFile, setUserFile]
+                previewData: [previewData, setPreviewData],
+                userFile: [userFile, setUserFile],
+                selectedPhase: [selectedPhase, setSelectedPhase],
             }}
         >
             {props.children}
