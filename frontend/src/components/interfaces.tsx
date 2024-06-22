@@ -5,6 +5,10 @@ interface contextProps {
         previewData: ImageData | null,
         setPreviewData: (e: ImageData | null) => void
     ];
+    previewImg: [
+        previewImg: HTMLImageElement | null,
+        setPreviewImg: (e: HTMLImageElement | null) => void
+    ];
     userFile: [
         userFile: File | null,
         setUserFile: (e: File | null) => void
@@ -27,6 +31,7 @@ export interface DragDropProps {
 
 export interface imageLoadInfo {
     previewData: ImageData; //use previewData.data to get raw arr
+    previewImg: HTMLImageElement;
     nDims: 2 | 3;
     nPhases: number;
     segmented: boolean;

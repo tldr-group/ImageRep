@@ -30,6 +30,7 @@ export const loadFromTIFF = (tiffBuffer: ArrayBuffer): imageLoadInfo => {
 
     const imgDataArr = new Uint8ClampedArray(UTIF.toRGBA8(tif));
     const imgData = new ImageData(imgDataArr, tif.width, tif.height);
+    const img = getImagefromImageData(imgData, tif.height, tif.width);
 
     const nDims = (tifs.length > 1) ? 3 : 2;
 
@@ -39,6 +40,7 @@ export const loadFromTIFF = (tiffBuffer: ArrayBuffer): imageLoadInfo => {
 
     return {
         previewData: imgData,
+        previewImg: img,
         nDims: nDims,
         nPhases: nPhases,
         segmented: segmented,
@@ -61,6 +63,20 @@ const getImageDataFromImage = (image: HTMLImageElement): ImageData => {
     return data;
 }
 
+const getImagefromImageData = (imageData: ImageData, height: number, width: number): HTMLImageElement => {
+    const tmpCanvas = document.createElement("canvas");
+    const tmpContext = tmpCanvas.getContext("2d")!;
+
+    tmpCanvas.height = height;
+    tmpCanvas.width = width;
+    tmpContext.putImageData(imageData, 0, 0);
+
+    const img = new Image(width, height);
+    img.src = tmpCanvas.toDataURL();
+    tmpCanvas.remove();
+    return img;
+}
+
 export const loadFromImage = async (href: string): Promise<imageLoadInfo> => {
     // load href to Image element, draw to temp canvas to extract pixel data
     const img = new Image();
@@ -75,6 +91,7 @@ export const loadFromImage = async (href: string): Promise<imageLoadInfo> => {
 
     return {
         previewData: imgData,
+        previewImg: img,
         nDims: 2,
         nPhases: nPhases,
         segmented: segmented,

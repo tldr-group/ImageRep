@@ -15,6 +15,7 @@ const MAX_FILE_SIZE_BYTES = 1024 * 1024 * 500; // 500MB
 const App = () => {
     const {
         previewData: [previewData, setPreviewData],
+        previewImg: [previewImg, setPreviewImg],
         userFile: [userFile, setUserFile],
     } = useContext(AppContext)!
 
@@ -54,6 +55,7 @@ const App = () => {
             } else {
                 setUserFile(file)
                 setPreviewData(result!.previewData)
+                setPreviewImg(result!.previewImg);
 
                 // set data -> trigger user phase selection prompt
             }

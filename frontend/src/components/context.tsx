@@ -6,6 +6,7 @@ const AppContextProvider = (props: {
 }) => {
 
     const [previewData, setPreviewData] = useState<ImageData | null>(null);
+    const [previewImg, setPreviewImg] = useState<HTMLImageElement | null>(null);
     const [userFile, setUserFile] = useState<File | null>(null);
     const [selectedPhase, setSelectedPhase] = useState<number>(1);
 
@@ -14,6 +15,7 @@ const AppContextProvider = (props: {
         <AppContext.Provider
             value={{
                 previewData: [previewData, setPreviewData],
+                previewImg: [previewImg, setPreviewImg],
                 userFile: [userFile, setUserFile],
                 selectedPhase: [selectedPhase, setSelectedPhase],
             }}
