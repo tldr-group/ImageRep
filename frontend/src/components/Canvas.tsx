@@ -20,15 +20,16 @@ const PreviewCanvas = () => {
         if (image === null) { return; } // null check - useful for the resize listeners
         const canvas = canvasRef.current!;
         const ctx = canvas.getContext("2d");
-        console.log(canvas.height);
+        // TODO: ensure this works w/ image aspect ratio
         ctx?.drawImage(image, 0, 0, canvas.width, canvas.height);
     }
 
-    useEffect(() => {
+    // ================ EFFECTS ================
+    useEffect(() => { // UPDATE WHEN IMAGE CHANGED
         redraw(previewImg!)
     }, [previewImg])
 
-    useEffect(() => {
+    useEffect(() => { // SET INITIAL CANV W AND H
         // runs on load to update canvDims with client rendered w and h of canvas (which is in vh/vw units)
         const resize = () => {
             const container = containerRef.current;
@@ -40,11 +41,11 @@ const PreviewCanvas = () => {
         resize();
     }, [])
 
-    useEffect(() => {
+    useEffect(() => { // UPDATE WHEN CLIENT RESIZED
         const canv = canvasRef.current!;
         canv.width = canvDims.w;
         canv.height = canvDims.h;
-        // we need to redraw otherwise setting w and h will clear
+        // we need to redraw otherwise setting w and h will clear the canvas
         redraw(previewImg);
     }, [canvDims])
 
