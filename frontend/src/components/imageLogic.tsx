@@ -4,9 +4,13 @@ const UTIF = require("./UTIF.js");
 
 const checkPhases = (arr: Uint8ClampedArray) => {
     // given 2D image data, find N unique values, if > 6 call it unsegmented
-    const uniqueValues = [... new Set(arr)]; // create Set (only unique vals) then unpack into arr
+    // ASSUMES RGBA ARRAYS: valid as UTIF decodes to RGBA
+    const uniqueColours = arr.filter((_, i, __) => { return i % 4 == 0 })
+    const uniqueValues = [... new Set(uniqueColours)]; // create Set (only unique vals) then unpack into arr
     const nPhases = uniqueValues.length;
     const segmented = (nPhases < 6) ? true : false;
+    // TODO: if data RGBA then opacity will be counted as phase - this is bug
+    // need to explictly look for unique rgb values
     return { nPhases: nPhases, segmented: segmented };
 }
 
