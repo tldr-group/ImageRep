@@ -4,6 +4,7 @@ import AppContext, { imageLoadInfo } from "./components/interfaces";
 import Topbar from "./components/Topbar";
 import DragDrop from "./components/DragDrop";
 import PreviewCanvas from "./components/Canvas";
+import Menu from "./components/Modals";
 
 import { loadFromTIFF, loadFromImage } from "./components/imageLogic";
 
@@ -17,6 +18,7 @@ const App = () => {
         previewData: [previewData, setPreviewData],
         previewImg: [previewImg, setPreviewImg],
         userFile: [userFile, setUserFile],
+        menuState: [menuState, setMenuState],
     } = useContext(AppContext)!
 
     const appLoadFile = async (file: File) => {
@@ -53,11 +55,10 @@ const App = () => {
             if (result?.segmented == false) {
                 console.log('error: unsegmented');
             } else {
-                setUserFile(file)
-                setPreviewData(result!.previewData)
+                setUserFile(file);
+                setPreviewData(result!.previewData);
                 setPreviewImg(result!.previewImg);
-
-                // set data -> trigger user phase selection prompt
+                setMenuState('phase')
             }
         };
     }
@@ -69,6 +70,7 @@ const App = () => {
                 {!previewData && <DragDrop loadFromFile={appLoadFile} />}
                 {previewData && <PreviewCanvas />}
             </div>
+            <Menu></Menu>
         </div>
     );
 };

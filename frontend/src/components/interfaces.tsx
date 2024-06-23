@@ -16,9 +16,14 @@ interface contextProps {
     selectedPhase: [
         selectedPhase: number,
         setSelectedPhase: (e: number) => void
-    ]
-
+    ];
+    menuState: [
+        menuState: MenuState,
+        setMenuState: (e: MenuState) => void
+    ];
 };
+
+export type MenuState = "hidden" | "phase" | "conf" | "conf_result" | "length" | "length_result"
 
 
 const AppContext = createContext<contextProps | null>(null);

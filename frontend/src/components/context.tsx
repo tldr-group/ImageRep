@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import AppContext from "./interfaces";
+import AppContext, { MenuState } from "./interfaces";
 
 const AppContextProvider = (props: {
     children: React.ReactElement<any, string | React.JSXElementConstructor<any>>;
@@ -9,6 +9,7 @@ const AppContextProvider = (props: {
     const [previewImg, setPreviewImg] = useState<HTMLImageElement | null>(null);
     const [userFile, setUserFile] = useState<File | null>(null);
     const [selectedPhase, setSelectedPhase] = useState<number>(1);
+    const [menuState, setMenuState] = useState<MenuState>('hidden');
 
 
     return (
@@ -18,6 +19,7 @@ const AppContextProvider = (props: {
                 previewImg: [previewImg, setPreviewImg],
                 userFile: [userFile, setUserFile],
                 selectedPhase: [selectedPhase, setSelectedPhase],
+                menuState: [menuState, setMenuState]
             }}
         >
             {props.children}
