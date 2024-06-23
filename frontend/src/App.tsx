@@ -58,7 +58,7 @@ const App = () => {
                 setUserFile(file);
                 setPreviewData(result!.previewData);
                 setPreviewImg(result!.previewImg);
-                setMenuState('phase')
+                setMenuState('phase');
             }
         };
     }
