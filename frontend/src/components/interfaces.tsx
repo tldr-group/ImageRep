@@ -13,6 +13,10 @@ interface contextProps {
         userFile: File | null,
         setUserFile: (e: File | null) => void
     ];
+    nPhases: [
+        nPhases: number,
+        setNPhases: (e: number) => void
+    ]
     selectedPhase: [
         selectedPhase: number,
         setSelectedPhase: (e: number) => void

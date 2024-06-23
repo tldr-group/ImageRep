@@ -21,10 +21,11 @@ const _getCSSColour = (currentStateVal: any, targetStateVal: any, successPrefix:
 const PhaseSelect = () => {
 
     const {
+        nPhases: [nPhases,],
         selectedPhase: [selectedPhase, setSelectedPhase]
     } = useContext(AppContext)!
 
-    const classes: number[] = [1, 2, 3, 4, 5, 6];
+    const classes: number[] = Array.from(new Array(nPhases), (_, i) => i + 1);
 
     const getStyle = (i: number) => {
         return {

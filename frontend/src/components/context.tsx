@@ -8,6 +8,7 @@ const AppContextProvider = (props: {
     const [previewData, setPreviewData] = useState<ImageData | null>(null);
     const [previewImg, setPreviewImg] = useState<HTMLImageElement | null>(null);
     const [userFile, setUserFile] = useState<File | null>(null);
+    const [nPhases, setNPhases] = useState<number>(2);
     const [selectedPhase, setSelectedPhase] = useState<number>(1);
     const [menuState, setMenuState] = useState<MenuState>('hidden');
 
@@ -18,6 +19,7 @@ const AppContextProvider = (props: {
                 previewData: [previewData, setPreviewData],
                 previewImg: [previewImg, setPreviewImg],
                 userFile: [userFile, setUserFile],
+                nPhases: [nPhases, setNPhases],
                 selectedPhase: [selectedPhase, setSelectedPhase],
                 menuState: [menuState, setMenuState]
             }}

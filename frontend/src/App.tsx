@@ -18,6 +18,7 @@ const App = () => {
         previewData: [previewData, setPreviewData],
         previewImg: [previewImg, setPreviewImg],
         userFile: [userFile, setUserFile],
+        nPhases: [nPhases, setNPhases],
         menuState: [menuState, setMenuState],
     } = useContext(AppContext)!
 
@@ -58,6 +59,7 @@ const App = () => {
                 setUserFile(file);
                 setPreviewData(result!.previewData);
                 setPreviewImg(result!.previewImg);
+                setNPhases(result!.nPhases);
                 setMenuState('phase');
             }
         };
