@@ -1,10 +1,18 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import AppContext, { imageLoadInfo } from "./interfaces";
+import AppContext from "./interfaces";
 
 const centredStyle = {
     height: '60vh', width: '60vw',
     justifyContent: 'center', alignItems: 'center',
     padding: '10px', display: 'flex', margin: 'auto',
+}
+
+const getAspectCorrectedDims = (ih: number, iw: number, ch: number, cw: number, otherSF: number = 0.8) => {
+    const hSF = ch / ih;
+    const wSF = cw / iw;
+    const sf = Math.min(hSF, wSF);
+    const [nh, nw] = [ih * sf * otherSF, iw * sf * otherSF];
+    return { w: nw, h: nh, ox: (cw - nw) / 2, oy: (ch - nh) / 2 };
 }
 
 const PreviewCanvas = () => {
@@ -20,8 +28,9 @@ const PreviewCanvas = () => {
         if (image === null) { return; } // null check - useful for the resize listeners
         const canvas = canvasRef.current!;
         const ctx = canvas.getContext("2d");
-        // TODO: ensure this works w/ image aspect ratio
-        ctx?.drawImage(image, 0, 0, canvas.width, canvas.height);
+        const [ih, iw, ch, cw] = [image.naturalHeight, image.naturalWidth, canvas.height, canvas.width];
+        const correctDims = getAspectCorrectedDims(ih, iw, ch, cw);
+        ctx?.drawImage(image, correctDims.ox, correctDims.oy, correctDims.w, correctDims.h);
     }
 
     // ================ EFFECTS ================
