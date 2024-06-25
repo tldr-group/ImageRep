@@ -333,10 +333,9 @@ def make_error_prediction(img, conf=0.95, err_targ=0.05, model_error=True, mxtpc
     std_model = get_std_model(dims, torch.numel(img))
     abs_err_target = err_targ * pf
     if model_error:
-        bounds = [(conf*1.0001, 1)]
-        args = (conf, std_bern, std_model, pf)
         # calculate the absolute error for the image:
-        abs_err_for_img = minimize(optimize_error_conf_pred, conf**0.5, args, bounds=bounds).fun
+        conf_bounds = get_prediction_interval(pf, std_bern, std_model, conf)
+        abs_err_for_img = pf - conf_bounds[0]
         args = (conf, std_model, pf, abs_err_target)
         n_for_err_targ = minimize(optimize_error_n_pred, conf**0.5, args, bounds=bounds).fun
     else:  # TODO what is this useful for.. for when you trust the model completely?
@@ -348,6 +347,41 @@ def make_error_prediction(img, conf=0.95, err_targ=0.05, model_error=True, mxtpc
     percentage_err_for_img = abs_err_for_img/pf
     return percentage_err_for_img, l_for_err_targ, cls
 
+def get_prediction_interval(image_pf, pred_std, pred_std_error_std, conf_level=0.95, n_divisions=101):
+    '''Get the prediction interval for the phase fraction of the material given the image phase
+    fraction, the predicted standard deviation and the standard deviation of the prediction error.'''
+    # have a large enough number of stds to converge to 0 at both ends, 
+    # but not too large to make the calculation slow:
+    std_dist_std = pred_std*pred_std_error_std  # TODO see if this fits
+    num_stds = min(pred_std/std_dist_std - pred_std/std_dist_std/10, 6)
+    # First, make the "weights" or "error" distribution, the normal distribution of the stds
+    # where the prediction std is the mean of this distribution:
+    x_std_dist_bounds = [pred_std - num_stds*std_dist_std, pred_std + num_stds*std_dist_std]
+    x_std_dist = np.linspace(*x_std_dist_bounds, n_divisions)
+    std_dist = normal_dist(x_std_dist, mean=pred_std, std=std_dist_std)
+    # Next, make the pf distributions, each row correspond to a different std, with 
+    # the same mean (observed pf) but different stds (x_std_dist), multiplied by the
+    # weights distribution (std_dist).
+    pf_locs = np.ones((n_divisions,n_divisions))*image_pf
+    pf_x_bounds = [image_pf - num_stds*pred_std, image_pf + num_stds*pred_std]
+    pf_x_1d = np.linspace(*pf_x_bounds, n_divisions)
+    pf_mesh, std_mesh = np.meshgrid(pf_x_1d, x_std_dist)
+    # Before normalising by weight:
+    pf_dist_before_norm = normal_dist(pf_mesh, mean=pf_locs, std=std_mesh)
+    # Normalise by weight:
+    pf_dist = (pf_dist_before_norm.T * std_dist).T    
+    # Sum the distributions over the different stds
+    sum_dist_norm = np.sum(pf_dist, axis=0)*np.diff(x_std_dist)[0]
+    # Find the alpha confidence bounds
+    cum_sum_sum_dist_norm = np.cumsum(sum_dist_norm*np.diff(pf_x_1d)[0])
+    half_conf_level = (1+conf_level)/2
+    conf_level_beginning = np.where(cum_sum_sum_dist_norm > 1-half_conf_level)[0][0]
+    conf_level_end = np.where(cum_sum_sum_dist_norm > half_conf_level)[0][0]
+    # Calculate the interval
+    return pf_x_1d[conf_level_beginning], pf_x_1d[conf_level_end]
+
+def normal_dist(x, mean, std):
+    return (1.0 / (std * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mean) / std) ** 2)
 
 def optimize_error_conf_pred(bern_conf, total_conf, std_bern, std_model, pf):
     model_conf = total_conf/bern_conf
