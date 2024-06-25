@@ -1,12 +1,12 @@
-
-from porespy.generators import *
 from representativity import util
+from porespy.generators import *
+import os
 import matplotlib.pyplot as plt
 import porespy as ps
 from itertools import product
 import torch
 import json
-import os
+
 
 def factors_to_params(args, im_shape):
     '''
