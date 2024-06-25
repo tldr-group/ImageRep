@@ -30,16 +30,10 @@ export const replaceGreyscaleWithColours = (arr: Uint8ClampedArray, mapping: { [
     return out;
 }
 
-const remapImageDataArr = (arr: Uint8ClampedArray, originalValues: Array<number>, newValues: Array<number>) => {
-    // given arr, list of original values in arr and desired new values, loop over arr and replace
-    const nPixels = arr.length;
-    const out = new Uint8ClampedArray(nPixels).fill(0);
-    for (let i = 0; i < nPixels; i++) {
-        const currentVal = arr[i];
-        const idx = originalValues.indexOf(currentVal);
-        out[i] = newValues[idx];
-    }
-    return out;
+export const getPhaseFraction = (arr: Uint8ClampedArray, val: number) => {
+    const uniqueVals = arr.filter((_, i, __) => { return i % 4 == 0 })
+    const matching = uniqueVals.filter((v) => v == val);
+    return (100 * matching.length) / (arr.length / 4);
 }
 
 export const loadFromTIFF = (tiffBuffer: ArrayBuffer): ImageLoadInfo => {

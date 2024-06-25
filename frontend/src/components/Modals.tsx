@@ -8,6 +8,8 @@ import Button from 'react-bootstrap/Button';
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
+import { getPhaseFraction } from "./imageLogic";
+import { Table } from "react-bootstrap";
 
 
 const _getCSSColour = (currentStateVal: any, targetStateVal: any, successPrefix: string, colourIdx: number): string => {
@@ -65,7 +67,12 @@ const ConfidenceSelect = () => {
         selectedPhase: [selectedPhase,],
         menuState: [, setMenuState]
     } = useContext(AppContext)!
-    const dimString = `${imageInfo?.nDims}D`
+    const dimString = `${imageInfo?.nDims}D`;
+
+    const phaseFrac = getPhaseFraction(
+        imageInfo?.previewData.data!,
+        imageInfo?.phaseVals[selectedPhase - 1]!
+    ).toFixed(1);
 
     // make the stats a table
     // colour selected phase with correct colour
@@ -74,21 +81,29 @@ const ConfidenceSelect = () => {
 
     return (
         <>
+            <Table>
+                <tbody>
+                    <tr>
+                        <td>Image Dimension:</td>
+                        <td>{dimString}</td>
+                    </tr>
+                    <tr>
+                        <td  >Chosen Phase:</td>
+                        <td >{selectedPhase}</td>
+                    </tr>
+                    <tr>
+                        <td>Volume Fraction (%):</td>
+                        <td>{phaseFrac}</td>
+                    </tr>
+                    <tr>
+                        <td>Estimated Time:</td>
+                        <td>5s</td>
+                    </tr>
+                </tbody>
+            </Table>
             <InputGroup>
-                <InputGroup.Text>Image Dimension: </InputGroup.Text>
-                <InputGroup.Text>{dimString}</InputGroup.Text>
-            </InputGroup>
-            <InputGroup>
-                <InputGroup.Text>Chosen Phase: </InputGroup.Text>
-                <InputGroup.Text>{selectedPhase}</InputGroup.Text>
-            </InputGroup>
-            <InputGroup>
-                <InputGroup.Text>Confidence in Error (%):</InputGroup.Text>
-                <Form.Control type="number" min={0} max={100} value={95} width={1} size="sm"></Form.Control>
-            </InputGroup>
-            <InputGroup>
-                <InputGroup.Text>Estimated Time: </InputGroup.Text>
-                <InputGroup.Text>5s</InputGroup.Text>
+                <InputGroup.Text>Confidence in Bounds (%):</InputGroup.Text>
+                <Form.Control type="number" min={0} max={100} value={95} width={1} readOnly={true} size="sm"></Form.Control>
             </InputGroup>
             <Button variant="dark" onClick={(e) => { }}>Confirm</Button>
         </>
