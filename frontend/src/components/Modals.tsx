@@ -6,6 +6,8 @@ import Toast from 'react-bootstrap/Toast'
 import ToastContainer from "react-bootstrap/ToastContainer";
 import Button from 'react-bootstrap/Button';
 import ButtonGroup from "react-bootstrap/ButtonGroup";
+import InputGroup from "react-bootstrap/InputGroup";
+import Form from "react-bootstrap/Form";
 
 
 const _getCSSColour = (currentStateVal: any, targetStateVal: any, successPrefix: string, colourIdx: number): string => {
@@ -19,10 +21,10 @@ const _getCSSColour = (currentStateVal: any, targetStateVal: any, successPrefix:
 }
 
 const PhaseSelect = () => {
-
     const {
         imageInfo: [imageInfo,],
-        selectedPhase: [selectedPhase, setSelectedPhase]
+        selectedPhase: [selectedPhase, setSelectedPhase],
+        menuState: [, setMenuState]
     } = useContext(AppContext)!
 
     const classes: number[] = Array.from(new Array(imageInfo!.nPhases), (_, i) => i + 1);
@@ -35,6 +37,15 @@ const PhaseSelect = () => {
         }
     }
 
+    const confirm = () => {
+        if ((selectedPhase > 0) && (selectedPhase < 7)) {
+            setMenuState('conf');
+            return;
+        } else {
+            return;
+        }
+    }
+
     return (
         <>
             <span>Choose phase to analyze representativity of:</span>
@@ -43,16 +54,49 @@ const PhaseSelect = () => {
                     classes.map(i => <Button key={i} variant="light" onClick={(e) => setSelectedPhase(i)} style={getStyle(i)}>{i}</Button>)
                 }
             </ButtonGroup>
-            <Button variant="dark">Confirm</Button>
+            <Button variant="dark" onClick={(e) => { confirm() }}>Confirm</Button>
         </>
     );
+}
+
+const ConfidenceSelect = () => {
+    const {
+        imageInfo: [imageInfo,],
+        selectedPhase: [selectedPhase,],
+        menuState: [, setMenuState]
+    } = useContext(AppContext)!
+    const dimString = `${imageInfo?.nDims}D`
+
+    return (
+        <>
+            <InputGroup>
+                <InputGroup.Text>Image Dimension: </InputGroup.Text>
+                <InputGroup.Text>{dimString}</InputGroup.Text>
+            </InputGroup>
+            <InputGroup>
+                <InputGroup.Text>Chosen Phase: </InputGroup.Text>
+                <InputGroup.Text>{selectedPhase}</InputGroup.Text>
+            </InputGroup>
+            <InputGroup>
+                <InputGroup.Text>Confidence in Error (%):</InputGroup.Text>
+                <Form.Control type="number" min={0} max={100} value={95} width={1} size="sm"></Form.Control>
+            </InputGroup>
+            <InputGroup>
+                <InputGroup.Text>Estimated Time: </InputGroup.Text>
+                <InputGroup.Text>5s</InputGroup.Text>
+            </InputGroup>
+            <Button variant="dark" onClick={(e) => { }}>Confirm</Button>
+        </>
+    )
 }
 
 
 const getMenuInfo = (state: MenuState) => {
     switch (state) {
         case 'phase':
-            return { title: "Select Phase!", innerHTML: <PhaseSelect /> }
+            return { title: "Select Phase", innerHTML: <PhaseSelect /> }
+        case 'conf':
+            return { title: "Select Confidence", innerHTML: <ConfidenceSelect /> }
         case 'hidden': // fall through
         default:
             return { title: "", innerHTML: <></> }
