@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import AppContext, { imageLoadInfo } from "./components/interfaces";
+import AppContext, { ImageLoadInfo } from "./components/interfaces";
 
 import Topbar from "./components/Topbar";
 import DragDrop from "./components/DragDrop";
@@ -15,10 +15,8 @@ const MAX_FILE_SIZE_BYTES = 1024 * 1024 * 500; // 500MB
 
 const App = () => {
     const {
-        previewData: [previewData, setPreviewData],
+        imageInfo: [imageInfo, setImageInfo],
         previewImg: [previewImg, setPreviewImg],
-        userFile: [userFile, setUserFile],
-        nPhases: [nPhases, setNPhases],
         menuState: [menuState, setMenuState],
     } = useContext(AppContext)!
 
@@ -39,7 +37,7 @@ const App = () => {
         };
 
         reader.onload = async () => {
-            let result: imageLoadInfo | null = null;
+            let result: ImageLoadInfo | null = null;
             if (file.size > MAX_FILE_SIZE_BYTES) {
                 console.log(`File .${file.size / (1000 * 1000)}MB greater than max size (500MB)`);
                 return;
@@ -56,10 +54,9 @@ const App = () => {
             if (result?.segmented == false) {
                 console.log('error: unsegmented');
             } else {
-                setUserFile(file);
-                setPreviewData(result!.previewData);
+                result!.file = file;
+                setImageInfo(result);
                 setPreviewImg(result!.previewImg);
-                setNPhases(result!.nPhases);
                 setMenuState('phase');
             }
         };
@@ -69,8 +66,8 @@ const App = () => {
         <div className={`w-full h-full`}>
             <Topbar></Topbar>
             <div className={`flex`} style={{ margin: '1.5%' }} > {/*Canvas div on left, sidebar on right*/}
-                {!previewData && <DragDrop loadFromFile={appLoadFile} />}
-                {previewData && <PreviewCanvas />}
+                {!previewImg && <DragDrop loadFromFile={appLoadFile} />}
+                {previewImg && <PreviewCanvas />}
             </div>
             <Menu></Menu>
         </div>

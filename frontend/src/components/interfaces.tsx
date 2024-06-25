@@ -1,22 +1,14 @@
 import { createContext } from "react";
 
 interface contextProps {
-    previewData: [
-        previewData: ImageData | null,
-        setPreviewData: (e: ImageData | null) => void
-    ];
+    imageInfo: [
+        imageInfo: ImageLoadInfo | null,
+        setImageInfo: (e: ImageLoadInfo | null) => void
+    ]
     previewImg: [
         previewImg: HTMLImageElement | null,
         setPreviewImg: (e: HTMLImageElement | null) => void
     ];
-    userFile: [
-        userFile: File | null,
-        setUserFile: (e: File | null) => void
-    ];
-    nPhases: [
-        nPhases: number,
-        setNPhases: (e: number) => void
-    ]
     selectedPhase: [
         selectedPhase: number,
         setSelectedPhase: (e: number) => void
@@ -50,11 +42,13 @@ export const colours: number[][] = [[255, 255, 255, 255], [31, 119, 180, 255], [
 export type MenuState = "hidden" | "phase" | "conf" | "conf_result" | "length" | "length_result"
 
 
-export interface imageLoadInfo {
+export interface ImageLoadInfo {
+    file: File | null;
     previewData: ImageData; //use previewData.data to get raw arr
     previewImg: HTMLImageElement;
     nDims: 2 | 3;
     nPhases: number;
+    phaseVals: Array<number>;
     segmented: boolean;
     height: number;
     width: number;

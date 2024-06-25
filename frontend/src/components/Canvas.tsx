@@ -18,6 +18,7 @@ const getAspectCorrectedDims = (ih: number, iw: number, ch: number, cw: number, 
 const PreviewCanvas = () => {
     const {
         previewImg: [previewImg,],
+        selectedPhase: [selectedPhase,]
     } = useContext(AppContext)!
 
     const containerRef = useRef<HTMLDivElement>(null);
@@ -37,6 +38,8 @@ const PreviewCanvas = () => {
     useEffect(() => { // UPDATE WHEN IMAGE CHANGED
         redraw(previewImg!)
     }, [previewImg])
+
+    useEffect(() => { }, [selectedPhase])
 
     useEffect(() => { // SET INITIAL CANV W AND H
         // runs on load to update canvDims with client rendered w and h of canvas (which is in vh/vw units)

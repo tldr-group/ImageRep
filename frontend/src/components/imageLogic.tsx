@@ -1,4 +1,4 @@
-import { imageLoadInfo } from "./interfaces"
+import { ImageLoadInfo } from "./interfaces"
 
 const UTIF = require("./UTIF.js");
 
@@ -11,7 +11,23 @@ const checkPhases = (arr: Uint8ClampedArray) => {
     const segmented = (nPhases < 6) ? true : false;
     // TODO: if data RGBA then opacity will be counted as phase - this is bug
     // need to explictly look for unique rgb values
-    return { nPhases: nPhases, segmented: segmented };
+    return { nPhases: nPhases, segmented: segmented, vals: uniqueValues };
+}
+
+const replaceGreyscaleWithColours = (arr: Uint8ClampedArray, mapping: { [greyVal: number]: Array<number> }) => {
+    const nPixels = Math.floor(arr.length / 4);
+    const out = new Uint8ClampedArray(nPixels * 4).fill(0);
+    for (let i = 0; i < nPixels; i = i + 4) {
+        const queryVal = arr[i];
+        if (queryVal in mapping) {
+            const [R, G, B, A] = mapping[queryVal];
+            out[i] = R;
+            out[i + 1] = G;
+            out[i + 2] = B;
+            out[i + 3] = A;
+        }
+    }
+    return out;
 }
 
 const remapImageDataArr = (arr: Uint8ClampedArray, originalValues: Array<number>, newValues: Array<number>) => {
@@ -26,7 +42,7 @@ const remapImageDataArr = (arr: Uint8ClampedArray, originalValues: Array<number>
     return out;
 }
 
-export const loadFromTIFF = (tiffBuffer: ArrayBuffer): imageLoadInfo => {
+export const loadFromTIFF = (tiffBuffer: ArrayBuffer): ImageLoadInfo => {
     const tifs: Array<any> = UTIF.decode(tiffBuffer);
     const tif = tifs[0];
     // this needs to be done in-place before we can read the data
@@ -39,15 +55,15 @@ export const loadFromTIFF = (tiffBuffer: ArrayBuffer): imageLoadInfo => {
     const nDims = (tifs.length > 1) ? 3 : 2;
 
     const phaseCheck = checkPhases(imgDataArr);
-    const nPhases = phaseCheck.nPhases;
-    const segmented = phaseCheck.segmented;
 
     return {
+        file: null,
         previewData: imgData,
         previewImg: img,
         nDims: nDims,
-        nPhases: nPhases,
-        segmented: segmented,
+        nPhases: phaseCheck.nPhases,
+        phaseVals: phaseCheck.vals,
+        segmented: phaseCheck.segmented,
         height: tif.height,
         width: tif.width,
     };
@@ -81,7 +97,7 @@ const getImagefromImageData = (imageData: ImageData, height: number, width: numb
     return img;
 }
 
-export const loadFromImage = async (href: string): Promise<imageLoadInfo> => {
+export const loadFromImage = async (href: string): Promise<ImageLoadInfo> => {
     // load href to Image element, draw to temp canvas to extract pixel data
     const img = new Image();
     img.src = href;
@@ -90,15 +106,15 @@ export const loadFromImage = async (href: string): Promise<imageLoadInfo> => {
 
     const imgData = getImageDataFromImage(img);
     const phaseCheck = checkPhases(imgData.data);
-    const nPhases = phaseCheck.nPhases;
-    const segmented = phaseCheck.segmented;
 
     return {
+        file: null,
         previewData: imgData,
         previewImg: img,
         nDims: 2,
-        nPhases: nPhases,
-        segmented: segmented,
+        nPhases: phaseCheck.nPhases,
+        phaseVals: phaseCheck.vals,
+        segmented: phaseCheck.segmented,
         height: img.height,
         width: img.width,
     };

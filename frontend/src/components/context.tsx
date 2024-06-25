@@ -1,14 +1,12 @@
 import React, { useState } from "react";
-import AppContext, { MenuState } from "./interfaces";
+import AppContext, { ImageLoadInfo, MenuState } from "./interfaces";
 
 const AppContextProvider = (props: {
     children: React.ReactElement<any, string | React.JSXElementConstructor<any>>;
 }) => {
 
-    const [previewData, setPreviewData] = useState<ImageData | null>(null);
+    const [imageInfo, setImageInfo] = useState<ImageLoadInfo | null>(null);
     const [previewImg, setPreviewImg] = useState<HTMLImageElement | null>(null);
-    const [userFile, setUserFile] = useState<File | null>(null);
-    const [nPhases, setNPhases] = useState<number>(2);
     const [selectedPhase, setSelectedPhase] = useState<number>(1);
     const [menuState, setMenuState] = useState<MenuState>('hidden');
 
@@ -16,10 +14,8 @@ const AppContextProvider = (props: {
     return (
         <AppContext.Provider
             value={{
-                previewData: [previewData, setPreviewData],
+                imageInfo: [imageInfo, setImageInfo],
                 previewImg: [previewImg, setPreviewImg],
-                userFile: [userFile, setUserFile],
-                nPhases: [nPhases, setNPhases],
                 selectedPhase: [selectedPhase, setSelectedPhase],
                 menuState: [menuState, setMenuState]
             }}
