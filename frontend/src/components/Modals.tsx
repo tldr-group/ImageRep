@@ -67,6 +67,11 @@ const ConfidenceSelect = () => {
     } = useContext(AppContext)!
     const dimString = `${imageInfo?.nDims}D`
 
+    // make the stats a table
+    // colour selected phase with correct colour
+    // move confidence to bottom
+    // add phase fraction for selected phase as a stat!
+
     return (
         <>
             <InputGroup>
