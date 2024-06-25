@@ -14,17 +14,17 @@ const checkPhases = (arr: Uint8ClampedArray) => {
     return { nPhases: nPhases, segmented: segmented, vals: uniqueValues };
 }
 
-const replaceGreyscaleWithColours = (arr: Uint8ClampedArray, mapping: { [greyVal: number]: Array<number> }) => {
+export const replaceGreyscaleWithColours = (arr: Uint8ClampedArray, mapping: { [greyVal: number]: Array<number> }) => {
     const nPixels = Math.floor(arr.length / 4);
     const out = new Uint8ClampedArray(nPixels * 4).fill(0);
-    for (let i = 0; i < nPixels; i = i + 4) {
+    for (let i = 0; i < arr.length; i = i + 4) {
         const queryVal = arr[i];
         if (queryVal in mapping) {
             const [R, G, B, A] = mapping[queryVal];
             out[i] = R;
             out[i + 1] = G;
             out[i + 2] = B;
-            out[i + 3] = A;
+            out[i + 3] = 255;
         }
     }
     return out;
@@ -83,7 +83,7 @@ const getImageDataFromImage = (image: HTMLImageElement): ImageData => {
     return data;
 }
 
-const getImagefromImageData = (imageData: ImageData, height: number, width: number): HTMLImageElement => {
+export const getImagefromImageData = (imageData: ImageData, height: number, width: number): HTMLImageElement => {
     const tmpCanvas = document.createElement("canvas");
     const tmpContext = tmpCanvas.getContext("2d")!;
 

@@ -1,5 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import AppContext from "./interfaces";
+import { colours } from "./interfaces";
+import { replaceGreyscaleWithColours, getImagefromImageData } from "./imageLogic";
 
 const centredStyle = {
     height: '60vh', width: '60vw',
@@ -17,7 +19,8 @@ const getAspectCorrectedDims = (ih: number, iw: number, ch: number, cw: number, 
 
 const PreviewCanvas = () => {
     const {
-        previewImg: [previewImg,],
+        imageInfo: [imageInfo,],
+        previewImg: [previewImg, setPreviewImg],
         selectedPhase: [selectedPhase,]
     } = useContext(AppContext)!
 
@@ -39,7 +42,26 @@ const PreviewCanvas = () => {
         redraw(previewImg!)
     }, [previewImg])
 
-    useEffect(() => { }, [selectedPhase])
+    useEffect(() => {
+        if (imageInfo === null) { return }
+        const uniqueVals = imageInfo.phaseVals;
+        const phaseCheck = (x: number, i: number) => {
+            const originalColour = [x, [x, x, x, x]];
+            const newColour = [x, colours[i + 1]];
+            const phaseIsSelected = (i + 1 == selectedPhase);
+            return phaseIsSelected ? newColour : originalColour;
+        }
+        const mapping = Object.fromEntries(
+            uniqueVals!.map((x, i, _) => phaseCheck(x, i))
+        );
+        const imageData = imageInfo?.previewData;
+        const newImageArr = replaceGreyscaleWithColours(imageData.data, mapping);
+        const newImageData = new ImageData(newImageArr, imageInfo.width, imageInfo.height);
+        const newImage = getImagefromImageData(newImageData, imageInfo.height, imageInfo.width);
+        setPreviewImg(newImage);
+
+        console.log(mapping)
+    }, [selectedPhase])
 
     useEffect(() => { // SET INITIAL CANV W AND H
         // runs on load to update canvDims with client rendered w and h of canvas (which is in vh/vw units)
