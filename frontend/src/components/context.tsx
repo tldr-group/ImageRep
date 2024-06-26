@@ -10,6 +10,7 @@ const AppContextProvider = (props: {
     const [selectedPhase, setSelectedPhase] = useState<number>(0);
     const [selectedConf, setSelectedConf] = useState<number>(95);
     const [errVF, setErrVF] = useState<number>(5);
+    const [targetL, setTargetL] = useState<number | null>(null);
     const [menuState, setMenuState] = useState<MenuState>('hidden');
 
 
@@ -21,6 +22,7 @@ const AppContextProvider = (props: {
                 selectedPhase: [selectedPhase, setSelectedPhase],
                 selectedConf: [selectedConf, setSelectedConf],
                 errVF: [errVF, setErrVF],
+                targetL: [targetL, setTargetL],
                 menuState: [menuState, setMenuState]
             }}
         >

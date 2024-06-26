@@ -21,6 +21,10 @@ interface contextProps {
         errVF: number,
         setErrVF: (e: number) => void,
     ];
+    targetL: [
+        targetL: number | null,
+        setTargetL: (e: number) => void,
+    ];
     menuState: [
         menuState: MenuState,
         setMenuState: (e: MenuState) => void

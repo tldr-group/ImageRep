@@ -3,8 +3,10 @@ import AppContext from "./interfaces";
 import { colours } from "./interfaces";
 import { replaceGreyscaleWithColours, getImagefromImageData } from "./imageLogic";
 
+const ADDITIONAL_SF = 1
+
 const centredStyle = {
-    height: '60vh', width: '60vw',
+    height: '75vh', width: '75vw', // was 60vh/w
     justifyContent: 'center', alignItems: 'center',
     padding: '10px', display: 'flex', margin: 'auto',
 }
@@ -21,10 +23,12 @@ const PreviewCanvas = () => {
     const {
         imageInfo: [imageInfo,],
         previewImg: [previewImg, setPreviewImg],
-        selectedPhase: [selectedPhase,]
+        selectedPhase: [selectedPhase,],
+        targetL: [targetL,]
     } = useContext(AppContext)!
 
     const containerRef = useRef<HTMLDivElement>(null);
+    const animDivRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [canvDims, setCanvDims] = useState<{ h: number, w: number }>({ w: 300, h: 150 });
 
@@ -33,8 +37,21 @@ const PreviewCanvas = () => {
         const canvas = canvasRef.current!;
         const ctx = canvas.getContext("2d");
         const [ih, iw, ch, cw] = [image.naturalHeight, image.naturalWidth, canvas.height, canvas.width];
-        const correctDims = getAspectCorrectedDims(ih, iw, ch, cw);
+        const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, ADDITIONAL_SF);
         ctx?.drawImage(image, correctDims.ox, correctDims.oy, correctDims.w, correctDims.h);
+    }
+
+    const animateDiv = () => {
+        const div = animDivRef.current!;
+        div.style.backgroundColor = 'red';
+        div.animate([
+            { opacity: 0 },
+            { opacity: 1 },
+        ], {
+            fill: "both",
+            duration: 3000,
+            iterations: Infinity,
+        })
     }
 
     // ================ EFFECTS ================
@@ -83,8 +100,30 @@ const PreviewCanvas = () => {
         redraw(previewImg);
     }, [canvDims])
 
+    useEffect(() => {
+        // Animated shrink of canvas into top left corner of parent div
+        // sf is original width / target length
+        if (targetL === null) { return; }
+        const canv = canvasRef.current!;
+        const parent = containerRef.current!;
+
+        const pRect = parent.getBoundingClientRect();
+
+        const sf = (targetL / imageInfo?.width!);
+        const canvAnim = canv.animate([
+            { transform: `scale(${1 / sf}) translate(${-pRect.width / (sf)}px, ${-pRect.height / (sf)}px)` },
+        ], {
+            duration: 1000,
+            iterations: 1,
+            fill: 'forwards'
+        })
+        canvAnim.onfinish = (e) => { animateDiv() }
+
+    }, [targetL])
+
     return (
         <div ref={containerRef} style={centredStyle}>
+            <div ref={animDivRef} style={{ height: '75vh', width: '75vw', position: 'absolute' }}></div>
             <canvas ref={canvasRef} id={"preview"}></canvas>
         </div>
     );

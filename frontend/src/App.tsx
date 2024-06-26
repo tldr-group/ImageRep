@@ -17,6 +17,7 @@ const App = () => {
     const {
         imageInfo: [imageInfo, setImageInfo],
         previewImg: [previewImg, setPreviewImg],
+        targetL: [targetL, setTargetL],
         menuState: [menuState, setMenuState],
     } = useContext(AppContext)!
 
@@ -65,6 +66,7 @@ const App = () => {
     useEffect(() => { // TODO: fetch from API instead
         if (menuState === 'processing') {
             setMenuState('conf_result');
+            setTargetL(2 * imageInfo?.width!);
         }
     }, [menuState])
 
