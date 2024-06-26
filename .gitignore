@@ -11,3 +11,7 @@ fig2 copy.py
 *.pdf
 *.png
 *.npy
+.vscode
+frontend/node_modules
+frontend/dist
+*.kra
