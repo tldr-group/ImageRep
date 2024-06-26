@@ -148,6 +148,7 @@ const Result = () => {
 
     const perErr = analysisInfo?.percentageErr;
     const [LB, UB] = [(1 - perErr! / 100) * phaseFrac, (1 + perErr! / 100) * phaseFrac];
+    const [targLB, targUB] = [(1 - errVF! / 100) * phaseFrac, (1 + errVF! / 100) * phaseFrac];
 
     const l = analysisInfo?.lForDefaultErr;
 
@@ -162,10 +163,12 @@ const Result = () => {
                 fraction Φ ({phaseFrac.toFixed(3)}) with {selectedConf}% confidence.
             </p>
             <p><b><i>i.e,</i> {LB.toFixed(3)} ≤ ϕ ≤ {UB.toFixed(3)} with {selectedConf}% confidence.</b></p>
-            <p>For a {errVF.toFixed(1)}% error target, you need an image length of {l}px at the same resolution. </p>
+            <p>For a {errVF.toFixed(2)}% error target, you need an image length of {l}px at the same resolution, which would give: </p>
+            <p><b>&nbsp;&nbsp;&nbsp;&nbsp; {targLB.toFixed(3)} ≤ ϕ ≤ {targUB.toFixed(3)} with {selectedConf}% confidence.</b></p>
             <InputGroup>
-                <Form.Label>Error Target (%):</Form.Label>
-                <Form.Range min={0} max={50} step={0.5} value={errVF} onChange={(e) => setErr(e)} width={1}></Form.Range>
+                <InputGroup.Text>Error Target (%):</InputGroup.Text>
+                <Form.Control type="number" min={0} max={100} value={errVF} onChange={(e) => setErr(e)} width={1} size="sm"></Form.Control>
+                <Form.Range min={0} max={30} step={0.25} value={errVF} onChange={(e) => setErr(e)} width={1}></Form.Range>
             </InputGroup>
         </>
     )

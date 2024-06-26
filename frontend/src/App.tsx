@@ -11,12 +11,16 @@ import { loadFromTIFF, loadFromImage } from "./components/imageLogic";
 import "./assets/scss/App.scss";
 import 'bootstrap/dist/css/bootstrap.min.css';
 
+const PATH = "http://127.0.0.1:5000";
+const PF_ENDPOINT = PATH + "/phasefraction";
+
 const MAX_FILE_SIZE_BYTES = 1024 * 1024 * 500; // 500MB
 
 const App = () => {
     const {
         imageInfo: [imageInfo, setImageInfo],
         previewImg: [previewImg, setPreviewImg],
+        selectedPhase: [selectedPhase,],
         targetL: [targetL, setTargetL],
         analysisInfo: [, setAnalysisInfo],
         menuState: [menuState, setMenuState],
@@ -64,6 +68,13 @@ const App = () => {
         };
     }
 
+    const requestPhaseFraction = (file: File, selectedPhaseValue: number) => {
+        const formData = new FormData();
+        formData.append('userFile', file)
+        formData.append('phaseVal', String(selectedPhaseValue))
+        let resp = fetch(PF_ENDPOINT, { method: 'POST', body: formData });
+    }
+
     useEffect(() => { // TODO: fetch from API instead
         if (menuState === 'processing') {
             setMenuState('conf_result');
@@ -76,6 +87,11 @@ const App = () => {
                 lForDefaultErr: 4 * imageInfo?.width!,
                 vf: 0.45
             })
+        } else if (menuState === "conf") {
+            const file = imageInfo?.file!
+            const vals = imageInfo?.phaseVals!
+            requestPhaseFraction(file, vals[selectedPhase - 1])
+
         }
     }, [menuState])
 
