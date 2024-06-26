@@ -8,10 +8,13 @@ import Button from 'react-bootstrap/Button';
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
-import { getPhaseFraction } from "./imageLogic";
-import { Spinner, Table } from "react-bootstrap";
-import { title } from "process";
+import Spinner from "react-bootstrap/Spinner";
+import Table from "react-bootstrap/Table";
 
+import { getPhaseFraction } from "./imageLogic";
+
+
+const centreStyle = { display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '1em' }
 
 const _getCSSColour = (currentStateVal: any, targetStateVal: any, successPrefix: string, colourIdx: number): string => {
     // Boring function to map a success to current labelling colour. Used for GUI elements.
@@ -67,6 +70,7 @@ const ConfidenceSelect = () => {
         imageInfo: [imageInfo,],
         selectedPhase: [selectedPhase,],
         selectedConf: [selectedConf, setSelectedConf],
+        errVF: [errVF, setErrVF],
         menuState: [, setMenuState]
     } = useContext(AppContext)!
     const dimString = `${imageInfo?.nDims}D`;
@@ -80,10 +84,9 @@ const ConfidenceSelect = () => {
         setSelectedConf(Number(e.target!.value))
     }
 
-    // make the stats a table
-    // colour selected phase with correct colour
-    // move confidence to bottom
-    // add phase fraction for selected phase as a stat!
+    const setErr = (e: any) => {
+        setErrVF(Number(e.target!.value))
+    }
 
     return (
         <>
@@ -111,7 +114,13 @@ const ConfidenceSelect = () => {
                 <InputGroup.Text>Confidence in Bounds (%):</InputGroup.Text>
                 <Form.Control type="number" min={0} max={100} value={selectedConf} onChange={(e) => setConf(e)} width={1} size="sm"></Form.Control>
             </InputGroup>
-            <Button variant="dark" onClick={(e) => { setMenuState('processing') }}>Confirm</Button>
+            <InputGroup>
+                <InputGroup.Text>Error Target (%):</InputGroup.Text>
+                <Form.Control type="number" min={0} max={100} value={errVF} onChange={(e) => setErr(e)} width={1} size="sm"></Form.Control>
+            </InputGroup>
+            <div style={centreStyle}>
+                <Button variant="dark" onClick={(e) => { setMenuState('processing') }}>Calculate!</Button>
+            </div>
         </>
     )
 }
@@ -122,6 +131,13 @@ const Result = () => {
     // epsilon slider (updates bounds in line 1)
     // conf re-select
     // CSS zoom anim on canvas
+
+
+    /* Measured v.f 45% within d% of true volume fraction with '$CONF$%
+    
+    
+    */
+
     return (
         <>
         </>
@@ -136,7 +152,7 @@ const getMenuInfo = (state: MenuState) => {
         case 'conf':
             return { title: "Select Confidence", innerHTML: <ConfidenceSelect /> }
         case 'processing':
-            return { title: "Processing", innerHTML: <Spinner /> }
+            return { title: "Processing", innerHTML: <div style={centreStyle}><Spinner /></div> }
         case 'conf_result':
             return { title: "Result!", innerHTML: <Result /> }
         case 'hidden': // fall through

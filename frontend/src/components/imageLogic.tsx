@@ -60,6 +60,7 @@ export const loadFromTIFF = (tiffBuffer: ArrayBuffer): ImageLoadInfo => {
         segmented: phaseCheck.segmented,
         height: tif.height,
         width: tif.width,
+        depth: tifs.length,
     };
 }
 
@@ -111,5 +112,6 @@ export const loadFromImage = async (href: string): Promise<ImageLoadInfo> => {
         segmented: phaseCheck.segmented,
         height: img.height,
         width: img.width,
+        depth: 1
     };
 }

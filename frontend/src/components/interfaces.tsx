@@ -17,6 +17,10 @@ interface contextProps {
         selectedConf: number,
         setSelectedNumber: (e: number) => void
     ];
+    errVF: [
+        errVF: number,
+        setErrVF: (e: number) => void,
+    ];
     menuState: [
         menuState: MenuState,
         setMenuState: (e: MenuState) => void
@@ -56,4 +60,5 @@ export interface ImageLoadInfo {
     segmented: boolean;
     height: number;
     width: number;
+    depth: number;
 }
