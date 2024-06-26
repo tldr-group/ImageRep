@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import AppContext, { ImageLoadInfo, MenuState } from "./interfaces";
+import AppContext, { AnalysisInfo, ImageLoadInfo, MenuState } from "./interfaces";
 
 const AppContextProvider = (props: {
     children: React.ReactElement<any, string | React.JSXElementConstructor<any>>;
@@ -11,6 +11,7 @@ const AppContextProvider = (props: {
     const [selectedConf, setSelectedConf] = useState<number>(95);
     const [errVF, setErrVF] = useState<number>(5);
     const [targetL, setTargetL] = useState<number | null>(null);
+    const [analysisInfo, setAnalysisInfo] = useState<AnalysisInfo | null>(null);
     const [menuState, setMenuState] = useState<MenuState>('hidden');
 
 
@@ -23,6 +24,7 @@ const AppContextProvider = (props: {
                 selectedConf: [selectedConf, setSelectedConf],
                 errVF: [errVF, setErrVF],
                 targetL: [targetL, setTargetL],
+                analysisInfo: [analysisInfo, setAnalysisInfo],
                 menuState: [menuState, setMenuState]
             }}
         >

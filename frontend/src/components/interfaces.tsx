@@ -25,6 +25,11 @@ interface contextProps {
         targetL: number | null,
         setTargetL: (e: number) => void,
     ];
+    analysisInfo: [
+        analysisInfo: AnalysisInfo | null,
+        setAnalysisInfo: (e: AnalysisInfo) => void
+    ]
+    // what do I need to store from azure? cls, z, l
     menuState: [
         menuState: MenuState,
         setMenuState: (e: MenuState) => void
@@ -65,4 +70,13 @@ export interface ImageLoadInfo {
     height: number;
     width: number;
     depth: number;
+}
+
+export interface AnalysisInfo {
+    integralRange: number,
+    z: number,
+    percentageErr: number,
+    absError: number,
+    lForDefaultErr: number,
+    vf: number
 }

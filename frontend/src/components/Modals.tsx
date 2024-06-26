@@ -10,6 +10,7 @@ import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
+import FormRange from 'react-bootstrap/FormRange';
 
 import { getPhaseFraction } from "./imageLogic";
 
@@ -54,7 +55,7 @@ const PhaseSelect = () => {
 
     return (
         <>
-            <span>Choose phase to analyze representativity of:</span>
+            <p>Choose phase to analyze representativity of:</p>
             <ButtonGroup style={{ paddingLeft: "3%", marginLeft: '0%' }}>
                 {
                     classes.map(i => <Button key={i} variant="light" onClick={(e) => setSelectedPhase(i)} style={getStyle(i)}>{i}</Button>)
@@ -131,15 +132,41 @@ const Result = () => {
     // epsilon slider (updates bounds in line 1)
     // conf re-select
     // CSS zoom anim on canvas
+    const {
+        analysisInfo: [analysisInfo,],
+        imageInfo: [imageInfo,],
+        selectedPhase: [selectedPhase,],
+        selectedConf: [selectedConf, setSelectedConf],
+        errVF: [errVF, setErrVF],
+        menuState: [, setMenuState]
+    } = useContext(AppContext)!
 
+    const phaseFrac = getPhaseFraction(
+        imageInfo?.previewData.data!,
+        imageInfo?.phaseVals[selectedPhase - 1]!
+    ) / 100;
 
-    /* Measured v.f 45% within d% of true volume fraction with '$CONF$%
-    
-    
-    */
+    const perErr = analysisInfo?.percentageErr;
+    const [LB, UB] = [(1 - perErr! / 100) * phaseFrac, (1 + perErr! / 100) * phaseFrac];
+
+    const l = analysisInfo?.lForDefaultErr;
+
+    const setErr = (e: any) => {
+        setErrVF(Number(e.target!.value))
+    };
 
     return (
         <>
+            <p>
+                The bulk volume fraction ϕ is within {perErr}% of your image volume
+                fraction Φ ({phaseFrac.toFixed(3)}) with {selectedConf}% confidence.
+            </p>
+            <p><b><i>i.e,</i> {LB.toFixed(3)} ≤ ϕ ≤ {UB.toFixed(3)} with {selectedConf}% confidence.</b></p>
+            <p>For a {errVF.toFixed(1)}% error target, you need an image length of {l}px at the same resolution. </p>
+            <InputGroup>
+                <Form.Label>Error Target (%):</Form.Label>
+                <Form.Range min={0} max={50} step={0.5} value={errVF} onChange={(e) => setErr(e)} width={1}></Form.Range>
+            </InputGroup>
         </>
     )
 }
@@ -154,7 +181,7 @@ const getMenuInfo = (state: MenuState) => {
         case 'processing':
             return { title: "Processing", innerHTML: <div style={centreStyle}><Spinner /></div> }
         case 'conf_result':
-            return { title: "Result!", innerHTML: <Result /> }
+            return { title: "Result", innerHTML: <Result /> }
         case 'hidden': // fall through
         default:
             return { title: "", innerHTML: <></> }
@@ -168,7 +195,7 @@ const Menu = () => {
 
     return (
         <>
-            <ToastContainer className="p-5" position="bottom-end">
+            <ToastContainer className="p-5" position="bottom-end" >
                 <Toast show={menuState != 'hidden'}>
                     <Toast.Header className="roundedme-2">
                         <strong className="me-auto" style={{ fontSize: '1.5em' }}>{getMenuInfo(menuState).title}</strong>

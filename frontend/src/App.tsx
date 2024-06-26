@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import AppContext, { ImageLoadInfo } from "./components/interfaces";
+import AppContext, { ImageLoadInfo, AnalysisInfo } from "./components/interfaces";
 
 import Topbar from "./components/Topbar";
 import DragDrop from "./components/DragDrop";
@@ -18,6 +18,7 @@ const App = () => {
         imageInfo: [imageInfo, setImageInfo],
         previewImg: [previewImg, setPreviewImg],
         targetL: [targetL, setTargetL],
+        analysisInfo: [, setAnalysisInfo],
         menuState: [menuState, setMenuState],
     } = useContext(AppContext)!
 
@@ -67,6 +68,14 @@ const App = () => {
         if (menuState === 'processing') {
             setMenuState('conf_result');
             setTargetL(4 * imageInfo?.width!);
+            setAnalysisInfo({
+                integralRange: 1,
+                z: 1,
+                percentageErr: 5,
+                absError: 5 * 0.45,
+                lForDefaultErr: 4 * imageInfo?.width!,
+                vf: 0.45
+            })
         }
     }, [menuState])
 
