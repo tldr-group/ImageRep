@@ -14,6 +14,9 @@ from tifffile import imread
 from PIL import Image
 from typing import Callable
 
+from representativity.core import make_error_prediction
+from representativity.old import make_error_prediction as mpe_old
+
 URL_WHITELIST = [
     "https://sambasegment.z33.web.core.windows.net",
     "http://www.sambasegment.com",
@@ -69,20 +72,26 @@ def generic_response(request, fn: Callable):
         return add_cors_headers(response)
 
 
-def phase_fraction(request) -> Response:
-    """User sends file, parse as array (either via tiffile or PIL-> numpy) and return all phase fractions.
-    It's cheap to compute all of them and this way it can be done on first upload in the background and
-    minimise delays."""
-    user_file = request.files["userFile"]
-    user_filename = user_file.filename
+def get_arr_from_file(form_data_file) -> np.ndarray:
+    user_filename = form_data_file.filename
 
-    file_object = BufferedReader(user_file)
+    file_object = BufferedReader(form_data_file)
     # note we assume the .tiff or image is greyscale
     if ".tif" in user_filename:
         arr = imread(file_object)
     else:
         img = Image.open(file_object).convert("L")
         arr = np.asarray(img)
+    arr = preprocess_arr(arr)
+    return arr
+
+
+def phase_fraction(request) -> Response:
+    """User sends file, parse as array (either via tiffile or PIL-> numpy) and return all phase fractions.
+    It's cheap to compute all of them and this way it can be done on first upload in the background and
+    minimise delays."""
+    user_file = request.files["userFile"]
+    arr = get_arr_from_file(user_file)
 
     out_fractions = {}
     for val in np.unique(arr):
@@ -97,6 +106,59 @@ def phase_fraction(request) -> Response:
 
 @app.route("/phasefraction", methods=["POST", "GET", "OPTIONS"])
 def phase_fraction_app():
-    """Init route."""
+    """phase fraction route."""
     response = generic_response(request, phase_fraction)
+    return response
+
+
+def preprocess_arr(arr: np.ndarray) -> np.ndarray:
+    print(arr.shape)
+    if len(arr.shape) == 3 and arr.shape[0] == 1:
+        # weird (1, H, W) tiffs
+        arr = arr[0, :, :]
+    print(arr.shape)
+
+    return arr
+
+
+def representativity(request) -> Response:
+    user_file = request.files["userFile"]
+    arr = get_arr_from_file(user_file)
+
+    selected_phase = int(request.values["selected_phase"])
+    selected_conf: float = float(request.values["selected_conf"]) / 100
+    selected_err: float = float(request.values["selected_err"]) / 100
+
+    print(selected_phase, selected_conf, selected_err)
+
+    binary_img = np.where(arr == selected_phase, 1, 0)
+
+    result = make_error_prediction(
+        binary_img, selected_conf, selected_err, model_error=False
+    )  # make_error_prediction(binary_img, selected_conf, selected_err)
+    print(result)
+    """
+    out = {
+        "abs_err": result[0] * np.mean(binary_img),
+        "percent_err": result[0],
+        "l": result[1],
+        "cls": result[2],
+    }
+    """
+    out = {
+        "abs_err": result["abs_err"],
+        "percent_err": result["percent_err"] * 100,
+        "l": result["l"],
+        "cls": result["integral_range"],
+    }
+    print(out)
+
+    response = Response(json.dumps(out), status=200)
+    return response
+
+
+@app.route("/repr", methods=["POST", "GET", "OPTIONS"])
+def representativity_app():
+    """representativity route."""
+    response = generic_response(request, representativity)
     return response
