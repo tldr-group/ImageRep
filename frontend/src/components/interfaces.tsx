@@ -25,6 +25,10 @@ interface contextProps {
         targetL: number | null,
         setTargetL: (e: number) => void,
     ];
+    accurateFractions: [
+        accurateFractions: { [val: number]: number } | null,
+        setAccurateFractions: (e: { [val: number]: number }) => void,
+    ]
     analysisInfo: [
         analysisInfo: AnalysisInfo | null,
         setAnalysisInfo: (e: AnalysisInfo) => void

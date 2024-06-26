@@ -72,14 +72,20 @@ const ConfidenceSelect = () => {
         selectedPhase: [selectedPhase,],
         selectedConf: [selectedConf, setSelectedConf],
         errVF: [errVF, setErrVF],
+        accurateFractions: [accurateFractions,],
         menuState: [, setMenuState]
     } = useContext(AppContext)!
     const dimString = `${imageInfo?.nDims}D`;
 
-    const phaseFrac = getPhaseFraction(
-        imageInfo?.previewData.data!,
-        imageInfo?.phaseVals[selectedPhase - 1]!
-    ).toFixed(1);
+    const vals = imageInfo?.phaseVals!
+    // horrible ternary: if server has responded and set the accurate phase fractions,
+    // then use those values in the modal. If not, use the estimate from the first image
+    const phaseFrac = (accurateFractions != null) ?
+        accurateFractions[vals[selectedPhase - 1]].toFixed(3)
+        : getPhaseFraction(
+            imageInfo?.previewData.data!,
+            vals[selectedPhase - 1]
+        ).toFixed(3);
 
     const setConf = (e: any) => {
         setSelectedConf(Number(e.target!.value))
@@ -102,7 +108,7 @@ const ConfidenceSelect = () => {
                         <td >{selectedPhase}</td>
                     </tr>
                     <tr>
-                        <td>Volume Fraction (%):</td>
+                        <td>Volume Fraction:</td>
                         <td>{phaseFrac}</td>
                     </tr>
                     <tr>
@@ -112,12 +118,12 @@ const ConfidenceSelect = () => {
                 </tbody>
             </Table>
             <InputGroup>
-                <InputGroup.Text>Confidence in Bounds (%):</InputGroup.Text>
-                <Form.Control type="number" min={0} max={100} value={selectedConf} onChange={(e) => setConf(e)} width={1} size="sm"></Form.Control>
-            </InputGroup>
-            <InputGroup>
                 <InputGroup.Text>Error Target (%):</InputGroup.Text>
                 <Form.Control type="number" min={0} max={100} value={errVF} onChange={(e) => setErr(e)} width={1} size="sm"></Form.Control>
+            </InputGroup>
+            <InputGroup>
+                <InputGroup.Text>Confidence in Bounds (%):</InputGroup.Text>
+                <Form.Control type="number" min={0} max={100} value={selectedConf} onChange={(e) => setConf(e)} width={1} size="sm"></Form.Control>
             </InputGroup>
             <div style={centreStyle}>
                 <Button variant="dark" onClick={(e) => { setMenuState('processing') }}>Calculate!</Button>
@@ -138,23 +144,41 @@ const Result = () => {
         selectedPhase: [selectedPhase,],
         selectedConf: [selectedConf, setSelectedConf],
         errVF: [errVF, setErrVF],
+        accurateFractions: [accurateFractions,],
         menuState: [, setMenuState]
     } = useContext(AppContext)!
 
-    const phaseFrac = getPhaseFraction(
-        imageInfo?.previewData.data!,
-        imageInfo?.phaseVals[selectedPhase - 1]!
-    ) / 100;
+    // we have two errVFs here because we want the values in the text to reflect the old
+    // errVF, the one they sent to the server and the slider to represent the new one
+    // which they are setting for recalculate.
+    const [newErrVF, setNewErrVF] = useState<number>(5);
+
+    const vals = imageInfo?.phaseVals!
+    const phaseFrac = (accurateFractions != null) ?
+        accurateFractions[vals[selectedPhase - 1]]
+        : getPhaseFraction(
+            imageInfo?.previewData.data!,
+            vals[selectedPhase - 1]
+        );
 
     const perErr = analysisInfo?.percentageErr;
-    const [LB, UB] = [(1 - perErr! / 100) * phaseFrac, (1 + perErr! / 100) * phaseFrac];
+    const [LB, UB] = [Math.max((1 - perErr! / 100) * phaseFrac, 0), Math.min((1 + perErr! / 100) * phaseFrac, 1)];
     const [targLB, targUB] = [(1 - errVF! / 100) * phaseFrac, (1 + errVF! / 100) * phaseFrac];
 
     const l = analysisInfo?.lForDefaultErr;
 
     const setErr = (e: any) => {
-        setErrVF(Number(e.target!.value))
+        setNewErrVF(Number(e.target!.value))
     };
+
+    const setConf = (e: any) => {
+        setSelectedConf(Number(e.target!.value))
+    };
+
+    const recalculate = () => {
+        setErrVF(newErrVF);
+        setMenuState('processing');
+    }
 
     return (
         <>
@@ -167,9 +191,15 @@ const Result = () => {
             <p><b>&nbsp;&nbsp;&nbsp;&nbsp; {targLB.toFixed(3)} ≤ ϕ ≤ {targUB.toFixed(3)} with {selectedConf}% confidence.</b></p>
             <InputGroup>
                 <InputGroup.Text>Error Target (%):</InputGroup.Text>
-                <Form.Control type="number" min={0} max={100} value={errVF} onChange={(e) => setErr(e)} width={1} size="sm"></Form.Control>
-                <Form.Range min={0} max={30} step={0.25} value={errVF} onChange={(e) => setErr(e)} width={1}></Form.Range>
+                <Form.Control type="number" min={0} max={100} value={newErrVF} onChange={(e) => setErr(e)} width={1} size="sm"></Form.Control>
             </InputGroup>
+            <InputGroup>
+                <InputGroup.Text>Confidence in Bounds (%):</InputGroup.Text>
+                <Form.Control type="number" min={0} max={100} value={selectedConf} onChange={(e) => setConf(e)} width={1} size="sm"></Form.Control>
+            </InputGroup>
+            <div style={centreStyle}>
+                <Button variant="dark" onClick={(e) => { recalculate() }}>Recalculate!</Button>
+            </div>
         </>
     )
 }

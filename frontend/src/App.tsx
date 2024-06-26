@@ -22,6 +22,7 @@ const App = () => {
         previewImg: [previewImg, setPreviewImg],
         selectedPhase: [selectedPhase,],
         targetL: [targetL, setTargetL],
+        accurateFractions: [, setAccurateFractions],
         analysisInfo: [, setAnalysisInfo],
         menuState: [menuState, setMenuState],
     } = useContext(AppContext)!
@@ -57,6 +58,8 @@ const App = () => {
             };
             console.log(result);
 
+            requestPhaseFraction(file);
+
             if (result?.segmented == false) {
                 console.log('error: unsegmented');
             } else {
@@ -68,11 +71,15 @@ const App = () => {
         };
     }
 
-    const requestPhaseFraction = (file: File, selectedPhaseValue: number) => {
+    const requestPhaseFraction = async (file: File) => {
         const formData = new FormData();
-        formData.append('userFile', file)
-        formData.append('phaseVal', String(selectedPhaseValue))
-        let resp = fetch(PF_ENDPOINT, { method: 'POST', body: formData });
+        formData.append('userFile', file);
+        //formData.append('phaseVal', String(selectedPhaseValue));
+        const resp = await fetch(PF_ENDPOINT, { method: 'POST', body: formData });
+        const obj = await resp.json();
+        const fractions = obj["phase_fractions"] as { [val: number]: number };
+        console.log(fractions);
+        setAccurateFractions(fractions);
     }
 
     useEffect(() => { // TODO: fetch from API instead
@@ -82,16 +89,11 @@ const App = () => {
             setAnalysisInfo({
                 integralRange: 1,
                 z: 1,
-                percentageErr: 5,
+                percentageErr: 10,
                 absError: 5 * 0.45,
                 lForDefaultErr: 4 * imageInfo?.width!,
                 vf: 0.45
             })
-        } else if (menuState === "conf") {
-            const file = imageInfo?.file!
-            const vals = imageInfo?.phaseVals!
-            requestPhaseFraction(file, vals[selectedPhase - 1])
-
         }
     }, [menuState])
 

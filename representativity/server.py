@@ -70,22 +70,27 @@ def generic_response(request, fn: Callable):
 
 
 def phase_fraction(request) -> Response:
-    """User sends file and desired phase, parse as array (either via tiffile or PIL-> numpy) and return phase fraction"""
+    """User sends file, parse as array (either via tiffile or PIL-> numpy) and return all phase fractions.
+    It's cheap to compute all of them and this way it can be done on first upload in the background and
+    minimise delays."""
     user_file = request.files["userFile"]
     user_filename = user_file.filename
-    val = int(request.values["phaseVal"])
 
     file_object = BufferedReader(user_file)
-
+    # note we assume the .tiff or image is greyscale
     if ".tif" in user_filename:
         arr = imread(file_object)
     else:
         img = Image.open(file_object).convert("L")
         arr = np.asarray(img)
-    phase_fraction = np.mean(arr == val)
-    print(f"Phase fraction: {phase_fraction}")
 
-    obj = {"phase_fraction": phase_fraction}
+    out_fractions = {}
+    for val in np.unique(arr):
+        key = int(val)
+        out_fractions[key] = np.mean(arr == key)
+    print(f"Phase fractions: {out_fractions}")
+
+    obj = {"phase_fractions": out_fractions}
     response = Response(json.dumps(obj), status=200)
     return response
 
