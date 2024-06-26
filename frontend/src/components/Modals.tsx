@@ -9,7 +9,8 @@ import ButtonGroup from "react-bootstrap/ButtonGroup";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
 import { getPhaseFraction } from "./imageLogic";
-import { Table } from "react-bootstrap";
+import { Spinner, Table } from "react-bootstrap";
+import { title } from "process";
 
 
 const _getCSSColour = (currentStateVal: any, targetStateVal: any, successPrefix: string, colourIdx: number): string => {
@@ -65,6 +66,7 @@ const ConfidenceSelect = () => {
     const {
         imageInfo: [imageInfo,],
         selectedPhase: [selectedPhase,],
+        selectedConf: [selectedConf, setSelectedConf],
         menuState: [, setMenuState]
     } = useContext(AppContext)!
     const dimString = `${imageInfo?.nDims}D`;
@@ -73,6 +75,10 @@ const ConfidenceSelect = () => {
         imageInfo?.previewData.data!,
         imageInfo?.phaseVals[selectedPhase - 1]!
     ).toFixed(1);
+
+    const setConf = (e: any) => {
+        setSelectedConf(Number(e.target!.value))
+    }
 
     // make the stats a table
     // colour selected phase with correct colour
@@ -103,9 +109,21 @@ const ConfidenceSelect = () => {
             </Table>
             <InputGroup>
                 <InputGroup.Text>Confidence in Bounds (%):</InputGroup.Text>
-                <Form.Control type="number" min={0} max={100} value={95} width={1} readOnly={true} size="sm"></Form.Control>
+                <Form.Control type="number" min={0} max={100} value={selectedConf} onChange={(e) => setConf(e)} width={1} size="sm"></Form.Control>
             </InputGroup>
-            <Button variant="dark" onClick={(e) => { }}>Confirm</Button>
+            <Button variant="dark" onClick={(e) => { setMenuState('processing') }}>Confirm</Button>
+        </>
+    )
+}
+
+const Result = () => {
+    // LB < VF_true < UB with '$CONF$% confidence  
+    // need L = $N$pix for \epsilon = ...
+    // epsilon slider (updates bounds in line 1)
+    // conf re-select
+    // CSS zoom anim on canvas
+    return (
+        <>
         </>
     )
 }
@@ -117,6 +135,10 @@ const getMenuInfo = (state: MenuState) => {
             return { title: "Select Phase", innerHTML: <PhaseSelect /> }
         case 'conf':
             return { title: "Select Confidence", innerHTML: <ConfidenceSelect /> }
+        case 'processing':
+            return { title: "Processing", innerHTML: <Spinner /> }
+        case 'conf_result':
+            return { title: "Result!", innerHTML: <Result /> }
         case 'hidden': // fall through
         default:
             return { title: "", innerHTML: <></> }

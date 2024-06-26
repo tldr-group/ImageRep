@@ -62,6 +62,12 @@ const App = () => {
         };
     }
 
+    useEffect(() => { // TODO: fetch from API instead
+        if (menuState === 'processing') {
+            setMenuState('conf_result');
+        }
+    }, [menuState])
+
     return (
         <div className={`w-full h-full`}>
             <Topbar></Topbar>

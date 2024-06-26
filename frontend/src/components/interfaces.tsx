@@ -13,6 +13,10 @@ interface contextProps {
         selectedPhase: number,
         setSelectedPhase: (e: number) => void
     ];
+    selectedConf: [
+        selectedConf: number,
+        setSelectedNumber: (e: number) => void
+    ];
     menuState: [
         menuState: MenuState,
         setMenuState: (e: MenuState) => void
@@ -39,7 +43,7 @@ export function rgbaToHex(r: number, g: number, b: number, a: number) {
 export const colours: number[][] = [[255, 255, 255, 255], [31, 119, 180, 255], [255, 127, 14, 255], [44, 160, 44, 255], [214, 39, 40, 255], [148, 103, 189, 255], [140, 86, 75, 255]]
 
 
-export type MenuState = "hidden" | "phase" | "conf" | "conf_result" | "length" | "length_result"
+export type MenuState = "hidden" | "phase" | "conf" | "processing" | "conf_result" | "length" | "length_result"
 
 
 export interface ImageLoadInfo {

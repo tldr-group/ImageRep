@@ -1,9 +1,10 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import AppContext from "./interfaces";
 
 import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
+
+// TODO: rename to be mea-sure/mea*sure*
 
 const Topbar = () => {
 
