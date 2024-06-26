@@ -66,7 +66,7 @@ const App = () => {
     useEffect(() => { // TODO: fetch from API instead
         if (menuState === 'processing') {
             setMenuState('conf_result');
-            setTargetL(2 * imageInfo?.width!);
+            setTargetL(4 * imageInfo?.width!);
         }
     }, [menuState])
 

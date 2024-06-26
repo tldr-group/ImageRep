@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { DragDropProps } from "./interfaces";
 
-const dragDropStyle = {
+export const dragDropStyle = {
     height: '75vh', width: '75vw',
     outline: '10px dashed #b5bab6', color: '#b5bab6',
     fontSize: '3.5em', justifyContent: 'center', alignItems: 'center',

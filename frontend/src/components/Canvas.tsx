@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import AppContext from "./interfaces";
 import { colours } from "./interfaces";
+import { dragDropStyle } from "./DragDrop"
 import { replaceGreyscaleWithColours, getImagefromImageData } from "./imageLogic";
 
 const ADDITIONAL_SF = 1
@@ -17,6 +18,10 @@ const getAspectCorrectedDims = (ih: number, iw: number, ch: number, cw: number, 
     const sf = Math.min(hSF, wSF);
     const [nh, nw] = [ih * sf * otherSF, iw * sf * otherSF];
     return { w: nw, h: nh, ox: (cw - nw) / 2, oy: (ch - nh) / 2 };
+}
+
+const postZoomImageDims = (originalSize: number, targetL: number, cRect: DOMRect, pRect: DOMRect) => {
+    //compute where corner of shrunk canv will be relative to pRect,
 }
 
 const PreviewCanvas = () => {
@@ -39,18 +44,28 @@ const PreviewCanvas = () => {
         const [ih, iw, ch, cw] = [image.naturalHeight, image.naturalWidth, canvas.height, canvas.width];
         const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, ADDITIONAL_SF);
         ctx?.drawImage(image, correctDims.ox, correctDims.oy, correctDims.w, correctDims.h);
+        //ctx?.drawImage(image, 0, 0, correctDims.w, correctDims.h);
     }
 
-    const animateDiv = () => {
+    const animateDiv = (newW: number, newH: number) => { //newW: number, newH: number
         const div = animDivRef.current!;
-        div.style.backgroundColor = 'red';
+        div.style.width = `${newW}px`
+        div.style.height = `${newH}px`
+        div.style.outline = '10px #b4b4b4';
+        //div.style.color = '#b5bab6';
+        div.style.borderRadius = '10px';
+        div.style.backgroundColor = '#b4b4b4c2';
+        div.style.background = "repeating-linear-gradient(45deg, #b4b4b4d9, #b4b4b4d9 10px, #e5e5e5e3 10px, #e5e5e5e3 20px)";
+        //div.style.backgroundSize = "5px 5px"
+
         div.animate([
             { opacity: 0 },
             { opacity: 1 },
         ], {
             fill: "both",
-            duration: 3000,
+            duration: 2400,
             iterations: Infinity,
+            direction: "alternate"
         })
     }
 
@@ -104,26 +119,38 @@ const PreviewCanvas = () => {
         // Animated shrink of canvas into top left corner of parent div
         // sf is original width / target length
         if (targetL === null) { return; }
-        const canv = canvasRef.current!;
+        const canvas = canvasRef.current!;
         const parent = containerRef.current!;
 
+        const cRect = canvas.getBoundingClientRect();
         const pRect = parent.getBoundingClientRect();
 
         const sf = (targetL / imageInfo?.width!);
-        const canvAnim = canv.animate([
-            { transform: `scale(${1 / sf}) translate(${-pRect.width / (sf)}px, ${-pRect.height / (sf)}px)` },
+
+        const image = previewImg!
+        const [ih, iw, ch, cw] = [image.naturalHeight, image.naturalWidth, canvas.height, canvas.width];
+        const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, ADDITIONAL_SF);
+
+        const dx = (correctDims.w / 2) - (cRect.width / (2 * sf));
+        const dy = (correctDims.h / 2) - (cRect.height / (2 * sf));
+        console.log(dx, dy, pRect.width, cRect.width)
+
+
+        const canvAnim = canvas.animate([
+            { transform: `scale(${1 / sf}) translate(${-(dx * sf + correctDims.ox)}px, ${-(dy * sf + correctDims.oy)}px)` },
         ], {
-            duration: 1000,
+            duration: 1600,
             iterations: 1,
-            fill: 'forwards'
+            fill: 'forwards',
+            easing: 'ease-in-out'
         })
-        canvAnim.onfinish = (e) => { animateDiv() }
+        canvAnim.onfinish = (e) => { animateDiv(correctDims.w, correctDims.h) }
 
     }, [targetL])
 
     return (
         <div ref={containerRef} style={centredStyle}>
-            <div ref={animDivRef} style={{ height: '75vh', width: '75vw', position: 'absolute' }}></div>
+            <div ref={animDivRef} style={{ position: 'absolute' }}></div>
             <canvas ref={canvasRef} id={"preview"}></canvas>
         </div>
     );
