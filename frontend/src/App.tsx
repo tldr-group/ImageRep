@@ -13,6 +13,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 const PATH = "http://127.0.0.1:5000";
 const PF_ENDPOINT = PATH + "/phasefraction";
+const REPR_ENDPOINT = PATH + "/repr";
 
 const MAX_FILE_SIZE_BYTES = 1024 * 1024 * 500; // 500MB
 
@@ -21,6 +22,8 @@ const App = () => {
         imageInfo: [imageInfo, setImageInfo],
         previewImg: [previewImg, setPreviewImg],
         selectedPhase: [selectedPhase,],
+        selectedConf: [selectedConf,],
+        errVF: [errVF,],
         targetL: [targetL, setTargetL],
         accurateFractions: [, setAccurateFractions],
         analysisInfo: [, setAnalysisInfo],
@@ -82,9 +85,38 @@ const App = () => {
         setAccurateFractions(fractions);
     }
 
+    const requestRepr = async () => {
+        const info = imageInfo!
+
+        const formData = new FormData();
+        formData.append('userFile', info.file!);
+        formData.append('selected_phase', String(info.phaseVals[selectedPhase - 1]));
+        formData.append('selected_conf', String(selectedConf));
+        formData.append('selected_err', String(errVF));
+
+        const resp = await fetch(REPR_ENDPOINT, { method: 'POST', body: formData });
+        const obj = await resp.json();
+
+        setMenuState('conf_result');
+        setAnalysisInfo({
+            integralRange: obj["cls"],
+            z: 1,
+            percentageErr: obj["percent_err"],
+            absError: obj["abs_err"],
+            lForDefaultErr: obj["l"],
+            vf: 1
+        })
+        setTargetL(obj["l"])
+
+    }
+
     useEffect(() => { // TODO: fetch from API instead
         if (menuState === 'processing') {
-            setMenuState('conf_result');
+
+
+            requestRepr()
+
+            /*
             setTargetL(4 * imageInfo?.width!);
             setAnalysisInfo({
                 integralRange: 1,
@@ -94,6 +126,7 @@ const App = () => {
                 lForDefaultErr: 4 * imageInfo?.width!,
                 vf: 0.45
             })
+                */
         }
     }, [menuState])
 

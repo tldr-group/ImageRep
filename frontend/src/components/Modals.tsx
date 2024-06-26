@@ -183,7 +183,7 @@ const Result = () => {
     return (
         <>
             <p>
-                The bulk volume fraction ϕ is within {perErr}% of your image volume
+                The bulk volume fraction ϕ is within {perErr?.toFixed(3)}% of your image volume
                 fraction Φ ({phaseFrac.toFixed(3)}) with {selectedConf}% confidence.
             </p>
             <p><b><i>i.e,</i> {LB.toFixed(3)} ≤ ϕ ≤ {UB.toFixed(3)} with {selectedConf}% confidence.</b></p>
