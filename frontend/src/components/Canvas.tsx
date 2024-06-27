@@ -3,6 +3,7 @@ import AppContext from "./interfaces";
 import { colours } from "./interfaces";
 import { dragDropStyle } from "./DragDrop"
 import { replaceGreyscaleWithColours, getImagefromImageData } from "./imageLogic";
+import { Fade } from "react-bootstrap";
 
 const ADDITIONAL_SF = 1
 
@@ -122,17 +123,15 @@ const PreviewCanvas = () => {
         // sf is original width / target length
         if (targetL === null) { return; }
         const canvas = canvasRef.current!;
-        const cRect = canvas.getBoundingClientRect();
 
         const sf = (targetL / imageInfo?.width!); // TODO: FIX WHEN DATA IS REAL
 
         const image = previewImg!
-        const [ih, iw, ch, cw] = [image.naturalHeight, image.naturalWidth, canvas.height, canvas.width];
+        const [ih, iw, ch, cw] = [image.naturalHeight, image.naturalWidth, canvDims.h, canvDims.w];
         const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, ADDITIONAL_SF);
         // centred-adjusted shift
-        const dx = (correctDims.w / 2) - (cRect.width / (2 * sf));
-        const dy = (correctDims.h / 2) - (cRect.height / (2 * sf));
-
+        const dx = (correctDims.w / 2) - (canvDims.w / (2 * sf));
+        const dy = (correctDims.h / 2) - (canvDims.h / (2 * sf));
         // image drawn centred on canvas, need to correct to shift top left of image to top left of div.
         const shiftX = -(dx * sf + correctDims.ox);
         const shiftY = -(dy * sf + correctDims.oy);
