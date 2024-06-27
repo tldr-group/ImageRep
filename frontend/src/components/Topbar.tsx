@@ -37,7 +37,7 @@ const Topbar = ({ loadFromFile, reset }: TopbarProps) => {
                             ref={fileInputRef}
                             style={{ display: 'none' }}
                             onChange={e => handleFileUpload(e)} />
-                        <Nav.Link style={{ color: "red" }} onClick={reset}>Reset</Nav.Link>
+                        <Nav.Link style={{ color: "red" }} onClick={(e) => reset()}>Reset</Nav.Link>
                     </Nav>
                 </Navbar.Collapse>
             </Container>

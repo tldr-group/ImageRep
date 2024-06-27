@@ -1,10 +1,10 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import AppContext, { ImageLoadInfo, AnalysisInfo } from "./components/interfaces";
+import AppContext, { ImageLoadInfo, AnalysisInfo, IR_LIMIT_PX } from "./components/interfaces";
 
 import Topbar from "./components/Topbar";
 import DragDrop from "./components/DragDrop";
 import PreviewCanvas from "./components/Canvas";
-import { Menu, ErrorMessage } from "./components/Modals";
+import { Menu, ErrorMessage, CLSModal } from "./components/Modals";
 
 import { loadFromTIFF, loadFromImage } from "./components/imageLogic";
 
@@ -29,7 +29,9 @@ const App = () => {
         analysisInfo: [, setAnalysisInfo],
         menuState: [menuState, setMenuState],
         errorState: [errorState, setErrorState],
+        showWarning: [showWarning, setShowWarning]
     } = useContext(AppContext)!
+
 
     const appLoadFile = async (file: File) => {
         const reader = new FileReader();
@@ -114,6 +116,9 @@ const App = () => {
                 lForDefaultErr: obj["l"],
                 vf: 1
             })
+
+            if (obj["cls"] > IR_LIMIT_PX) { setShowWarning(true) }
+
             setTargetL(obj["l"]);
         } catch (e) {
             const error = e as Error;
@@ -149,6 +154,7 @@ const App = () => {
             </div>
             {errorState.msg == "" && <Menu></Menu>}
             {errorState.msg != "" && <ErrorMessage />}
+            {showWarning && <CLSModal />}
         </div>
     );
 };

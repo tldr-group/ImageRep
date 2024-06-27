@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import AppContext, { MenuState } from "./interfaces";
+import AppContext, { IR_LIMIT_PX, MenuState } from "./interfaces";
 import { colours, rgbaToHex } from "./interfaces";
 
 import Toast from 'react-bootstrap/Toast'
@@ -77,7 +77,7 @@ const ConfidenceSelect = () => {
         accurateFractions: [accurateFractions,],
         menuState: [, setMenuState]
     } = useContext(AppContext)!
-    const dimString = `${imageInfo?.nDims}D`;
+
 
     const vals = imageInfo?.phaseVals!
     // horrible ternary: if server has responded and set the accurate phase fractions,
@@ -97,16 +97,19 @@ const ConfidenceSelect = () => {
         setErrVF(Number(e.target!.value))
     }
 
+    const [h, w, d] = [imageInfo?.height, imageInfo?.width, imageInfo?.depth];
+    const dimString = (imageInfo?.nDims == 3) ? `${h}x${w}x${d}` : `${h}x${w}`;
+
     return (
         <>
             <Table>
                 <tbody>
                     <tr>
-                        <td>Image Dimension:</td>
+                        <td>Image Dimensions:</td>
                         <td>{dimString}</td>
                     </tr>
                     <tr>
-                        <td  >Chosen Phase:</td>
+                        <td >Chosen Phase:</td>
                         <td >{selectedPhase}</td>
                     </tr>
                     <tr>
@@ -283,6 +286,33 @@ export const ErrorMessage = () => {
                     </Button>
                 </Modal.Footer>
             </Modal >
+        </>
+    );
+}
+
+
+export const CLSModal = () => {
+    const {
+        analysisInfo: [analysisInfo,],
+        showWarning: [, setShowWarning],
+    } = useContext(AppContext)!;
+
+    const hide = () => {
+        setShowWarning(false);
+    }
+
+    return (
+        <>
+            <ToastContainer className="p-5" position="bottom-start">
+                <Toast onClose={(e) => hide()}>
+                    <Toast.Header className="roundedme-2" closeButton={true} style={{ backgroundColor: '#fcba03', color: '#ffffff' }}>
+                        <strong className="me-auto" style={{ fontSize: '1.5em' }}>Warning!</strong>
+                    </Toast.Header>
+                    <Toast.Body>
+                        Integral Range/feature size of {analysisInfo?.integralRange.toFixed(2)} exceeds tested limit of {IR_LIMIT_PX}px, results may be inaccurate.
+                    </Toast.Body>
+                </Toast>
+            </ToastContainer>
         </>
     );
 }
