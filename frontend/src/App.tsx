@@ -21,9 +21,9 @@ const App = () => {
     const {
         imageInfo: [imageInfo, setImageInfo],
         previewImg: [previewImg, setPreviewImg],
-        selectedPhase: [selectedPhase,],
-        selectedConf: [selectedConf,],
-        errVF: [errVF,],
+        selectedPhase: [selectedPhase, setSelectedPhase],
+        selectedConf: [selectedConf, setSelectedConf],
+        errVF: [errVF, setErrVF],
         targetL: [targetL, setTargetL],
         accurateFractions: [, setAccurateFractions],
         analysisInfo: [, setAnalysisInfo],
@@ -106,33 +106,31 @@ const App = () => {
             lForDefaultErr: obj["l"],
             vf: 1
         })
-        setTargetL(obj["l"])
+        setTargetL(obj["l"]);
+    }
 
+    const reset = () => {
+        setMenuState('hidden');
+        setPreviewImg(null);
+        setImageInfo(null);
+        setAnalysisInfo(null);
+        setTargetL(null);
+        setAccurateFractions(null);
+        setPreviewImg(null);
+        setSelectedPhase(0);
+        setErrVF(5);
+        setSelectedConf(95);
     }
 
     useEffect(() => { // TODO: fetch from API instead
         if (menuState === 'processing') {
-
-
-            requestRepr()
-
-            /*
-            setTargetL(4 * imageInfo?.width!);
-            setAnalysisInfo({
-                integralRange: 1,
-                z: 1,
-                percentageErr: 10,
-                absError: 5 * 0.45,
-                lForDefaultErr: 4 * imageInfo?.width!,
-                vf: 0.45
-            })
-                */
+            requestRepr();
         }
     }, [menuState])
 
     return (
         <div className={`w-full h-full`}>
-            <Topbar></Topbar>
+            <Topbar loadFromFile={appLoadFile} reset={reset}></Topbar>
             <div className={`flex`} style={{ margin: '1.5%' }} > {/*Canvas div on left, sidebar on right*/}
                 {!previewImg && <DragDrop loadFromFile={appLoadFile} />}
                 {previewImg && <PreviewCanvas />}

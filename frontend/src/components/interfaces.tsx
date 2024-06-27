@@ -23,15 +23,15 @@ interface contextProps {
     ];
     targetL: [
         targetL: number | null,
-        setTargetL: (e: number) => void,
+        setTargetL: (e: number | null) => void,
     ];
     accurateFractions: [
         accurateFractions: { [val: number]: number } | null,
-        setAccurateFractions: (e: { [val: number]: number }) => void,
+        setAccurateFractions: (e: { [val: number]: number } | null) => void,
     ]
     analysisInfo: [
         analysisInfo: AnalysisInfo | null,
-        setAnalysisInfo: (e: AnalysisInfo) => void
+        setAnalysisInfo: (e: AnalysisInfo | null) => void
     ]
     // what do I need to store from azure? cls, z, l
     menuState: [
@@ -46,6 +46,11 @@ export default AppContext;
 
 export interface DragDropProps {
     loadFromFile: (file: File) => void;
+}
+
+export interface TopbarProps {
+    loadFromFile: (file: File) => void;
+    reset: () => void;
 }
 
 export function rgbaToHex(r: number, g: number, b: number, a: number) {
