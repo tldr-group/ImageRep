@@ -116,6 +116,8 @@ def ps_error_prediction(dim, data, confidence, error_target):
     one_im_clss = []
     large_shape = data[f'validation_{dim}']['large_im_size']
     large_im_repeats = 1
+    in_the_bounds_w_model = []
+    in_the_bounds_wo_model = []
     for generator, params in ps_generators.items():
         for value_comb in product(*params.values()):
             args = {key: value for key, value in zip(params.keys(), value_comb)}
@@ -130,20 +132,46 @@ def ps_error_prediction(dim, data, confidence, error_target):
             data[f'validation_{dim}'][gen_name]['true_cls'] = true_cls
             edge_lengths_pred = data[f'validation_{dim}']['edge_lengths_pred']
             for edge_length in edge_lengths_pred:
-                true_error = util.bernouli_from_cls(true_cls, true_pf, [edge_length]*int(dim[0]))
-                small_im = large_im_stack[0][edge_length:2*edge_length, edge_length:2*edge_length]
-                one_im_stat_analysis_cls = util.one_img_stat_analysis_error(small_im, small_im.mean())
-                print(f'One image stat analysis cls: {one_im_stat_analysis_cls}')
-                one_im_clss.append(one_im_stat_analysis_cls)
-                im_err, l_for_err_target, cls = util.make_error_prediction(small_im, 
-                        conf=confidence, err_targ=error_target, model_error=True)
-                true_clss.append(true_cls)
-                clss.append(cls)
-                print(f'edge_length {edge_length}:')
-                print(f'cls: {cls}')
-                print(f'true error: {true_error[0]:.2f}')
-                print(f'error: {im_err*100:.2f}\n')
-            print('\n')
+                for _ in range(20):
+                    true_error = util.bernouli_from_cls(true_cls, true_pf, [edge_length]*int(dim[0]))
+                    start_idx = [np.random.randint(0, large_shape[i]-edge_length) for i in range(int(dim[0]))]
+                    end_idx = [start_idx[i]+edge_length for i in range(int(dim[0]))]
+                    small_im = large_im_stack[0][start_idx[0]:end_idx[0], start_idx[1]:end_idx[1]]
+                    small_im_pf = torch.mean(small_im)
+                    one_im_stat_analysis_cls = util.one_img_stat_analysis_error(small_im, small_im.mean())
+                    print(f'One image stat analysis cls: {one_im_stat_analysis_cls}')
+                    one_im_clss.append(one_im_stat_analysis_cls)
+                    for i in range(2):
+                        with_model = i == 0
+                        im_err, l_for_err_target, cls = util.make_error_prediction(small_im, 
+                                conf=confidence, err_targ=error_target, model_error=with_model)
+                        true_clss.append(true_cls)
+                        clss.append(cls)
+                        bounds = [(1-im_err)*small_im_pf, (1+im_err)*small_im_pf]
+                        print(f'Bounds: {bounds}')
+                        print(f'True PF: {true_pf}')
+                        if true_pf >= bounds[0] and true_pf <= bounds[1]:
+                            if with_model:
+                                in_the_bounds_w_model.append(1)
+                            else:
+                                in_the_bounds_wo_model.append(1)
+                        else:   
+                            if with_model:
+                                in_the_bounds_w_model.append(0)
+                            else:
+                                in_the_bounds_wo_model.append(0) 
+                        if with_model:
+                            print('With model:')
+                            print(f'current right percentage: {np.mean(in_the_bounds_w_model)}')
+                        else:
+                            print('Without model:')
+                            print(f'current right percentage: {np.mean(in_the_bounds_wo_model)}')
+                        print(f'edge_length {edge_length}:')
+                        print(f'cls: {cls}')
+                        print(f'true error: {true_error[0]:.2f}')
+                        print(f'error: {im_err*100:.2f}\n')
+                        print(f'Length for error target: {l_for_err_target}')
+                    print('\n')
                 
             # plt.imshow(im[150:350,150:350])
             # plt.title(f'{generator.__name__} with {args}')

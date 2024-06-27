@@ -338,12 +338,13 @@ def make_error_prediction(img, conf=0.95, err_targ=0.05, model_error=True, mxtpc
         abs_err_for_img = pf - conf_bounds[0]
         # calculate the n for the error target:
         args = (pf, std_model, err_targ, conf)
-        n_for_err_targ = minimize(find_n_for_err_targ, n, args=args)
+        # TODO: this is a slow convergence, can be much faster with a 'lion in a forest' algorithm:
+        n_for_err_targ = minimize(find_n_for_err_targ, n, args=args, method='nelder-mead', bounds=[(10, 10e8)])  
         n_for_err_targ = n_for_err_targ.x[0]
     else:  # TODO what is this useful for.. for when you trust the model completely?
         z = stats.norm.interval(conf)[1]
-        abs_err_for_img = (z*std_bern/pf)
-        n_for_err_targ = pf * (1 - pf) * (z/ (abs_err_target * pf)) ** 2
+        abs_err_for_img = z*std_bern
+        n_for_err_targ = pf * (1 - pf) * (z / abs_err_target) ** 2
 
     l_for_err_targ = dims_from_n(n_for_err_targ, shape, cls, dims)
     percentage_err_for_img = abs_err_for_img/pf
@@ -385,11 +386,13 @@ def get_prediction_interval(image_pf, pred_std, pred_std_error_std, conf_level=0
 def normal_dist(x, mean, std):
     return (1.0 / (std * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mean) / std) ** 2)
 
+
 def find_n_for_err_targ(n, image_pf, pred_std_error_std, err_target, conf_level=0.95, n_divisions=101):
+    n = n[0]
     std_bern = ((1 / n) * (image_pf * (1 - image_pf))) ** 0.5
     pred_interval = get_prediction_interval(image_pf, std_bern, pred_std_error_std, conf_level, n_divisions)
     err_for_img = image_pf - pred_interval[0]
-    return (err_target - err_for_img)**2
+    return np.abs(err_target - err_for_img)
         
 
 def optimize_error_conf_pred(bern_conf, total_conf, std_bern, std_model, pf):
