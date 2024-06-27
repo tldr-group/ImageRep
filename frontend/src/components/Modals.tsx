@@ -10,7 +10,9 @@ import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
-import FormRange from 'react-bootstrap/FormRange';
+
+import Accordion from 'react-bootstrap/Accordion';
+import Modal from 'react-bootstrap/Modal';
 
 import { getPhaseFraction } from "./imageLogic";
 
@@ -223,7 +225,7 @@ const getMenuInfo = (state: MenuState) => {
     }
 }
 
-const Menu = () => {
+export const Menu = () => {
     const {
         menuState: [menuState,]
     } = useContext(AppContext)!
@@ -247,4 +249,40 @@ const Menu = () => {
     )
 }
 
-export default Menu;
+
+
+
+export const ErrorMessage = () => {
+    const {
+        errorState: [errorObject, setErrorObject]
+    } = useContext(AppContext)!;
+
+
+    const handleClose = () => { setErrorObject({ msg: "", stackTrace: "" }) };
+
+    return (
+        <>
+            <Modal show={errorObject.msg !== ""} onHide={handleClose}>
+                <Modal.Header style={{ backgroundColor: '#eb4034', color: '#ffffff' }} closeVariant="white" closeButton>
+                    <Modal.Title>Error</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>{errorObject.msg}</Modal.Body>
+                <Modal.Body>
+                    <Accordion defaultActiveKey="0">
+                        <Accordion.Item eventKey="1">
+                            <Accordion.Header>Stack trace</Accordion.Header>
+                            <Accordion.Body>
+                                {errorObject.stackTrace}
+                            </Accordion.Body>
+                        </Accordion.Item>
+                    </Accordion>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="dark" onClick={handleClose}>
+                        Understood!
+                    </Button>
+                </Modal.Footer>
+            </Modal >
+        </>
+    );
+}

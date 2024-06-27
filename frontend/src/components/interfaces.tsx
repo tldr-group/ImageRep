@@ -38,6 +38,10 @@ interface contextProps {
         menuState: MenuState,
         setMenuState: (e: MenuState) => void
     ];
+    errorState: [
+        errorState: ErrorMessage,
+        setErrorState: (e: ErrorMessage) => void
+    ];
 };
 
 const AppContext = createContext<contextProps | null>(null);
@@ -88,4 +92,9 @@ export interface AnalysisInfo {
     absError: number,
     lForDefaultErr: number,
     vf: number
+}
+
+export interface ErrorMessage {
+    msg: string;
+    stackTrace: string;
 }

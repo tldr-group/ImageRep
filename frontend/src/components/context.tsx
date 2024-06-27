@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import AppContext, { AnalysisInfo, ImageLoadInfo, MenuState } from "./interfaces";
+import AppContext, { AnalysisInfo, ImageLoadInfo, MenuState, ErrorMessage } from "./interfaces";
 
 const AppContextProvider = (props: {
     children: React.ReactElement<any, string | React.JSXElementConstructor<any>>;
@@ -17,6 +17,7 @@ const AppContextProvider = (props: {
     const [analysisInfo, setAnalysisInfo] = useState<AnalysisInfo | null>(null);
     // control flow
     const [menuState, setMenuState] = useState<MenuState>('hidden');
+    const [errorState, setErrorState] = useState<ErrorMessage>({ msg: "", stackTrace: "" });
 
 
     return (
@@ -30,7 +31,8 @@ const AppContextProvider = (props: {
                 targetL: [targetL, setTargetL],
                 accurateFractions: [accurateFractions, setAccurateFractions],
                 analysisInfo: [analysisInfo, setAnalysisInfo],
-                menuState: [menuState, setMenuState]
+                menuState: [menuState, setMenuState],
+                errorState: [errorState, setErrorState]
             }}
         >
             {props.children}

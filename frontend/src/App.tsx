@@ -4,7 +4,7 @@ import AppContext, { ImageLoadInfo, AnalysisInfo } from "./components/interfaces
 import Topbar from "./components/Topbar";
 import DragDrop from "./components/DragDrop";
 import PreviewCanvas from "./components/Canvas";
-import Menu from "./components/Modals";
+import { Menu, ErrorMessage } from "./components/Modals";
 
 import { loadFromTIFF, loadFromImage } from "./components/imageLogic";
 
@@ -28,6 +28,7 @@ const App = () => {
         accurateFractions: [, setAccurateFractions],
         analysisInfo: [, setAnalysisInfo],
         menuState: [menuState, setMenuState],
+        errorState: [errorState, setErrorState],
     } = useContext(AppContext)!
 
     const appLoadFile = async (file: File) => {
@@ -42,14 +43,14 @@ const App = () => {
         } else if (isPNGJPG) {
             reader.readAsDataURL(file);
         } else {
-            console.log(`Unsupported file format .${extension}`);
+            setErrorState({ msg: `Unsupported file format .${extension}`, stackTrace: "" })
             return;
         };
 
         reader.onload = async () => {
             let result: ImageLoadInfo | null = null;
             if (file.size > MAX_FILE_SIZE_BYTES) {
-                console.log(`File .${file.size / (1000 * 1000)}MB greater than max size (500MB)`);
+                setErrorState({ msg: `File too large!`, stackTrace: `File .${file.size / (1000 * 1000)}MB greater than max size (500MB)` })
                 return;
             }
 
@@ -61,11 +62,13 @@ const App = () => {
             };
             console.log(result);
 
-            requestPhaseFraction(file);
-
             if (result?.segmented == false) {
-                console.log('error: unsegmented');
+                setErrorState({
+                    msg: `Data is unsegmented - try using our web segmentation tool, SAMBA (https://www.sambasegment.com/) `,
+                    stackTrace: `Number of unique values ${result?.nPhases} > 6`
+                })
             } else {
+                requestPhaseFraction(file);
                 result!.file = file;
                 setImageInfo(result);
                 setPreviewImg(result!.previewImg);
@@ -75,38 +78,47 @@ const App = () => {
     }
 
     const requestPhaseFraction = async (file: File) => {
-        const formData = new FormData();
-        formData.append('userFile', file);
-        //formData.append('phaseVal', String(selectedPhaseValue));
-        const resp = await fetch(PF_ENDPOINT, { method: 'POST', body: formData });
-        const obj = await resp.json();
-        const fractions = obj["phase_fractions"] as { [val: number]: number };
-        console.log(fractions);
-        setAccurateFractions(fractions);
+        try {
+            const formData = new FormData();
+            formData.append('userFile', file);
+            //formData.append('phaseVal', String(selectedPhaseValue));
+            const resp = await fetch(PF_ENDPOINT, { method: 'POST', body: formData });
+            const obj = await resp.json();
+            const fractions = obj["phase_fractions"] as { [val: number]: number };
+            setAccurateFractions(fractions);
+        } catch (e) {
+            const error = e as Error;
+            setErrorState({ msg: "Couldn't fetch phase fractions: data wrong or server down.", stackTrace: error.toString() });
+        }
     }
 
     const requestRepr = async () => {
-        const info = imageInfo!
+        try {
+            const info = imageInfo!
 
-        const formData = new FormData();
-        formData.append('userFile', info.file!);
-        formData.append('selected_phase', String(info.phaseVals[selectedPhase - 1]));
-        formData.append('selected_conf', String(selectedConf));
-        formData.append('selected_err', String(errVF));
+            const formData = new FormData();
+            formData.append('userFile', info.file!);
+            formData.append('selected_phase', String(info.phaseVals[selectedPhase - 1]));
+            formData.append('selected_conf', String(selectedConf));
+            formData.append('selected_err', String(errVF));
 
-        const resp = await fetch(REPR_ENDPOINT, { method: 'POST', body: formData });
-        const obj = await resp.json();
+            const resp = await fetch(REPR_ENDPOINT, { method: 'POST', body: formData });
+            const obj = await resp.json();
 
-        setMenuState('conf_result');
-        setAnalysisInfo({
-            integralRange: obj["cls"],
-            z: 1,
-            percentageErr: obj["percent_err"],
-            absError: obj["abs_err"],
-            lForDefaultErr: obj["l"],
-            vf: 1
-        })
-        setTargetL(obj["l"]);
+            setMenuState('conf_result');
+            setAnalysisInfo({
+                integralRange: obj["cls"],
+                z: 1,
+                percentageErr: obj["percent_err"],
+                absError: obj["abs_err"],
+                lForDefaultErr: obj["l"],
+                vf: 1
+            })
+            setTargetL(obj["l"]);
+        } catch (e) {
+            const error = e as Error;
+            setErrorState({ msg: "Couldn't determine representativity: data wrong or server down.", stackTrace: error.toString() });
+        }
     }
 
     const reset = () => {
@@ -135,7 +147,8 @@ const App = () => {
                 {!previewImg && <DragDrop loadFromFile={appLoadFile} />}
                 {previewImg && <PreviewCanvas />}
             </div>
-            <Menu></Menu>
+            {errorState.msg == "" && <Menu></Menu>}
+            {errorState.msg != "" && <ErrorMessage />}
         </div>
     );
 };
