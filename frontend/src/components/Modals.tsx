@@ -187,8 +187,10 @@ const Result = () => {
                 fraction Φ ({phaseFrac.toFixed(3)}) with {selectedConf}% confidence.
             </p>
             <p><b><i>i.e,</i> {LB.toFixed(3)} ≤ ϕ ≤ {UB.toFixed(3)} with {selectedConf}% confidence.</b></p>
-            <p>For a {errVF.toFixed(2)}% error target, you need an image length of {l}px at the same resolution, which would give: </p>
+            <p>For a {errVF.toFixed(2)}% error target, you need an image length of {l?.toFixed(0)}px at the same resolution. </p>
+            {/*
             <p><b>&nbsp;&nbsp;&nbsp;&nbsp; {targLB.toFixed(3)} ≤ ϕ ≤ {targUB.toFixed(3)} with {selectedConf}% confidence.</b></p>
+            */}
             <InputGroup>
                 <InputGroup.Text>Error Target (%):</InputGroup.Text>
                 <Form.Control type="number" min={0} max={100} value={newErrVF} onChange={(e) => setErr(e)} width={1} size="sm"></Form.Control>
