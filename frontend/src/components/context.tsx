@@ -18,6 +18,7 @@ const AppContextProvider = (props: {
     // control flow
     const [menuState, setMenuState] = useState<MenuState>('hidden');
     const [errorState, setErrorState] = useState<ErrorMessage>({ msg: "", stackTrace: "" });
+    const [showWarning, setShowWarning] = useState<boolean>(false);
 
 
     return (
@@ -32,7 +33,8 @@ const AppContextProvider = (props: {
                 accurateFractions: [accurateFractions, setAccurateFractions],
                 analysisInfo: [analysisInfo, setAnalysisInfo],
                 menuState: [menuState, setMenuState],
-                errorState: [errorState, setErrorState]
+                errorState: [errorState, setErrorState],
+                showWarning: [showWarning, setShowWarning],
             }}
         >
             {props.children}
