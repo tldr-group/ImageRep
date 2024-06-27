@@ -228,15 +228,18 @@ const Menu = () => {
         menuState: [menuState,]
     } = useContext(AppContext)!
 
+    const [collapse, setCollapse] = useState<boolean>(false);
+
     return (
         <>
             <ToastContainer className="p-5" position="bottom-end" >
                 <Toast show={menuState != 'hidden'}>
-                    <Toast.Header className="roundedme-2">
+                    <Toast.Header className="roundedme-2" closeButton={false}>
                         <strong className="me-auto" style={{ fontSize: '1.5em' }}>{getMenuInfo(menuState).title}</strong>
+                        <Button onClick={(e) => setCollapse(!collapse)} variant="outline-dark" size="sm">{collapse ? `▼` : `▲`}</Button>
                     </Toast.Header>
                     <Toast.Body>
-                        {getMenuInfo(menuState).innerHTML}
+                        {(collapse == false) && getMenuInfo(menuState).innerHTML}
                     </Toast.Body>
                 </Toast>
             </ToastContainer>
