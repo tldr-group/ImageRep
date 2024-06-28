@@ -136,6 +136,7 @@ def representativity(request) -> Response:
     result = make_error_prediction(
         binary_img, selected_conf, selected_err, model_error=False
     )  # make_error_prediction(binary_img, selected_conf, selected_err)
+    # this can get stuck sometimes in the optimisation step (usually cls > 1)
     print(result)
     """
     out = {

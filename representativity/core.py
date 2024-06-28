@@ -412,7 +412,9 @@ def make_error_prediction(
     n = ns_from_dims([np.array(binary_img.shape)], integral_range)
     print("bpe3")
 
-    std_bern = ((1 / n[0]) * (phase_fraction * (1 - phase_fraction))) ** 0.5
+    std_bern = (
+        (1 / n[0]) * (phase_fraction * (1 - phase_fraction))
+    ) ** 0.5  # TODO: this is the std of phi relative to Phi with
     std_model = get_std_model(n_dims, n_elems)
     abs_err_target = target_error * phase_fraction
     print("bpe4")
@@ -430,11 +432,9 @@ def make_error_prediction(
         print("bpe6")
     else:  # TODO what is this useful for.. for when you trust the model completely?
         z = norm.interval(confidence)[1]
-        abs_err_for_img = z * std_bern / phase_fraction
+        abs_err_for_img = z * std_bern
         n_for_err_targ = (
-            phase_fraction
-            * (1 - phase_fraction)
-            * (z / (abs_err_target * phase_fraction)) ** 2
+            phase_fraction * (1 - phase_fraction) * (z / abs_err_target) ** 2
         )
     print("bpe7")
     l_for_err_targ = dims_from_n(n_for_err_targ, equal_shape, integral_range, n_dims)
