@@ -15,7 +15,6 @@ from PIL import Image
 from typing import Callable
 
 from representativity.core import make_error_prediction
-from representativity.old import make_error_prediction as mpe_old
 
 URL_WHITELIST = [
     "https://sambasegment.z33.web.core.windows.net",

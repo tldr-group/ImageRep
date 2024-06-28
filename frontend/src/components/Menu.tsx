@@ -230,7 +230,7 @@ const Result = () => {
                     <Accordion.Header ref={lResultRef}>Required Length for Target</Accordion.Header>
                     {/*Need to manually overwrite the style here because of werid bug*/}
                     <Accordion.Body style={{ visibility: "visible" }}>
-                        For a {errVF.toFixed(2)}% uncertainty in phase fraction, you <b>need to measure an image size of {sizeText}</b> at the same resolution.
+                        For a {errVF.toFixed(2)}% uncertainty in phase fraction, you <b>need to measure an image size of about {sizeText}</b> at the same resolution.
                     </Accordion.Body>
                 </Accordion.Item>
             </Accordion >
