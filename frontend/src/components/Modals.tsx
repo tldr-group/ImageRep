@@ -15,6 +15,7 @@ import Accordion from 'react-bootstrap/Accordion';
 import Modal from 'react-bootstrap/Modal';
 
 import { getPhaseFraction } from "./imageLogic";
+import { AccordionHeaderProps } from "react-bootstrap/esm/AccordionHeader";
 
 
 const centreStyle = { display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '1em' }
@@ -157,6 +158,8 @@ const Result = () => {
     // errVF, the one they sent to the server and the slider to represent the new one
     // which they are setting for recalculate.
     const [newErrVF, setNewErrVF] = useState<number>(5);
+    const pfResultRef = useRef<HTMLHeadingElement>(null);
+    const lResultRef = useRef<HTMLHeadingElement>(null);
 
     const vals = imageInfo?.phaseVals!
     const phaseFrac = (accurateFractions != null) ?
@@ -173,11 +176,11 @@ const Result = () => {
     const l = analysisInfo?.lForDefaultErr;
 
     const setErr = (e: any) => {
-        setNewErrVF(Number(e.target!.value))
+        setNewErrVF(Number(e.target!.value));
     };
 
     const setConf = (e: any) => {
-        setSelectedConf(Number(e.target!.value))
+        setSelectedConf(Number(e.target!.value));
     };
 
     const recalculate = () => {
@@ -185,12 +188,32 @@ const Result = () => {
         setMenuState('processing');
     }
 
+    const c = colours[selectedPhase];
+    const headerHex = rgbaToHex(c[0], c[1], c[2], c[3]);
+
+    const restyleAccordionHeaders = (ref: React.RefObject<HTMLHeadingElement>, primary: boolean) => {
+        const headerBGCSSName = "--bs-accordion-active-bg"
+        const headerTextCSSName = "--bs-accordion-active-color"
+        const header = ref.current
+
+        const colour = (primary) ? headerHex : "#ffffff"
+
+        header?.style.setProperty(headerBGCSSName, colour)
+        header?.style.setProperty(headerTextCSSName, "#212529")
+        //header?.style.removeProperty("background-image")
+    }
+
+    useEffect(() => {
+        const refs = [pfResultRef, lResultRef];
+        refs.map((r, i) => restyleAccordionHeaders(r, (i == 0)));
+    }, [selectedPhase])
+
 
     return (
         <>
-            <Accordion defaultActiveKey="0">
-                <Accordion.Item eventKey="1" key={1}>
-                    <Accordion.Header>Phase Fraction Uncertainty</Accordion.Header>
+            <Accordion defaultActiveKey={['0']} flush alwaysOpen>
+                <Accordion.Item eventKey="0">
+                    <Accordion.Header ref={pfResultRef}>Phase Fraction Uncertainty</Accordion.Header>
                     {/*Need to manually overwrite the style here because of werid bug*/}
                     <Accordion.Body style={{ visibility: "visible" }}>
                         The bulk volume fraction ϕ is within {perErr?.toFixed(3)}% of your image volume
@@ -198,17 +221,23 @@ const Result = () => {
                         <p><b><i>i.e,</i> {LB.toFixed(3)} ≤ ϕ ≤ {UB.toFixed(3)} with {selectedConf}% confidence.</b></p>
                     </Accordion.Body>
                 </Accordion.Item>
-            </Accordion>
+                <Accordion.Item eventKey="1" >
+                    <Accordion.Header ref={lResultRef}>Required Length</Accordion.Header>
+                    {/*Need to manually overwrite the style here because of werid bug*/}
+                    <Accordion.Body style={{ visibility: "visible" }}>
+                        For a {errVF.toFixed(2)}% error target, you need an image length of {l?.toFixed(0)}px at the same resolution.
+                    </Accordion.Body>
+                </Accordion.Item>
+            </Accordion >
 
-
-            <p>For a {errVF.toFixed(2)}% error target, you need an image length of {l?.toFixed(0)}px at the same resolution. </p>
             {/*
             <p><b>&nbsp;&nbsp;&nbsp;&nbsp; {targLB.toFixed(3)} ≤ ϕ ≤ {targUB.toFixed(3)} with {selectedConf}% confidence.</b></p>
             */}
-            <InputGroup>
+            <p></p>
+            < InputGroup >
                 <InputGroup.Text>Error Target (%):</InputGroup.Text>
                 <Form.Control type="number" min={0} max={100} value={newErrVF} onChange={(e) => setErr(e)} width={1} size="sm"></Form.Control>
-            </InputGroup>
+            </InputGroup >
             <InputGroup>
                 <InputGroup.Text>Confidence in Bounds (%):</InputGroup.Text>
                 <Form.Control type="number" min={0} max={100} value={selectedConf} onChange={(e) => setConf(e)} width={1} size="sm"></Form.Control>
