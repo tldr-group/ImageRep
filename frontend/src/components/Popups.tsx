@@ -6,6 +6,7 @@ import Accordion from 'react-bootstrap/Accordion';
 import Toast from 'react-bootstrap/Toast'
 import ToastContainer from "react-bootstrap/ToastContainer";
 import Button from 'react-bootstrap/Button';
+import App from "../App";
 
 
 
@@ -70,4 +71,48 @@ export const CLSModal = () => {
             </ToastContainer>
         </>
     );
+}
+
+export const MoreInfo = () => {
+    const {
+        imageInfo: [imageInfo,],
+        analysisInfo: [analysisInfo,],
+        showInfo: [showInfo, setShowInfo]
+    } = useContext(AppContext)!;
+
+    const handleClose = () => { setShowInfo(false) };
+
+    return (
+        <>
+            <Modal show={showInfo} onHide={handleClose} size="lg">
+                <Modal.Header style={{ backgroundColor: '#212529', color: '#ffffff' }} closeVariant="white" closeButton>
+                    <Modal.Title>About the Model</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <p>How sure are we that our measured phase fraction in a material represents the 'true' or bulk phase fraction?
+                        We can never know for certain, but our model allows us to assess the uncertainty.
+                    </p>
+                    <p>
+                        We estimate the Two-Point-Correlation (TPC) - the probability a random vector starts and ends on pixels with
+                        the same value - of a chosen phase in a micrograph. From the TPC we determine the 'Integral Range', which is
+                        effectively the feature size or 'characteristic length scale' (CLS) of the phase in image. Previously this
+                        has been done statisically (and slowly), we do this directly by use of the FFT of the image.
+                    </p>
+                    <p>
+                        For finite-sized features in large images, the variance in the bulk phase fraction is some function of the CLS,
+                        so by determining it for our measured image we can establish uncertainty bounds on the bulk phase fraction given
+                        the measured phase fractions. Put another way, <b>we can state the true phase fraction lies within some d% of
+                            the measured phase fraction with c% of the time.</b>
+                    </p>
+
+                    <p>Full details can be found in the <a href="comingsoon">paper</a>.</p>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="dark" onClick={handleClose}>
+                        Understood!
+                    </Button>
+                </Modal.Footer>
+            </Modal >
+        </>
+    )
 }

@@ -19,6 +19,7 @@ const AppContextProvider = (props: {
     const [menuState, setMenuState] = useState<MenuState>('hidden');
     const [errorState, setErrorState] = useState<ErrorMessage>({ msg: "", stackTrace: "" });
     const [showWarning, setShowWarning] = useState<boolean>(false);
+    const [showInfo, setShowInfo] = useState<boolean>(false);
 
 
     return (
@@ -35,6 +36,7 @@ const AppContextProvider = (props: {
                 menuState: [menuState, setMenuState],
                 errorState: [errorState, setErrorState],
                 showWarning: [showWarning, setShowWarning],
+                showInfo: [showInfo, setShowInfo]
             }}
         >
             {props.children}

@@ -5,7 +5,7 @@ import Topbar from "./components/Topbar";
 import DragDrop from "./components/DragDrop";
 import PreviewCanvas from "./components/Canvas";
 import { Menu } from "./components/Menu";
-import { ErrorMessage, CLSModal } from "./components/Popups"
+import { ErrorMessage, CLSModal, MoreInfo } from "./components/Popups"
 
 import { loadFromTIFF, loadFromImage } from "./components/imageLogic";
 
@@ -165,6 +165,7 @@ const App = () => {
             <Menu />
             <ErrorMessage />
             {showWarning && <CLSModal />}
+            <MoreInfo />
         </div>
     );
 };

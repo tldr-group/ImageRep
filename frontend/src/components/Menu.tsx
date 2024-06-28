@@ -148,7 +148,8 @@ const Result = () => {
         selectedConf: [selectedConf, setSelectedConf],
         errVF: [errVF, setErrVF],
         accurateFractions: [accurateFractions,],
-        menuState: [, setMenuState]
+        menuState: [, setMenuState],
+        showInfo: [, setShowInfo],
     } = useContext(AppContext)!
 
     // we have two errVFs here because we want the values in the text to reflect the old
@@ -229,7 +230,7 @@ const Result = () => {
                     <Accordion.Header ref={lResultRef}>Required Length for Target</Accordion.Header>
                     {/*Need to manually overwrite the style here because of werid bug*/}
                     <Accordion.Body style={{ visibility: "visible" }}>
-                        For a {errVF.toFixed(2)}% uncertainty target, you need to measure an image size of <b>{sizeText}</b> at the same resolution.
+                        For a {errVF.toFixed(2)}% uncertainty in phase fraction, you <b>need to measure an image size of {sizeText}</b> at the same resolution.
                     </Accordion.Body>
                 </Accordion.Item>
             </Accordion >
@@ -247,7 +248,7 @@ const Result = () => {
                 <Form.Control type="number" min={0} max={100} value={selectedConf} onChange={(e) => setConf(e)} width={1} size="sm"></Form.Control>
             </InputGroup>
             <div style={centreStyle}>
-                <Button variant="outline-dark">More Info</Button>
+                <Button variant="outline-dark" onClick={(e) => { setShowInfo(true) }}>More Info</Button>
                 <Button variant="dark" onClick={(e) => { recalculate() }}>Recalculate!</Button>
             </div>
         </>

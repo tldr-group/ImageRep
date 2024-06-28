@@ -46,6 +46,10 @@ interface contextProps {
         showWarning: boolean,
         setShowWarning: (e: boolean) => void
     ]
+    showInfo: [
+        showInfo: boolean,
+        setShowInfo: (e: boolean) => void
+    ]
 };
 
 const AppContext = createContext<contextProps | null>(null);
