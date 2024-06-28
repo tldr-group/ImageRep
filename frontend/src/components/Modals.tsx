@@ -15,7 +15,6 @@ import Accordion from 'react-bootstrap/Accordion';
 import Modal from 'react-bootstrap/Modal';
 
 import { getPhaseFraction } from "./imageLogic";
-import { size } from "underscore";
 
 
 const centreStyle = { display: 'flex', justifyContent: 'space-evenly', alignItems: 'center', marginTop: '1em' }
@@ -114,7 +113,7 @@ const ConfidenceSelect = () => {
                         <td >{selectedPhase}</td>
                     </tr>
                     <tr>
-                        <td>Volume Fraction:</td>
+                        <td>Phase Fraction:</td>
                         <td>{phaseFrac}</td>
                     </tr>
                     <tr>
@@ -223,7 +222,7 @@ const Result = () => {
                     <Accordion.Header ref={pfResultRef}>Phase Fraction Uncertainty</Accordion.Header>
                     {/*Need to manually overwrite the style here because of werid bug*/}
                     <Accordion.Body style={{ visibility: "visible" }}>
-                        The <b>bulk volume fraction ϕ is within {perErr?.toFixed(3)}% of your image volume
+                        The <b>bulk phase fraction ϕ is within {perErr?.toFixed(3)}% of your image phase
                             fraction Φ ({phaseFrac.toFixed(3)}) </b> with {selectedConf}% confidence.
                         {/*<p><b><i>i.e,</i> {LB.toFixed(3)} ≤ ϕ ≤ {UB.toFixed(3)} with {selectedConf}% confidence.</b></p>*/}
                     </Accordion.Body>
