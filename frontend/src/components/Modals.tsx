@@ -15,10 +15,10 @@ import Accordion from 'react-bootstrap/Accordion';
 import Modal from 'react-bootstrap/Modal';
 
 import { getPhaseFraction } from "./imageLogic";
-import { AccordionHeaderProps } from "react-bootstrap/esm/AccordionHeader";
+import { size } from "underscore";
 
 
-const centreStyle = { display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '1em' }
+const centreStyle = { display: 'flex', justifyContent: 'space-evenly', alignItems: 'center', marginTop: '1em' }
 
 const _getCSSColour = (currentStateVal: any, targetStateVal: any, successPrefix: string, colourIdx: number): string => {
     // Boring function to map a success to current labelling colour. Used for GUI elements.
@@ -124,7 +124,7 @@ const ConfidenceSelect = () => {
                 </tbody>
             </Table>
             <InputGroup>
-                <InputGroup.Text>Error Target (%):</InputGroup.Text>
+                <InputGroup.Text>Uncertainty Target (%):</InputGroup.Text>
                 <Form.Control type="number" min={0} max={100} value={errVF} onChange={(e) => setErr(e)} width={1} size="sm"></Form.Control>
             </InputGroup>
             <InputGroup>
@@ -171,9 +171,10 @@ const Result = () => {
 
     const perErr = analysisInfo?.percentageErr;
     const [LB, UB] = [Math.max((1 - perErr! / 100) * phaseFrac, 0), Math.min((1 + perErr! / 100) * phaseFrac, 1)];
-    const [targLB, targUB] = [(1 - errVF! / 100) * phaseFrac, (1 + errVF! / 100) * phaseFrac];
 
     const l = analysisInfo?.lForDefaultErr;
+    const lStr = l?.toFixed(0);
+    const sizeText = (imageInfo?.nDims == 3) ? `${lStr}x${lStr}x${lStr}` : `${lStr}x${lStr}`
 
     const setErr = (e: any) => {
         setNewErrVF(Number(e.target!.value));
@@ -194,12 +195,18 @@ const Result = () => {
     const restyleAccordionHeaders = (ref: React.RefObject<HTMLHeadingElement>, primary: boolean) => {
         const headerBGCSSName = "--bs-accordion-active-bg"
         const headerTextCSSName = "--bs-accordion-active-color"
+        const headerDefaultBGCSSName = "--bs-accordion-bg"
         const header = ref.current
 
         const colour = (primary) ? headerHex : "#ffffff"
 
         header?.style.setProperty(headerBGCSSName, colour)
         header?.style.setProperty(headerTextCSSName, "#212529")
+
+        if (primary) {
+            header?.style.setProperty(headerDefaultBGCSSName, colour)
+            header?.style.setProperty('background-color', colour)
+        }
         //header?.style.removeProperty("background-image")
     }
 
@@ -216,16 +223,16 @@ const Result = () => {
                     <Accordion.Header ref={pfResultRef}>Phase Fraction Uncertainty</Accordion.Header>
                     {/*Need to manually overwrite the style here because of werid bug*/}
                     <Accordion.Body style={{ visibility: "visible" }}>
-                        The bulk volume fraction ϕ is within {perErr?.toFixed(3)}% of your image volume
-                        fraction Φ ({phaseFrac.toFixed(3)}) with {selectedConf}% confidence.
-                        <p><b><i>i.e,</i> {LB.toFixed(3)} ≤ ϕ ≤ {UB.toFixed(3)} with {selectedConf}% confidence.</b></p>
+                        The <b>bulk volume fraction ϕ is within {perErr?.toFixed(3)}% of your image volume
+                            fraction Φ ({phaseFrac.toFixed(3)}) </b> with {selectedConf}% confidence.
+                        {/*<p><b><i>i.e,</i> {LB.toFixed(3)} ≤ ϕ ≤ {UB.toFixed(3)} with {selectedConf}% confidence.</b></p>*/}
                     </Accordion.Body>
                 </Accordion.Item>
                 <Accordion.Item eventKey="1" >
-                    <Accordion.Header ref={lResultRef}>Required Length</Accordion.Header>
+                    <Accordion.Header ref={lResultRef}>Required Length for Target</Accordion.Header>
                     {/*Need to manually overwrite the style here because of werid bug*/}
                     <Accordion.Body style={{ visibility: "visible" }}>
-                        For a {errVF.toFixed(2)}% error target, you need an image length of {l?.toFixed(0)}px at the same resolution.
+                        For a {errVF.toFixed(2)}% uncertainty target, you need to measure an image size of <b>{sizeText}</b> at the same resolution.
                     </Accordion.Body>
                 </Accordion.Item>
             </Accordion >
@@ -235,7 +242,7 @@ const Result = () => {
             */}
             <p></p>
             < InputGroup >
-                <InputGroup.Text>Error Target (%):</InputGroup.Text>
+                <InputGroup.Text>Uncertainty Target (%):</InputGroup.Text>
                 <Form.Control type="number" min={0} max={100} value={newErrVF} onChange={(e) => setErr(e)} width={1} size="sm"></Form.Control>
             </InputGroup >
             <InputGroup>
@@ -243,6 +250,7 @@ const Result = () => {
                 <Form.Control type="number" min={0} max={100} value={selectedConf} onChange={(e) => setConf(e)} width={1} size="sm"></Form.Control>
             </InputGroup>
             <div style={centreStyle}>
+                <Button variant="outline-dark">More Info</Button>
                 <Button variant="dark" onClick={(e) => { recalculate() }}>Recalculate!</Button>
             </div>
         </>
@@ -255,7 +263,7 @@ const getMenuInfo = (state: MenuState) => {
         case 'phase':
             return { title: "Select Phase", innerHTML: <PhaseSelect /> }
         case 'conf':
-            return { title: "Select Confidence", innerHTML: <ConfidenceSelect /> }
+            return { title: "Choose Parameters", innerHTML: <ConfidenceSelect /> }
         case 'processing':
             return { title: "Processing", innerHTML: <div style={centreStyle}><Spinner /></div> }
         case 'conf_result':
