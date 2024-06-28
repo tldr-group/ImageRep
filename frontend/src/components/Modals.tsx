@@ -185,13 +185,22 @@ const Result = () => {
         setMenuState('processing');
     }
 
+
     return (
         <>
-            <p>
-                The bulk volume fraction ϕ is within {perErr?.toFixed(3)}% of your image volume
-                fraction Φ ({phaseFrac.toFixed(3)}) with {selectedConf}% confidence.
-            </p>
-            <p><b><i>i.e,</i> {LB.toFixed(3)} ≤ ϕ ≤ {UB.toFixed(3)} with {selectedConf}% confidence.</b></p>
+            <Accordion defaultActiveKey="0">
+                <Accordion.Item eventKey="1" key={1}>
+                    <Accordion.Header>Phase Fraction Uncertainty</Accordion.Header>
+                    {/*Need to manually overwrite the style here because of werid bug*/}
+                    <Accordion.Body style={{ visibility: "visible" }}>
+                        The bulk volume fraction ϕ is within {perErr?.toFixed(3)}% of your image volume
+                        fraction Φ ({phaseFrac.toFixed(3)}) with {selectedConf}% confidence.
+                        <p><b><i>i.e,</i> {LB.toFixed(3)} ≤ ϕ ≤ {UB.toFixed(3)} with {selectedConf}% confidence.</b></p>
+                    </Accordion.Body>
+                </Accordion.Item>
+            </Accordion>
+
+
             <p>For a {errVF.toFixed(2)}% error target, you need an image length of {l?.toFixed(0)}px at the same resolution. </p>
             {/*
             <p><b>&nbsp;&nbsp;&nbsp;&nbsp; {targLB.toFixed(3)} ≤ ϕ ≤ {targUB.toFixed(3)} with {selectedConf}% confidence.</b></p>
@@ -221,7 +230,7 @@ const getMenuInfo = (state: MenuState) => {
         case 'processing':
             return { title: "Processing", innerHTML: <div style={centreStyle}><Spinner /></div> }
         case 'conf_result':
-            return { title: "Result", innerHTML: <Result /> }
+            return { title: "Results", innerHTML: <Result /> }
         case 'hidden': // fall through
         default:
             return { title: "", innerHTML: <></> }
@@ -272,9 +281,10 @@ export const ErrorMessage = () => {
                 <Modal.Body>{errorObject.msg}</Modal.Body>
                 <Modal.Body>
                     <Accordion defaultActiveKey="0">
-                        <Accordion.Item eventKey="1">
+                        <Accordion.Item eventKey="1" key={1}>
                             <Accordion.Header>Stack trace</Accordion.Header>
-                            <Accordion.Body>
+                            {/*Need to manually overwrite the style here because of werid bug*/}
+                            <Accordion.Body style={{ visibility: "visible" }}>
                                 {errorObject.stackTrace}
                             </Accordion.Body>
                         </Accordion.Item>

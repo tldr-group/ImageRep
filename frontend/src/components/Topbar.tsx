@@ -28,18 +28,18 @@ const Topbar = ({ loadFromFile, reset }: TopbarProps) => {
                 {/*path for these assets need to be relative to index.html in assets/*/}
                 <Navbar.Brand><img src="favicon.png" width="40" height="40" className="d-inline-block align-top" /></Navbar.Brand>
                 <Navbar.Brand style={{ marginTop: "3px", fontSize: "1.75em" }}>mea-<i>sure?</i></Navbar.Brand>
-                <Navbar.Collapse id="basic-navbar-nav">
-                    <Nav>
-                        <Nav.Link onClick={addData}>Add Data</Nav.Link>
-                        <input
-                            type='file'
-                            id='file_load'
-                            ref={fileInputRef}
-                            style={{ display: 'none' }}
-                            onChange={e => handleFileUpload(e)} />
-                        <Nav.Link style={{ color: "red" }} onClick={(e) => reset()}>Reset</Nav.Link>
-                    </Nav>
-                </Navbar.Collapse>
+
+                <Nav>
+                    <Nav.Link onClick={addData}>Add Data</Nav.Link>
+                    <input
+                        type='file'
+                        id='file_load'
+                        ref={fileInputRef}
+                        style={{ display: 'none' }}
+                        onChange={e => handleFileUpload(e)} />
+                    <Nav.Link style={{ color: "red" }} onClick={(e) => reset()}>Reset</Nav.Link>
+                </Nav>
+
             </Container>
         </Navbar >
     );

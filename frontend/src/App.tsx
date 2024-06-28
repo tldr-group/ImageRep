@@ -64,16 +64,25 @@ const App = () => {
             };
             console.log(result);
 
-            if (result?.segmented == false) {
+            if (result == null) {
                 setErrorState({
-                    msg: `Data is unsegmented - try using our web segmentation tool, SAMBA (https://www.sambasegment.com/) `,
-                    stackTrace: `Number of unique values ${result?.nPhases} > 6`
-                })
+                    msg: "Failed to load data",
+                    stackTrace: ""
+                });
+                return;
+            }
+
+            if (result.segmented == false) {
+                setErrorState({
+                    msg: "Data is unsegmented - try using our web segmentation tool, SAMBA (https://www.sambasegment.com/)",
+                    stackTrace: "Number of unique values > 6"
+                });
+                return;
             } else {
                 requestPhaseFraction(file);
-                result!.file = file;
+                result.file = file;
                 setImageInfo(result);
-                setPreviewImg(result!.previewImg);
+                setPreviewImg(result.previewImg);
                 setMenuState('phase');
             }
         };
@@ -152,8 +161,8 @@ const App = () => {
                 {!previewImg && <DragDrop loadFromFile={appLoadFile} />}
                 {previewImg && <PreviewCanvas />}
             </div>
-            {errorState.msg == "" && <Menu></Menu>}
-            {errorState.msg != "" && <ErrorMessage />}
+            <Menu />
+            <ErrorMessage />
             {showWarning && <CLSModal />}
         </div>
     );
