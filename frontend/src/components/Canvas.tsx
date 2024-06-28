@@ -44,6 +44,7 @@ const PreviewCanvas = () => {
         const ctx = canvas.getContext("2d");
         const [ih, iw, ch, cw] = [image.naturalHeight, image.naturalWidth, canvas.height, canvas.width];
         const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, ADDITIONAL_SF);
+        ctx?.clearRect(0, 0, canvas.width, canvas.height);
         ctx?.drawImage(image, correctDims.ox, correctDims.oy, correctDims.w, correctDims.h);
         //ctx?.drawImage(image, 0, 0, correctDims.w, correctDims.h);
     }
@@ -81,7 +82,8 @@ const PreviewCanvas = () => {
         // create mapping of {greyscaleVal1: [color to draw], greyscaleVal2: [color to draw]}
         // where color to draw is blue, orange, etc if val1 phase selected, greyscale otherwise
         const phaseCheck = (x: number, i: number) => {
-            const originalColour = [x, [x, x, x, x]]; // identity mapping of grey -> grey in RGBA
+            const alpha = (selectedPhase == 0) ? 255 : 80
+            const originalColour = [x, [x, x, x, alpha]]; // identity mapping of grey -> grey in RGBA
             const newColour = [x, colours[i + 1]]; // grey -> phase colour
             const phaseIsSelected = (i + 1 == selectedPhase);
             return phaseIsSelected ? newColour : originalColour;

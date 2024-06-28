@@ -24,7 +24,7 @@ export const replaceGreyscaleWithColours = (arr: Uint8ClampedArray, mapping: { [
             out[i] = R;
             out[i + 1] = G;
             out[i + 2] = B;
-            out[i + 3] = 255;
+            out[i + 3] = A;
         }
     }
     return out;
