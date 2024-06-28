@@ -4,7 +4,8 @@ import AppContext, { ImageLoadInfo, AnalysisInfo, IR_LIMIT_PX } from "./componen
 import Topbar from "./components/Topbar";
 import DragDrop from "./components/DragDrop";
 import PreviewCanvas from "./components/Canvas";
-import { Menu, ErrorMessage, CLSModal } from "./components/Modals";
+import { Menu } from "./components/Menu";
+import { ErrorMessage, CLSModal } from "./components/Popups"
 
 import { loadFromTIFF, loadFromImage } from "./components/imageLogic";
 
