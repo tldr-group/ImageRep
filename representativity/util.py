@@ -333,7 +333,7 @@ def fit_to_errs_function(dim, n_voxels, a, b):
 
 
 def make_error_prediction(
-    img, conf=0.95, err_targ=0.05, model_error=True, mxtpc=100, shape="equal"
+    img, conf=0.95, err_targ=0.05, model_error=True, mxtpc=100, shape="equal", n_divisions=301
 ):
     pf = torch.mean(img).item()
     dims = len(img.shape)
@@ -347,22 +347,26 @@ def make_error_prediction(
     abs_err_target = err_targ * pf
     if model_error:
         # calculate the absolute error for the image:
-        conf_bounds = get_prediction_interval(pf, std_bern, std_model, conf)
+        print(f'std_model = {std_model}')
+        print(f'pf = {pf}')
+        print(f'std_bern = {std_bern}')
+        conf_bounds = get_prediction_interval(pf, std_bern, std_model, conf, n_divisions)
         abs_err_for_img = pf - conf_bounds[0]
         # calculate the n for the error target:
         args = (pf, std_model, err_targ, conf)
-        n_for_err_targ = minimize(find_n_for_err_targ, n, args=args)
+        # TODO: this is a slow convergence, can be much faster with a 'lion in a forest' algorithm:
+        n_for_err_targ = minimize(find_n_for_err_targ, n, args=args, method='nelder-mead', bounds=[(10, 10e8)])  
         n_for_err_targ = n_for_err_targ.x[0]
     else:  # TODO what is this useful for.. for when you trust the model completely?
         z = stats.norm.interval(conf)[1]
-        abs_err_for_img = z * std_bern / pf
-        n_for_err_targ = pf * (1 - pf) * (z / (abs_err_target * pf)) ** 2
+        abs_err_for_img = z*std_bern
+        n_for_err_targ = pf * (1 - pf) * (z / abs_err_target) ** 2
 
     l_for_err_targ = dims_from_n(n_for_err_targ, shape, cls, dims)
     percentage_err_for_img = abs_err_for_img / pf
     return percentage_err_for_img, l_for_err_targ, cls
 
-def get_prediction_interval(image_pf, pred_std, pred_std_error_std, conf_level=0.95, n_divisions=101):
+def get_prediction_interval(image_pf, pred_std, pred_std_error_std, conf_level=0.95, n_divisions=301):
     '''Get the prediction interval for the phase fraction of the material given the image phase
     fraction, the predicted standard deviation and the standard deviation of the prediction error.'''
     # have a large enough number of stds to converge to 0 at both ends, 
@@ -388,6 +392,8 @@ def get_prediction_interval(image_pf, pred_std, pred_std_error_std, conf_level=0
     # Sum the distributions over the different stds
     sum_dist_norm = np.sum(pf_dist, axis=0)*np.diff(x_std_dist)[0]
     # Find the alpha confidence bounds
+    # need a bit of normalization for symmetric bounds (it's very close to 1 already)
+    sum_dist_norm /= np.trapz(sum_dist_norm, pf_x_1d)
     cum_sum_sum_dist_norm = np.cumsum(sum_dist_norm*np.diff(pf_x_1d)[0])
     half_conf_level = (1+conf_level)/2
     conf_level_beginning = np.where(cum_sum_sum_dist_norm > 1-half_conf_level)[0][0]
@@ -398,11 +404,13 @@ def get_prediction_interval(image_pf, pred_std, pred_std_error_std, conf_level=0
 def normal_dist(x, mean, std):
     return (1.0 / (std * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mean) / std) ** 2)
 
-def find_n_for_err_targ(n, image_pf, pred_std_error_std, err_target, conf_level=0.95, n_divisions=101):
+
+def find_n_for_err_targ(n, image_pf, pred_std_error_std, err_target, conf_level=0.95, n_divisions=301):
+    n = n[0]
     std_bern = ((1 / n) * (image_pf * (1 - image_pf))) ** 0.5
     pred_interval = get_prediction_interval(image_pf, std_bern, pred_std_error_std, conf_level, n_divisions)
     err_for_img = image_pf - pred_interval[0]
-    return (err_target - err_for_img)**2
+    return np.abs(err_target - err_for_img)
         
 
 def optimize_error_conf_pred(bern_conf, total_conf, std_bern, std_model, pf):

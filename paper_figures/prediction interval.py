@@ -6,7 +6,7 @@ from representativity import util
 
 
 def plot_likelihood_of_phi(image_pf, pred_std, std_dist_std):
-    std_dist_divisions = 101
+    std_dist_divisions = 1001
     num_stds = min(pred_std/std_dist_std - pred_std/std_dist_std/10, 6)
     # first make the "weights distribution", the normal distribution of the stds
     # where the prediction std is the mean of this distribution.
@@ -48,19 +48,21 @@ def plot_likelihood_of_phi(image_pf, pred_std, std_dist_std):
     # print(pf_dist_integral)
     
     sum_dist_norm = np.sum(pf_dist, axis=0)*np.diff(x_std_dist)[0]
-    # sum_dist_norm /= np.trapz(sum_dist_norm, pf_x_1d)
-
     # mu, std = norm.fit(sum_dist_norm)
     # p = norm.pdf(pf_x_1d, mu, std)
     # print(mu, std)
     mid_std_dist = pf_dist_before_norm[std_dist_divisions//2,:]
-    # mid_std_dist /= np.trapz(mid_std_dist, pf_x_1d)
+    # both need a bit of normalization for symmetric bounds (they're both very close to 1)
+    sum_dist_norm /= np.trapz(sum_dist_norm, pf_x_1d)
+    mid_std_dist /= np.trapz(mid_std_dist, pf_x_1d)
 
     cum_sum_sum_dist_norm = np.cumsum(sum_dist_norm*np.diff(pf_x_1d)[0])
+    # cum_sum_sum_dist_norm /= np.trapz(sum_dist_norm, pf_x_1d)
     alpha = 0.975
     alpha_sum_dist_norm_end = np.where(cum_sum_sum_dist_norm > alpha)[0][0]
     alpha_sum_dist_norm_beginning = np.where(cum_sum_sum_dist_norm > 1-alpha)[0][0]
     cum_sum_mid_std_dist = np.cumsum(mid_std_dist*np.diff(pf_x_1d)[0])
+    # cum_sum_mid_std_dist /= np.trapz(mid_std_dist, pf_x_1d)
     alpha_mid_std_dist_end = np.where(cum_sum_mid_std_dist > alpha)[0][0]
     alpha_mid_std_dist_beginning = np.where(cum_sum_mid_std_dist > 1-alpha)[0][0]
     plt.plot(pf_x_1d, mid_std_dist, c='blue', label = 'middle normal dist')
@@ -75,15 +77,15 @@ def plot_likelihood_of_phi(image_pf, pred_std, std_dist_std):
     plt.legend()
     plt.show()
     print(np.trapz(sum_dist_norm, pf_x_1d))
-    print(np.trapz(pf_dist_before_norm[std_dist_divisions//2,:], pf_x_1d))
+    print(np.trapz(mid_std_dist, pf_x_1d))
 
 
 
 
 if __name__ == "__main__":
     image_pf = 0.3
-    pred_std = image_pf/100
-    std_dist_std = pred_std/5
+    pred_std = image_pf/100*2/3
+    std_dist_std = pred_std/4
     time_bf = time.time()
     plot_likelihood_of_phi(image_pf, pred_std, std_dist_std)
     print(f'time taken = {time.time()-time_bf}')
