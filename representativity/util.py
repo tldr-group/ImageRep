@@ -366,7 +366,7 @@ def make_error_prediction(
     percentage_err_for_img = abs_err_for_img / pf
     return percentage_err_for_img, l_for_err_targ, cls
 
-def get_prediction_interval(image_pf, pred_std, pred_std_error_std, conf_level=0.95, n_divisions=101):
+def get_prediction_interval(image_pf, pred_std, pred_std_error_std, conf_level=0.95, n_divisions=301):
     '''Get the prediction interval for the phase fraction of the material given the image phase
     fraction, the predicted standard deviation and the standard deviation of the prediction error.'''
     # have a large enough number of stds to converge to 0 at both ends, 
@@ -392,6 +392,8 @@ def get_prediction_interval(image_pf, pred_std, pred_std_error_std, conf_level=0
     # Sum the distributions over the different stds
     sum_dist_norm = np.sum(pf_dist, axis=0)*np.diff(x_std_dist)[0]
     # Find the alpha confidence bounds
+    # need a bit of normalization for symmetric bounds (it's very close to 1 already)
+    sum_dist_norm /= np.trapz(sum_dist_norm, pf_x_1d)
     cum_sum_sum_dist_norm = np.cumsum(sum_dist_norm*np.diff(pf_x_1d)[0])
     half_conf_level = (1+conf_level)/2
     conf_level_beginning = np.where(cum_sum_sum_dist_norm > 1-half_conf_level)[0][0]
@@ -403,7 +405,7 @@ def normal_dist(x, mean, std):
     return (1.0 / (std * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mean) / std) ** 2)
 
 
-def find_n_for_err_targ(n, image_pf, pred_std_error_std, err_target, conf_level=0.95, n_divisions=101):
+def find_n_for_err_targ(n, image_pf, pred_std_error_std, err_target, conf_level=0.95, n_divisions=301):
     n = n[0]
     std_bern = ((1 / n) * (image_pf * (1 - image_pf))) ** 0.5
     pred_interval = get_prediction_interval(image_pf, std_bern, pred_std_error_std, conf_level, n_divisions)
