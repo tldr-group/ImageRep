@@ -333,7 +333,7 @@ def fit_to_errs_function(dim, n_voxels, a, b):
 
 
 def make_error_prediction(
-    img, conf=0.95, err_targ=0.05, model_error=True, mxtpc=100, shape="equal"
+    img, conf=0.95, err_targ=0.05, model_error=True, mxtpc=100, shape="equal", n_divisions=301
 ):
     pf = torch.mean(img).item()
     dims = len(img.shape)
@@ -347,7 +347,10 @@ def make_error_prediction(
     abs_err_target = err_targ * pf
     if model_error:
         # calculate the absolute error for the image:
-        conf_bounds = get_prediction_interval(pf, std_bern, std_model, conf)
+        print(f'std_model = {std_model}')
+        print(f'pf = {pf}')
+        print(f'std_bern = {std_bern}')
+        conf_bounds = get_prediction_interval(pf, std_bern, std_model, conf, n_divisions)
         abs_err_for_img = pf - conf_bounds[0]
         # calculate the n for the error target:
         args = (pf, std_model, err_targ, conf)
