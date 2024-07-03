@@ -9,6 +9,12 @@ def autocorrelation_orthant(
 ):
     """Calculates the autocorrelation function of an image using the FFT method
     Calculates over a single orthant, in all directions right and down from the origin.
+
+    Instead of explictly shifting image by every vector r \in [(0, 1) ... (0, l) .. (l, l)]
+    and taking the product to compute 2PC
+
+    Reduces N^2 (N shifts * N for each product) -> Nlog(N) where N = image size
+
     """
     ax = list(range(0, len(binary_img.shape)))
     img_FFT = np.fft.rfftn(binary_img, axes=ax)
@@ -16,6 +22,7 @@ def autocorrelation_orthant(
         np.fft.irfftn(img_FFT.conjugate() * img_FFT, s=binary_img.shape, axes=ax).real
         / num_elements
     )
+    # tpc is 2D array for orthant where tpc[y, x] is the tpc for the vector (y,x)
     return tpc[tuple(map(slice, (desired_length,) * n_dims))]
 
 
@@ -31,10 +38,17 @@ def two_point_correlation_orthant(
     before calculating the 2PC function using the FFT method. After the FFT calculation, it
     normalises the result by the number of possible occurences of the 2PC function.
     """
+    # periodic = periodic bcs, which can mess correlations but is needed for stability
+    # adding 'ghost columns/rows' which loop round with the periodic bcs but are then ignored
+    # in the product, which we need to then account for with normalisation
     img_shape = binary_img.shape
     if not periodic:  # padding the image with zeros, then calculates the normaliser.
         indices_img = np.indices(img_shape) + 1
+
         normaliser = np.flip(np.prod(indices_img, axis=0))
+        # normaliser is an arr where the entry arr[x, y] counts the number of the original entries of img that
+        # will be present after shifting by x,y i.e for a shift 0,0 this is mag(img)
+        # this lets you normalise the mean with the 'ghost dimensions' later for non-periodic images
         binary_img = np.pad(
             binary_img, [(0, desired_length) for _ in range(n_dims)], "constant"
         )
@@ -43,9 +57,15 @@ def two_point_correlation_orthant(
         binary_img, num_elements, n_dims, desired_length
     )
 
-    if not periodic:  # normalising the result
+    if not periodic:
+        # normalising the result as we have more 0s than would otherwise have
+        # not used often
+
+        # normaliser[:100, :100]
+        # this tuple(map(slice, shape)) is to be dimensional agnostic (2d or 3d)
         normaliser = normaliser[tuple(map(slice, tpc_desired.shape))]
         normaliser = num_elements / normaliser
+        # normaliser is an array of adjustments applied pointwise to the tpc_desired
         return normaliser * tpc_desired
     else:
         return tpc_desired
@@ -61,6 +81,8 @@ def two_point_correlation(
     # orthant = N-D quadrant. stored here, indexed by axis
     orthants: dict[tuple, np.ndarray] = {}
     # calculating the 2PC function for each orthant, saving the result in a dictionary
+    # flip list is just a list of axes to flip, sometimes no flip happens
+    # computing tpc of left and down img = computing tpc of left and up flipped (T->B) image
     for axis in product((1, 0), repeat=n_dims - 1):
         flip_list = np.arange(n_dims - 1)[~np.array(axis, dtype=bool)]
         # flipping img to the opposite side for calculation of the 2PC:
@@ -74,11 +96,16 @@ def two_point_correlation(
 
         # flipping the orthant to the opposite side
         opposite_axis = tuple(1 - np.array(axis)) + (0,)
+        # symmetry flip
         orthants[opposite_axis] = np.flip(original_tpc_orthant)
 
+    # result is our 2/3D array of TPC values up to desired length (in half-manhattan distance NOT euclidean)
     result = np.zeros((desired_length * 2 + 1,) * n_dims)
     for axis in orthants.keys():
+        # axis looks like (1, 1)
         axis_idx = np.array(axis) * desired_length
+        # axis_idx looks like (100, 100)
+        # slice to input: mapping of orthant axis to location in result i.e [0:100, 0:100]
         slice_to_input = tuple(map(slice, axis_idx, axis_idx + desired_length))  # + 1
         result[slice_to_input] = orthants[axis]
     return result
@@ -87,9 +114,10 @@ def two_point_correlation(
 def radial_tpc(
     binary_img: np.ndarray, volumetric: bool = False, periodic: bool = True
 ) -> np.ndarray:
-
+    # this is a problem where arr not square, should take minimum of dimensiosn (for now)
+    # TODO: make desired length different in all dimensions
     img_y_length: int = binary_img.shape[0]  # was 0
-    # desired length: output of fft
+    # desired length: dims of output of fft arr,
     desired_length = (img_y_length // 2) if periodic else (img_y_length - 1)
     return two_point_correlation(
         binary_img,
@@ -106,13 +134,22 @@ def calc_coeff_for_cls_prediction(
     img_volume: int,
     bool_array: np.ndarray,
 ) -> float:
+    # norm vol: normilisation volumes
+    # dist_arr still euclidean dists of orthant indices from centre
+    # end_dist: when tpc stops fluctuating
+    # bool arr: distances less than end_distance
+    # looking for C_r0 here
+
+    # sum of normalisations of all vectors less than r_0/end_dist
     sum_of_small_radii = np.sum(norm_vol[dist_arr < end_dist])
     coeff_1 = img_volume / (img_volume - sum_of_small_radii)
+    # TODO: check if np.sum(norm_vol[bool_array]) == np.sum(norm_vol[dist_arr < end_dist])
     coeff_2 = (1 / img_volume) * (np.sum(bool_array) - np.sum(norm_vol[bool_array]))
     coeff_product = coeff_1 * coeff_2
     while coeff_product > 1:
         print(f"coeff product = {coeff_product}")
         coeff_product /= 1.1
+    # output is effectively (but not exactly) C_r0
     return coeff_1 / (1 - coeff_product)
 
 
@@ -120,6 +157,18 @@ def find_end_dist_idx(
     pf: float, tpc: np.ndarray, dist_arr: np.ndarray, distances: np.ndarray
 ):
     """Finds the distance before the tpc function plateaus."""
+    # looking at change in TPC radially from centre
+    # deviation = how different TPC is from image phase fraction ^2
+    # because TPC should converge to real phase fraction squared
+
+    # looking at percentage of all TPCs in the ring that are outside
+    # of 5% of the image phase fraction squared
+    # => where TPC stops fluctuating
+
+    # the rings are all distances from (0, 100) then (100, 200) then ,,,
+    # based on distances
+    # TODO: renamed distances -> r0_bounds or ring_distances etc
+
     percentage = 0.05
     small_change = (pf - pf**2) * percentage
     for dist_i in np.arange(1, len(distances) - 1):
@@ -134,9 +183,19 @@ def find_end_dist_idx(
 
 def find_end_dist_tpc(pf: float, tpc: np.ndarray, dist_arr: np.ndarray) -> float:
     # print(f'pf^2 = {pf**2}')
-    distances = np.linspace(
-        0, int(np.max(dist_arr)), 100
-    )  # np.concatenate([np.arange(0, np.max(dist_arr), 100)])
+    # assumption is image is at least 200 in every dimensoom
+    # TODO: signpost in paper?
+    # TODO: add post-result warning if img < (200, 200, ...) that result
+    # TODO: add if/else here to default to other method of choosing dist
+
+    # this gives different results but works for smaller images
+    # distances = np.linspace(
+    #    0, int(np.max(dist_arr)), 100
+    # )
+
+    # this is the correct way (i.e its meant to step in increments of 100)
+    # but will fail for images smaller than 200 px in each dimension
+    distances = np.arange(0, np.max(dist_arr), 100)
     # check the tpc change and the comparison to pf^2
     # over bigger and bigger discs:
     print(f"distances: {distances.shape}")
@@ -151,14 +210,20 @@ def calc_pred_cls(
     bool_array: np.ndarray,
     im_shape: tuple[int, ...],
 ) -> float:
+    # second term is integral of tpc - pf_squared
+    # eq 11 in paper (for now)
+    # NB don't need |X_r|/|X| norm in summand as in \psi in eq (9) as already
+    # taken care of due to periodicity and coeffs found previously
+    # TODO: check
     pred_cls = coeff / (pf - pf_squared) * np.sum(tpc[bool_array] - pf_squared)
+    # this goes from length^N -> length to get a length scale
     if pred_cls > 0:
         pred_cls = pred_cls ** (1 / 3) if len(im_shape) == 3 else pred_cls ** (1 / 2)
     return pred_cls
 
 
 def divide_img_to_subimages(img: np.ndarray, subimg_ratio) -> np.ndarray:
-    """Divides an image to subimages from a certain ratio."""
+    """Divides an image to non-overlapping subimages from a certain ratio."""
     img = img[np.newaxis, :]
     threed = len(img.shape) == 4
     one_img_shape = np.array(img.shape)[1:]
@@ -186,7 +251,9 @@ def calc_std_from_ratio(binary_img: np.ndarray, ratio):
 def image_stats(
     img: np.ndarray, pf: float, ratios, z_score: float = 1.96
 ) -> list[float]:
-    errs = []
+    # for each of the edge length rations, calc std of phase fraction of
+    #  subimages of size image.shape / ratio
+    errs = []  # std_err of phase fraction
     for ratio in ratios:
         std_ratio = calc_std_from_ratio(img, ratio)
         errs.append(100 * ((z_score * std_ratio) / pf))
@@ -194,8 +261,15 @@ def image_stats(
 
 
 def ns_from_dims(img_dims, integral_range: float) -> list:
+    # translation from cls -> ns = (number of samples) from your
+    # bernoulli distribution with feature size cls
+
+    # img dims is a list of image dimensions i.e [(h1, w1), (h2, w2)]
+    # from our sub images
     n_dims = len(img_dims[0])
+    # den = denominator
     den = integral_range**n_dims
+    # subimage (hyper)volume / integral range (hyper) volume
     return [np.prod(np.array(i)) / den for i in img_dims]
 
 
@@ -208,9 +282,13 @@ def bernouli(pf: float, ns: list[int], conf: float = 0.95) -> np.ndarray:
 
 
 def test_cls_set(err_exp, pf, clss, img_dims):
+    # test all the clses in clss (=cls set)
+    # err exp is error from the pfs of the sub images, we compare to the
+    # ideal/theoretical of the bernoulli of the image divided into cls (hyoer)cubes
     err_fit = []
     for cls in clss:
         ns = ns_from_dims(img_dims, cls)
+        # given that the cls is correct, this is the error in the standard statistical method
         err_model = bernouli(pf, ns)
         difference = abs(err_exp - err_model)
         err = np.mean(difference)
@@ -220,8 +298,13 @@ def test_cls_set(err_exp, pf, clss, img_dims):
 
 
 def fit_cls(err_exp, img_dims, pf, max_cls=150):
+    # find the cls that best explains the phase fraction std errors from
+    # the various subimages i.e that best aligns with our bernoulli assumption
+    # which holds if the features are finite
     err_exp = np.array(err_exp)
+    # coarse scan
     cls = test_cls_set(err_exp, pf, np.arange(1, max_cls, 1), img_dims)
+    # fine scan
     cls = test_cls_set(err_exp, pf, np.linspace(cls - 1, cls + 1, 50), img_dims)
     # print(f'real cls = {cls}')
     return cls
@@ -230,6 +313,10 @@ def fit_cls(err_exp, img_dims, pf, max_cls=150):
 def stat_analysis_error_classic(
     binary_img: np.ndarray, pf: float
 ):  # TODO see if to delete this or not
+
+    # crop in increasing powers of 2
+    # TODO: binary_img.shape[1] is always one dimensions, should be the smallest dimension
+    # or dimension specific
     ratios = [2**i for i in np.arange(1, int(np.log2(binary_img.shape[1])) - 5)]
     ratios.reverse()
     if binary_img.shape[0] > 1:
@@ -244,10 +331,18 @@ def stat_analysis_error_classic(
 
 
 def pred_cls_is_off(pred_cls: float, binary_img: np.ndarray, pf: float):
+    # can compare our predicted cls to the standard way of calculating the cls
+    # standard way = taking different crops of the image then calculating the
+    # std deviation
+
+    # cls in pixel length
     if pred_cls < 1:
         return True, 1
+    # one image statistical/classical prediction of the cls
     one_im_stat_pred = stat_analysis_error_classic(binary_img, pf)
     if one_im_stat_pred > 1:  # could be erroneous stat. analysis prediction
+        # if pred cls too low or too high compared to statistical method,
+        # return true and the direction of the error (1 for too low, -1 for too high)
         if pred_cls / one_im_stat_pred < 2 / 3:
             return True, 1
         if pred_cls / one_im_stat_pred > 2:
@@ -258,6 +353,12 @@ def pred_cls_is_off(pred_cls: float, binary_img: np.ndarray, pf: float):
 def change_pred_cls(coeff, tpc, pf, pf_squared, bool_array, im_shape, sign):
     """Changes the tpc function to be more positive or more negative, compared
     to the fast stat. analysis cls pred. of the single img."""
+    # rationale is that changing the tpcs and then predicting is more
+    # likely to reutrn a 'good' cls than just snapping to the error
+    # bound regions of [(2/3) * stat_pred, 2 * stat_pred]
+
+    # pf_squared = measured image pf ^2
+
     if sign > 0:
         negatives = np.where(tpc - pf_squared < 0)
         tpc[negatives] += (pf_squared - tpc[negatives]) / 10
@@ -275,18 +376,27 @@ def tpc_to_cls(tpc: np.ndarray, binary_image: np.ndarray) -> float:
     middle_idx = np.array(tpc.shape) // 2
     pf = tpc[tuple(map(slice, middle_idx, middle_idx + 1))][0][0]
     print(pf, tpc.shape)
+    # 'dist_arr_before' = before taking sqrts
     dist_arr_before = np.indices(tpc.shape)
+    # middle index to get 0 distance
+    # arr indics != coordinates, we care about distances from centre of coords
     dist_arr_before = np.abs((dist_arr_before.T - middle_idx.T).T)
     img_volume = np.prod(img_shape)
     # normalising the tpc s.t. different vectors would have different weights,
     # According to their volumes.
+    # number of r s.t x + r \in x i.e same as other normlaiser
     norm_vol = (np.array(img_shape).T - dist_arr_before.T).T
     norm_vol = np.prod(norm_vol, axis=0) / img_volume
+    # euclidean distances
     dist_arr: np.ndarray = np.sqrt(np.sum(dist_arr_before**2, axis=0))
-    end_dist = find_end_dist_tpc(pf, tpc, dist_arr)
+    end_dist = find_end_dist_tpc(pf, tpc, dist_arr)  # =r_0
+    # no guarantee end_dist/r_0 < our desired length
     print(f"end dist = {end_dist}")
+    # take mean of tpcs in the outer ring width 10 from end dist
+    # this is a stabilisation step
     pf_squared_end = np.mean(tpc[(dist_arr >= end_dist - 10) & (dist_arr <= end_dist)])
-
+    # take mean of this estimated pf_square from tpc and measured pf_squared from image
+    # emprical result - broadly speaking mean is more stable
     pf_squared = (pf_squared_end + pf**2) / 2
     bool_array = dist_arr < end_dist
 
@@ -311,6 +421,7 @@ def fit_to_errs_function(dim: int, n_voxels: int, a: float, b: float) -> float:
 
 
 def get_std_model(dim: int, n_voxels: int) -> float:
+    # fit from microlib
     popt = {"2d": [48.20175315, 0.4297919], "3d": [444.803518, 0.436974444]}
     return fit_to_errs_function(dim, n_voxels, *popt[f"{dim}d"])
 
@@ -416,6 +527,7 @@ def make_error_prediction(
     n = ns_from_dims([np.array(binary_img.shape)], integral_range)
     print("bpe3")
 
+    # bern = bernouilli
     std_bern = (
         (1 / n[0]) * (phase_fraction * (1 - phase_fraction))
     ) ** 0.5  # TODO: this is the std of phi relative to Phi with
