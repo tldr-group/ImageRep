@@ -182,23 +182,18 @@ def find_end_dist_idx(
 
 
 def find_end_dist_tpc(pf: float, tpc: np.ndarray, dist_arr: np.ndarray) -> float:
-    # print(f'pf^2 = {pf**2}')
     # assumption is image is at least 200 in every dimensoom
     # TODO: signpost in paper?
-    # TODO: add post-result warning if img < (200, 200, ...) that result
-    # TODO: add if/else here to default to other method of choosing dist
+    max_img_dim = np.max(dist_arr)
+    if max_img_dim < 200:
+        # this gives more unstable results but works for smaller images
+        distances = np.linspace(0, int(max_img_dim), 100)
+    else:
+        # this is the correct way as it reduces number of operations (but fails for small images)
+        distances = np.arange(0, np.max(dist_arr), 100)
 
-    # this gives different results but works for smaller images
-    # distances = np.linspace(
-    #    0, int(np.max(dist_arr)), 100
-    # )
-
-    # this is the correct way (i.e its meant to step in increments of 100)
-    # but will fail for images smaller than 200 px in each dimension
-    distances = np.arange(0, np.max(dist_arr), 100)
     # check the tpc change and the comparison to pf^2
     # over bigger and bigger discs:
-    print(f"distances: {distances.shape}")
     return find_end_dist_idx(pf, tpc, dist_arr, distances)
 
 
