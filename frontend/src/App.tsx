@@ -80,6 +80,10 @@ const App = () => {
                 });
                 return;
             } else {
+                if (result.height < 200 || result.width < 200 || result.depth < 200) {
+                    setShowWarning("size")
+                }
+
                 requestPhaseFraction(file);
                 result.file = file;
                 setImageInfo(result);
@@ -127,7 +131,7 @@ const App = () => {
                 vf: 1
             })
 
-            if (obj["cls"] > IR_LIMIT_PX) { setShowWarning(true) }
+            if (obj["cls"] > IR_LIMIT_PX) { setShowWarning("cls") }
 
             setTargetL(obj["l"]);
         } catch (e) {
@@ -164,7 +168,7 @@ const App = () => {
             </div>
             <Menu />
             <ErrorMessage />
-            {showWarning && <CLSModal />}
+            {showWarning != "" && <CLSModal />}
             <MoreInfo />
         </div>
     );

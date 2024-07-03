@@ -7,6 +7,7 @@ import Toast from 'react-bootstrap/Toast'
 import ToastContainer from "react-bootstrap/ToastContainer";
 import Button from 'react-bootstrap/Button';
 import App from "../App";
+import { stat } from "fs";
 
 
 
@@ -50,11 +51,21 @@ export const ErrorMessage = () => {
 export const CLSModal = () => {
     const {
         analysisInfo: [analysisInfo,],
-        showWarning: [, setShowWarning],
+        showWarning: [showWarning, setShowWarning],
     } = useContext(AppContext)!;
 
     const hide = () => {
-        setShowWarning(false);
+        setShowWarning("");
+    }
+
+    const getText = (state: "" | "cls" | "size") => {
+        if (state == "cls") {
+            return `Integral Range/feature size of ${analysisInfo?.integralRange.toFixed(2)} exceeds tested limit of ${IR_LIMIT_PX}px, results may be inaccurate.`
+        } else if (state == "size") {
+            return `Image size < 200 px in at least one dimension. Results may be unstable.`
+        } else {
+            return ""
+        }
     }
 
     return (
@@ -65,7 +76,7 @@ export const CLSModal = () => {
                         <strong className="me-auto" style={{ fontSize: '1.5em' }}>Warning!</strong>
                     </Toast.Header>
                     <Toast.Body>
-                        Integral Range/feature size of {analysisInfo?.integralRange.toFixed(2)} exceeds tested limit of {IR_LIMIT_PX}px, results may be inaccurate.
+                        {getText(showWarning)}
                     </Toast.Body>
                 </Toast>
             </ToastContainer>

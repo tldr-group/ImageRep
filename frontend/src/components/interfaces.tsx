@@ -43,8 +43,8 @@ interface contextProps {
         setErrorState: (e: ErrorMessage) => void
     ];
     showWarning: [
-        showWarning: boolean,
-        setShowWarning: (e: boolean) => void
+        showWarning: "" | "cls" | "size",
+        setShowWarning: (e: "" | "cls" | "size") => void
     ]
     showInfo: [
         showInfo: boolean,

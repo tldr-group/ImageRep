@@ -18,7 +18,7 @@ const AppContextProvider = (props: {
     // control flow
     const [menuState, setMenuState] = useState<MenuState>('hidden');
     const [errorState, setErrorState] = useState<ErrorMessage>({ msg: "", stackTrace: "" });
-    const [showWarning, setShowWarning] = useState<boolean>(false);
+    const [showWarning, setShowWarning] = useState<"" | "cls" | "size">("");
     const [showInfo, setShowInfo] = useState<boolean>(false);
 
 

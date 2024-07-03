@@ -17,17 +17,17 @@ const get3DFacePoints = (ih: number, iw: number, id: number, theta: number, sfz:
     const dox = Math.floor((Math.cos(theta) * id) * sfz);
     const doy = Math.floor((Math.sin(theta) * id) * sfz);
     const f1Points: Array<Point> = [{ x: dox, y: 0 }, { x: iw + dox, y: 0 }, { x: iw, y: doy }, { x: 0, y: doy }];
-    const f2Points: Array<Point> = [{ x: iw + dox, y: 0 }, { x: iw, y: doy }, { x: iw, y: ih }, { x: iw + dox, y: ih - doy }];
+    const f2Points: Array<Point> = [{ x: iw + dox, y: 0 }, { x: iw, y: doy }, { x: iw, y: ih + doy }, { x: iw + dox, y: ih }];
     return { face1: f1Points, face2: f2Points, dox: dox, doy: doy };
 }
 
 const getAspectCorrectedDims = (ih: number, iw: number, ch: number, cw: number, dox: number, doy: number, otherSF: number = 0.8) => {
-    const hSF = (ch - doy) / ih;
-    const wSF = (cw - dox) / iw;
+    const hSF = (ch) / (ih + doy);
+    const wSF = (cw) / (iw + dox);
     const maxFitSF = Math.min(hSF, wSF);
     const sf = maxFitSF * otherSF
     const [nh, nw] = [ih * sf, iw * sf];
-    return { w: nw, h: nh, ox: ((cw - nw) / 2) - dox, oy: ((ch - nh) / 2) + doy * sf, sf: sf };
+    return { w: nw, h: nh, ox: ((cw - (nw + dox * sf)) / 2), oy: doy * sf, sf: sf };
 }
 
 const postZoomImageDims = (originalSize: number, targetL: number, cRect: DOMRect, pRect: DOMRect) => {
@@ -52,11 +52,12 @@ const PreviewCanvas = () => {
         const canvas = canvasRef.current!;
         const ctx = canvas.getContext("2d");
         const [ih, iw, ch, cw] = [image.naturalHeight, image.naturalWidth, canvas.height, canvas.width];
-        const faceData = get3DFacePoints(ih, iw, imageInfo?.depth!, DEFAULT_ANGLE_RAD, 0.33);
+        const faceData = get3DFacePoints(ih, iw, imageInfo?.depth!, DEFAULT_ANGLE_RAD, 0.3);
         const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, faceData.dox, faceData.doy, ADDITIONAL_SF);
         ctx?.clearRect(0, 0, canvas.width, canvas.height);
         if (faceData.dox > 0) {
             console.log(faceData)
+            console.log(correctDims.oy)
             drawFaces(ctx!, faceData.face1, faceData.face2, correctDims.sf, correctDims.ox, correctDims.oy)
         }
         ctx?.drawImage(image, correctDims.ox, correctDims.oy, correctDims.w, correctDims.h);
