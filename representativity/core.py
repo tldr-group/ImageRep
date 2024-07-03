@@ -4,17 +4,38 @@ from scipy.stats import norm
 from scipy.optimize import minimize
 
 
+# %% ======================== TWO-POINT CORRELATION METHODS ========================
+
+
 def autocorrelation_orthant(
     binary_img: np.ndarray, num_elements: int, n_dims: int, desired_length: int = 100
-):
-    """Calculates the autocorrelation function of an image using the FFT method
-    Calculates over a single orthant, in all directions right and down from the origin.
+) -> np.ndarray:
+    """Calculates the autocorrelation function of a binary image using the FFT method
+    for a single orthant, in all vectors right and down from the origin. Using the FFT
+    computes the TPC for all these vectors in a single pass, instead of explicitly
+    shifting the image by every vector r in [(0, 1) ... (0, l) .. (l, l)] and taking
+    the product. This reduces the number of operations for an image of size N from
+    N^2 (N shifts * N for each product) -> Nlog(N). We slice to $desired_length
+    after to speed up calculations later.
 
-    Instead of explictly shifting image by every vector r \in [(0, 1) ... (0, l) .. (l, l)]
-    and taking the product to compute 2PC
+    Note Two-Point Correlation (TPC) = autocorrelation and are used interchangably.
 
-    Reduces N^2 (N shifts * N for each product) -> Nlog(N) where N = image size
+    [1] 'Microstructure sensitive design for performance optimization', 2012
+    Adams, Brent L and Kalidindi, Surya R and Fullwood, David T
+    [2] 'Efficient generation of anisotropic N-field microstructures
+    from 2-point statistics using multi-output Gaussian random fields', 2022
+    Robertson, Andreas E and Kalidindi, Surya R
 
+    :param binary_img: 2/3D binary arr for the microstructure
+    :type binary_img: np.ndarray
+    :param num_elements: total N elements in microstructure
+    :type num_elements: int
+    :param n_dims: whether arr is 2/3D
+    :type n_dims: int
+    :param desired_length: post TPC crop length, defaults to 100
+    :type desired_length: int, optional
+    :return:  2/3D array for orthant where tpc[y, x] is the tpc for the vector (y,x)
+    :rtype: np.nddary
     """
     ax = list(range(0, len(binary_img.shape)))
     img_FFT = np.fft.rfftn(binary_img, axes=ax)
@@ -22,7 +43,7 @@ def autocorrelation_orthant(
         np.fft.irfftn(img_FFT.conjugate() * img_FFT, s=binary_img.shape, axes=ax).real
         / num_elements
     )
-    # tpc is 2D array for orthant where tpc[y, x] is the tpc for the vector (y,x)
+    # multidimensional slicing up to desired length i.e tpc[:100, :100, :100]
     return tpc[tuple(map(slice, (desired_length,) * n_dims))]
 
 
@@ -31,42 +52,53 @@ def two_point_correlation_orthant(
     n_dims: int,
     desired_length: int = 100,
     periodic: bool = True,
-):
+) -> np.ndarray:
+    """Calculates the two point correlation function of an image along an orthant.
+    If we do not want to use periodic boundary conditions for calculating the autocorrelation,
+    it pads the image with $desired_length number of zeros before calculating the 2PC function
+    using the FFT method. After the FFT calculation, it normalises the result by the number of
+    possible occurences of the 2PC function.
+
+    Periodic BCs are better for stability, so not using them (i.e not periodic == True) is uncommon.
+
+    :param binary_img: 2/3D binary arr for the microstructure
+    :type binary_img: np.ndarray
+    :param n_dims: whether arr is 2/3D
+    :type n_dims: int
+    :param desired_length: post TPC crop length, defaults to 100
+    :type desired_length: int, optional
+    :param periodic: whether periodic BCs applied, defaults to True
+    :type periodic: bool, optional
+    :return: (normalised) tpc for a orthant
+    :rtype: np.ndarray
     """
-    Calculates the two point correlation function of an image along an orthant.
-    If the image is not periodic, it pads the image with desired_length number of zeros, before
-    before calculating the 2PC function using the FFT method. After the FFT calculation, it
-    normalises the result by the number of possible occurences of the 2PC function.
-    """
-    # periodic = periodic bcs, which can mess correlations but is needed for stability
-    # adding 'ghost columns/rows' which loop round with the periodic bcs but are then ignored
-    # in the product, which we need to then account for with normalisation
     img_shape = binary_img.shape
-    if not periodic:  # padding the image with zeros, then calculates the normaliser.
+    normalisation_for_tpc: np.ndarray
+    if not periodic:  # padding the image with zeros
         indices_img = np.indices(img_shape) + 1
 
-        normaliser = np.flip(np.prod(indices_img, axis=0))
-        # normaliser is an arr where the entry arr[x, y] counts the number of the original entries of img that
+        normalisation_for_tpc = np.flip(np.prod(indices_img, axis=0))
+        # normalisation_for_tpc is an arr where the entry arr[x, y] counts the number of the original entries of img that
         # will be present after shifting by x,y i.e for a shift 0,0 this is mag(img)
         # this lets you normalise the mean with the 'ghost dimensions' later for non-periodic images
         binary_img = np.pad(
             binary_img, [(0, desired_length) for _ in range(n_dims)], "constant"
         )
-    num_elements = np.product(img_shape)
+
+    num_elements = int(np.product(img_shape))
+    # 2D tpc array up to $desired_legth * $desired_length
     tpc_desired = autocorrelation_orthant(
         binary_img, num_elements, n_dims, desired_length
     )
 
     if not periodic:
         # normalising the result as we have more 0s than would otherwise have
-        # not used often
-
-        # normaliser[:100, :100]
-        # this tuple(map(slice, shape)) is to be dimensional agnostic (2d or 3d)
-        normaliser = normaliser[tuple(map(slice, tpc_desired.shape))]
-        normaliser = num_elements / normaliser
-        # normaliser is an array of adjustments applied pointwise to the tpc_desired
-        return normaliser * tpc_desired
+        normalisation_for_tpc = normalisation_for_tpc[
+            tuple(map(slice, tpc_desired.shape))
+        ]  # multidimensional slicing
+        normalisation_for_tpc = num_elements / normalisation_for_tpc
+        # normalisation_for_tpc is an array of adjustments applied pointwise to the tpc_desired
+        return normalisation_for_tpc * tpc_desired
     else:
         return tpc_desired
 
@@ -77,13 +109,30 @@ def two_point_correlation(
     volumetric: bool = False,
     periodic: bool = True,
 ) -> np.ndarray:
+    """Compute TPC for all orthants (ND quadrants) in the input data. These orthants are related to
+    directions of vectors we would use to shift the image before computing the self-product were we
+    not using the FFT approach. They correspond to the axes of the image that are flipped before
+    performing the FFT. The orthant TPCs are then recombined into $result
+
+    :param binary_img: 2/3D binary arr for the microstructure
+    :type binary_img: np.ndarray
+    :param desired_length: post TPC crop length, defaults to 100
+    :type desired_length: int, optional
+    :param volumetric: if 3D or 2D, defaults to False
+    :type volumetric: bool, optional
+    :param periodic: whether periodic BCs applied, defaults to True
+    :type periodic: bool, optional
+    :return: a 2/3D array composed of orthant-wise tpcs. For a 2D array this is
+    (2 * $desired_length, 2 * $desired_length).
+    :rtype: np.ndarray
+    """
     n_dims = 3 if volumetric else 2
     # orthant = N-D quadrant. stored here, indexed by axis
     orthants: dict[tuple, np.ndarray] = {}
     # calculating the 2PC function for each orthant, saving the result in a dictionary
-    # flip list is just a list of axes to flip, sometimes no flip happens
-    # computing tpc of left and down img = computing tpc of left and up flipped (T->B) image
     for axis in product((1, 0), repeat=n_dims - 1):
+        # flip list is just a list of axes to flip, sometimes no flip happens
+        # computing tpc of left and down img = computing tpc of left and up flipped (T->B) image
         flip_list = np.arange(n_dims - 1)[~np.array(axis, dtype=bool)]
         # flipping img to the opposite side for calculation of the 2PC:
         flipped_img = np.flip(binary_img, flip_list)
@@ -106,7 +155,9 @@ def two_point_correlation(
         axis_idx = np.array(axis) * desired_length
         # axis_idx looks like (100, 100)
         # slice to input: mapping of orthant axis to location in result i.e [0:100, 0:100]
-        slice_to_input = tuple(map(slice, axis_idx, axis_idx + desired_length))  # + 1
+        slice_to_input = tuple(
+            map(slice, axis_idx, axis_idx + desired_length)
+        )  # TODO: check with A, this used to be + 1
         result[slice_to_input] = orthants[axis]
     return result
 
@@ -114,9 +165,10 @@ def two_point_correlation(
 def radial_tpc(
     binary_img: np.ndarray, volumetric: bool = False, periodic: bool = True
 ) -> np.ndarray:
-    # this is a problem where arr not square, should take minimum of dimensiosn (for now)
+    """TPC entrypoint"""
+    # this is a problem where arr not square, should take minimum of dimension (for now)
     # TODO: make desired length different in all dimensions
-    img_y_length: int = binary_img.shape[0]  # was 0
+    img_y_length: int = min(binary_img.shape)  # binary_img.shape[0]
     # desired length: dims of output of fft arr,
     desired_length = (img_y_length // 2) if periodic else (img_y_length - 1)
     return two_point_correlation(
@@ -125,6 +177,9 @@ def radial_tpc(
         volumetric=volumetric,
         periodic=periodic,
     )
+
+
+# %% ======================== CHARACTERISTIC LENGTH SCALE METHODS ========================
 
 
 def calc_coeff_for_cls_prediction(
@@ -186,6 +241,7 @@ def find_end_dist_tpc(pf: float, tpc: np.ndarray, dist_arr: np.ndarray) -> float
     # TODO: signpost in paper?
     max_img_dim = np.max(dist_arr)
     if max_img_dim < 200:
+        print(f"Max img dim of {max_img_dim} < 200px, using small method")
         # this gives more unstable results but works for smaller images
         distances = np.linspace(0, int(max_img_dim), 100)
     else:
@@ -365,49 +421,69 @@ def change_pred_cls(coeff, tpc, pf, pf_squared, bool_array, im_shape, sign):
 
 
 def tpc_to_cls(tpc: np.ndarray, binary_image: np.ndarray) -> float:
-    """Calculates the integral range from the tpc function."""
+    """Compute the Characteristic Length Scale (CLS) from the TPC array and microstructure.
+    First, the distance where the TPC stops fluctuating (r_0) is found. Using this the TPC-estimated
+    phase fraction is found. The model from the paper (sections 4.1 and 4.2) is used to calculate
+    the coefficients. All these quantities are then used to calculate the CLS. This TPC-predicted
+    CLS is compared to the classical (statistical) method for CLS estimation and adjusted if
+    less than 2/3x or more than 2X of CLS_stats.
+
+    :param tpc: 2D array of orthant TPCs, shape (2*$desired_length, 2*$desired_length) in 2D
+    :type tpc: np.ndarray
+    :param binary_image: 2/3D binary arr for the microstructure
+    :type binary_image: np.ndarray
+    :return: CLS of the binary microstructure (roughly the feature size)
+    :rtype: float
+    """
 
     img_shape = binary_image.shape
+    # the middle index is the 0,0 TPC because of how the TPC function laid them out
     middle_idx = np.array(tpc.shape) // 2
-    pf = tpc[tuple(map(slice, middle_idx, middle_idx + 1))][0][0]
-    print(pf, tpc.shape)
+    # this is the measured image phase fraction (i.e the product of the image with itself)
+    image_phase_fraction = tpc[tuple(map(slice, middle_idx, middle_idx + 1))][0][0]
     # 'dist_arr_before' = before taking sqrts
-    dist_arr_before = np.indices(tpc.shape)
+    raw_dist_arr = np.indices(tpc.shape)
     # middle index to get 0 distance
     # arr indics != coordinates, we care about distances from centre of coords
-    dist_arr_before = np.abs((dist_arr_before.T - middle_idx.T).T)
+    raw_dist_arr = np.abs((raw_dist_arr.T - middle_idx.T).T)
     img_volume = np.prod(img_shape)
     # normalising the tpc s.t. different vectors would have different weights,
     # According to their volumes.
     # number of r s.t x + r \in x i.e same as other normlaiser
-    norm_vol = (np.array(img_shape).T - dist_arr_before.T).T
+    norm_vol = (np.array(img_shape).T - raw_dist_arr.T).T
     norm_vol = np.prod(norm_vol, axis=0) / img_volume
     # euclidean distances
-    dist_arr: np.ndarray = np.sqrt(np.sum(dist_arr_before**2, axis=0))
-    end_dist = find_end_dist_tpc(pf, tpc, dist_arr)  # =r_0
+    euc_dist_arr: np.ndarray = np.sqrt(np.sum(raw_dist_arr**2, axis=0))
+    end_dist = find_end_dist_tpc(image_phase_fraction, tpc, dist_arr)  # =r_0
     # no guarantee end_dist/r_0 < our desired length
     print(f"end dist = {end_dist}")
     # take mean of tpcs in the outer ring width 10 from end dist
     # this is a stabilisation step
-    pf_squared_end = np.mean(tpc[(dist_arr >= end_dist - 10) & (dist_arr <= end_dist)])
+    pf_squared_end = np.mean(
+        tpc[(euc_dist_arr >= end_dist - 10) & (euc_dist_arr <= end_dist)]
+    )
     # take mean of this estimated pf_square from tpc and measured pf_squared from image
     # emprical result - broadly speaking mean is more stable
-    pf_squared = (pf_squared_end + pf**2) / 2
-    bool_array = dist_arr < end_dist
+    pf_squared = (pf_squared_end + image_phase_fraction**2) / 2
+    bool_array = euc_dist_arr < end_dist
 
     # calculate the coefficient for the cls prediction:
     coeff = calc_coeff_for_cls_prediction(
-        norm_vol, dist_arr, end_dist, int(img_volume), bool_array
+        norm_vol, euc_dist_arr, end_dist, int(img_volume), bool_array
     )
-    pred_cls = calc_pred_cls(coeff, tpc, pf, pf_squared, bool_array, img_shape)
-    pred_is_off, sign = pred_cls_is_off(pred_cls, binary_image, pf)
+    pred_cls = calc_pred_cls(
+        coeff, tpc, image_phase_fraction, pf_squared, bool_array, img_shape
+    )
+    pred_is_off, sign = pred_cls_is_off(pred_cls, binary_image, image_phase_fraction)
     while pred_is_off:
         how_off = "negative" if sign > 0 else "positive"
         print(f"pred cls = {pred_cls} is too {how_off}, CHANGING TPC VALUES")
         tpc, pred_cls = change_pred_cls(
-            coeff, tpc, pf, pf_squared, bool_array, img_shape, sign
+            coeff, tpc, image_phase_fraction, pf_squared, bool_array, img_shape, sign
         )
-        pred_is_off, sign = pred_cls_is_off(pred_cls, binary_image, pf)
+        pred_is_off, sign = pred_cls_is_off(
+            pred_cls, binary_image, image_phase_fraction
+        )
     return pred_cls
 
 
@@ -510,44 +586,35 @@ def make_error_prediction(
     n_dims = len(binary_img.shape)  # 2D or 3D
     n_elems = int(np.prod(binary_img.shape))
 
-    print("bpe0")
     two_point_correlation = radial_tpc(binary_img, n_dims == 3, True)
-    print("bpe1")
     integral_range = tpc_to_cls(
         two_point_correlation,
         binary_img,
     )
-    print("bpe2")
 
     n = ns_from_dims([np.array(binary_img.shape)], integral_range)
-    print("bpe3")
-
     # bern = bernouilli
     std_bern = (
         (1 / n[0]) * (phase_fraction * (1 - phase_fraction))
     ) ** 0.5  # TODO: this is the std of phi relative to Phi with
     std_model = get_std_model(n_dims, n_elems)
     abs_err_target = target_error * phase_fraction
-    print("bpe4")
     if model_error:
         # calculate the absolute error for the image:
         conf_bounds = get_prediction_interval(
             phase_fraction, std_bern, std_model, confidence
         )
-        print("bpe5")
         abs_err_for_img = phase_fraction - conf_bounds[0]
         # calculate the n for the error target:
         args = (phase_fraction, std_model, target_error, confidence)
         n_for_err_targ = minimize(find_n_for_err_targ, n, args=args)
         n_for_err_targ = n_for_err_targ.x[0]
-        print("bpe6")
     else:  # TODO what is this useful for.. for when you trust the model completely?
         z = norm.interval(confidence)[1]
         abs_err_for_img = z * std_bern
         n_for_err_targ = (
             phase_fraction * (1 - phase_fraction) * (z / abs_err_target) ** 2
         )
-    print("bpe7")
     l_for_err_targ = dims_from_n(n_for_err_targ, equal_shape, integral_range, n_dims)
     percentage_err_for_img = abs_err_for_img / phase_fraction
 
