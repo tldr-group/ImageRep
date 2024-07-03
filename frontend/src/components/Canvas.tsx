@@ -1,11 +1,10 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import AppContext from "./interfaces";
+import AppContext, { Point } from "./interfaces";
 import { colours } from "./interfaces";
-import { dragDropStyle } from "./DragDrop"
 import { replaceGreyscaleWithColours, getImagefromImageData } from "./imageLogic";
-import { Fade } from "react-bootstrap";
 
 const ADDITIONAL_SF = 1
+const DEFAULT_ANGLE_RAD = 30 * (Math.PI / 180)
 
 const centredStyle = {
     height: '75vh', width: '75vw', // was 60vh/w
@@ -13,12 +12,22 @@ const centredStyle = {
     padding: '10px', display: 'flex', margin: 'auto',
 }
 
-const getAspectCorrectedDims = (ih: number, iw: number, ch: number, cw: number, otherSF: number = 0.8) => {
-    const hSF = ch / ih;
-    const wSF = cw / iw;
-    const sf = Math.min(hSF, wSF);
-    const [nh, nw] = [ih * sf * otherSF, iw * sf * otherSF];
-    return { w: nw, h: nh, ox: (cw - nw) / 2, oy: (ch - nh) / 2 };
+const get3DFacePoints = (ih: number, iw: number, id: number, theta: number, sfz: number) => {
+    // get upper and right faces of a cube with front face of preview image and (projected) depth determined by theta and sfz 
+    const dox = Math.floor((Math.cos(theta) * id) * sfz);
+    const doy = Math.floor((Math.sin(theta) * id) * sfz);
+    const f1Points: Array<Point> = [{ x: dox, y: 0 }, { x: iw + dox, y: 0 }, { x: iw, y: doy }, { x: 0, y: doy }];
+    const f2Points: Array<Point> = [{ x: iw + dox, y: 0 }, { x: iw, y: doy }, { x: iw, y: ih }, { x: iw + dox, y: ih - doy }];
+    return { face1: f1Points, face2: f2Points, dox: dox, doy: doy };
+}
+
+const getAspectCorrectedDims = (ih: number, iw: number, ch: number, cw: number, dox: number, doy: number, otherSF: number = 0.8) => {
+    const hSF = (ch - doy) / ih;
+    const wSF = (cw - dox) / iw;
+    const maxFitSF = Math.min(hSF, wSF);
+    const sf = maxFitSF * otherSF
+    const [nh, nw] = [ih * sf, iw * sf];
+    return { w: nw, h: nh, ox: ((cw - nw) / 2) - dox, oy: ((ch - nh) / 2) + doy * sf, sf: sf };
 }
 
 const postZoomImageDims = (originalSize: number, targetL: number, cRect: DOMRect, pRect: DOMRect) => {
@@ -43,10 +52,34 @@ const PreviewCanvas = () => {
         const canvas = canvasRef.current!;
         const ctx = canvas.getContext("2d");
         const [ih, iw, ch, cw] = [image.naturalHeight, image.naturalWidth, canvas.height, canvas.width];
-        const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, ADDITIONAL_SF);
+        const faceData = get3DFacePoints(ih, iw, imageInfo?.depth!, DEFAULT_ANGLE_RAD, 0.33);
+        const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, faceData.dox, faceData.doy, ADDITIONAL_SF);
         ctx?.clearRect(0, 0, canvas.width, canvas.height);
+        if (faceData.dox > 0) {
+            console.log(faceData)
+            drawFaces(ctx!, faceData.face1, faceData.face2, correctDims.sf, correctDims.ox, correctDims.oy)
+        }
         ctx?.drawImage(image, correctDims.ox, correctDims.oy, correctDims.w, correctDims.h);
         //ctx?.drawImage(image, 0, 0, correctDims.w, correctDims.h);
+    }
+
+    const drawFaces = (ctx: CanvasRenderingContext2D, face1: Array<Point>, face2: Array<Point>, sf: number, ox: number, oy: number) => {
+        drawPoints(ctx, face1, sf, ox, oy, "#f0f0f0") //"#dbdbdbff" 
+        drawPoints(ctx, face2, sf, ox, oy, "#ababab64")
+        //#f0f0f0
+    }
+
+    const drawPoints = (ctx: CanvasRenderingContext2D, points: Array<Point>, sf: number, ox: number, oy: number, fill: string) => {
+        const p0 = points[0];
+        ctx.fillStyle = fill;
+        ctx.beginPath();
+        ctx.moveTo(ox + p0.x * sf, p0.y * sf);
+        for (let i = 1; i < points.length; i++) {
+            const p = points[i];
+            ctx.lineTo(ox + p.x * sf, p.y * sf);
+        }
+        ctx.closePath();
+        ctx.fill();
     }
 
     const animateDiv = (newW: number, newH: number) => {
@@ -130,7 +163,7 @@ const PreviewCanvas = () => {
 
         const image = previewImg!
         const [ih, iw, ch, cw] = [image.naturalHeight, image.naturalWidth, canvDims.h, canvDims.w];
-        const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, ADDITIONAL_SF);
+        const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, 0, 0, ADDITIONAL_SF);
         // centred-adjusted shift
         const dx = (correctDims.w / 2) - (canvDims.w / (2 * sf));
         const dy = (correctDims.h / 2) - (canvDims.h / (2 * sf));

@@ -87,7 +87,9 @@ def two_point_correlation(
 def radial_tpc(
     binary_img: np.ndarray, volumetric: bool = False, periodic: bool = True
 ) -> np.ndarray:
+
     img_y_length: int = binary_img.shape[0]  # was 0
+    # desired length: output of fft
     desired_length = (img_y_length // 2) if periodic else (img_y_length - 1)
     return two_point_correlation(
         binary_img,
@@ -352,6 +354,8 @@ def get_prediction_interval(
     # print(np.sum(pf_dist, axis=0).shape, np.diff(x_std_dist).shape)
     print(np.diff(x_std_dist))
     sum_dist_norm = np.sum(pf_dist, axis=0) * np.diff(x_std_dist)[0]  # [0]
+    # need a bit of normalization for symmetric bounds (it's very close to 1 already)
+    sum_dist_norm /= np.trapz(sum_dist_norm, pf_x_1d)
     # Find the alpha confidence bounds
     cum_sum_sum_dist_norm = np.cumsum(sum_dist_norm * np.diff(pf_x_1d)[0])
     half_conf_level = (1 + conf_level) / 2

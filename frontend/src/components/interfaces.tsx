@@ -106,3 +106,8 @@ export interface ErrorMessage {
     msg: string;
     stackTrace: string;
 }
+
+export interface Point {
+    x: number;
+    y: number
+}
