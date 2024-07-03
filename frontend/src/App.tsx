@@ -80,8 +80,8 @@ const App = () => {
                 });
                 return;
             } else {
-                if (result.height < 200 || result.width < 200 || result.depth < 200) {
-                    setShowWarning("size")
+                if (result.height < 200 || result.width < 200 || (result.depth < 200 && result.depth > 1)) {
+                    setShowWarning("size");
                 }
 
                 requestPhaseFraction(file);
