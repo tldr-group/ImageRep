@@ -186,8 +186,6 @@ def radial_tpc(
 
 def calc_coeff_for_cls_prediction(
     norm_vol: np.ndarray,
-    dist_arr: np.ndarray,
-    end_dist: float,
     img_volume: int,
     bool_array: np.ndarray,
 ) -> float:
@@ -202,8 +200,6 @@ def calc_coeff_for_cls_prediction(
     # sum_of_small_radii = np.sum(norm_vol[dist_arr < end_dist])
     sum_of_small_radii = np.sum(norm_vol[bool_array])
     coeff_1 = img_volume / (img_volume - sum_of_small_radii)
-    # TODO: check if np.sum(norm_vol[bool_array]) == np.sum(norm_vol[dist_arr < end_dist])
-    # TODO: remove end dist and dist_arr args
     # coeff_2 = (1 / img_volume) * (np.sum(bool_array) - np.sum(norm_vol[bool_array]))
     coeff_2 = (1 / img_volume) * (np.sum(bool_array) - sum_of_small_radii)
 
@@ -216,37 +212,46 @@ def calc_coeff_for_cls_prediction(
 
 
 def find_end_dist_idx(
-    pf: float, tpc: np.ndarray, dist_arr: np.ndarray, distances: np.ndarray
-):
-    """Finds the distance before the tpc function plateaus."""
-    # looking at change in TPC radially from centre
-    # deviation = how different TPC is from image phase fraction ^2
-    # because TPC should converge to real phase fraction squared
+    image_pf: float, tpc: np.ndarray, dist_arr: np.ndarray, ring_distances: np.ndarray
+) -> int:
+    """Find the (radial) distance before the TPC function plateaus. This means looking at the
+    percentage of all TPCs in a ring (width distances[i] - distances[i-1], usually 100) a
+    certain distance from the centre that are outside of 5% of the image phase fraction squared.
+    The TPC should tend to the (true) phase fraction squared, but the image phase fraction
+    is a good approximation.
 
-    # looking at percentage of all TPCs in the ring that are outside
-    # of 5% of the image phase fraction squared
-    # => where TPC stops fluctuating
+    If there less than 5% of all the TPCs in the ring are more than 5% out from the image
+    phase fraction at a certain distance D, return it as our end distance.
 
-    # the rings are all distances from (0, 100) then (100, 200) then ,,,
-    # based on distances
-    # TODO: renamed distances -> r0_bounds or ring_distances etc
+    :param image_pf: measured image phase fraction
+    :type pf: float
+    :param tpc: 2D array of orthant TPCs, shape (2*$desired_length, 2*$desired_length) in 2D
+    :type tpc: np.ndarray
+    :param dist_arr: _description_
+    :type dist_arr: np.ndarray
+    :param ring_distances: list of ints that define start/stop of ring i.e [0, 100, 200, ...]
+    :type ring_distances: np.ndarray
+    :return: ring distance where the tpc stops fluctuating
+    :rtype: int
+    """
 
     percentage = 0.05
-    small_change = (pf - pf**2) * percentage
-    for dist_i in np.arange(1, len(distances) - 1):
-        start_dist, end_dist = distances[dist_i], distances[dist_i + 1]
+    small_change = (image_pf - image_pf**2) * percentage
+    for dist_i in np.arange(1, len(ring_distances) - 1):
+        start_dist, end_dist = ring_distances[dist_i], ring_distances[dist_i + 1]
         bool_array = (dist_arr >= start_dist) & (dist_arr < end_dist)
-        sum_dev = np.sum(tpc[bool_array] - pf**2 > small_change)
+        sum_dev = np.sum(tpc[bool_array] - image_pf**2 > small_change)
         deviation = sum_dev / np.sum(bool_array)
         if deviation < 0.05:
-            return distances[dist_i]
-    return distances[1]
+            return ring_distances[dist_i]
+    return ring_distances[1]
 
 
 def find_end_dist_tpc(
     phase_fraction: float, tpc: np.ndarray, dist_arr: np.ndarray
 ) -> float:
-    # assumption is image is at least 200 in every dimensoom
+    """Defines search range for endpoint, calls main fn"""
+    # Assumption is image is at least 200 in every dimensoom
     # TODO: signpost in paper?
     max_img_dim = np.max(dist_arr)
     if max_img_dim < 200:
@@ -265,17 +270,36 @@ def find_end_dist_tpc(
 def calc_pred_cls(
     coeff: float,
     tpc: np.ndarray,
-    pf: float,
-    pf_squared: float,
+    image_pf: float,
+    mean_pf_squared: float,
     bool_array: np.ndarray,
     im_shape: tuple[int, ...],
 ) -> float:
+    """Calculate the model predicted CLS based on equation (11) in the paper.
+
+    NB: don't need |X_r|/|X| norm in summand as in psi in eq (9) as already taken care of due
+    to periodicity and coeffs found previously
+
+    :param coeff: normalisation coefficient (some function of C_r0)
+    :type coeff: float
+    :param tpc: 2D array of orthant TPCs, shape (2*$desired_length, 2*$desired_length) in 2D
+    :type tpc: np.ndarray
+    :param image_pf: measured image phase fraction
+    :type image_pf: float
+    :param mean_pf_squared: mean of measured image phase fraction and TPC-calculated phase fraction, squared
+    :type mean_pf_squared: float
+    :param bool_array: boolean array of indices < r0
+    :type bool_array: np.ndarray
+    :param im_shape: shape of $binary_img
+    :type im_shape: tuple[int, ...]
+    :return: characteristic length scale (CLS) / feature size of the phase in $binary_image
+    :rtype: float
+    """
     # second term is integral of tpc - pf_squared
-    # eq 11 in paper (for now)
-    # NB don't need |X_r|/|X| norm in summand as in \psi in eq (9) as already
-    # taken care of due to periodicity and coeffs found previously
     # TODO: check
-    pred_cls = coeff / (pf - pf_squared) * np.sum(tpc[bool_array] - pf_squared)
+    pred_cls = (
+        coeff / (image_pf - mean_pf_squared) * np.sum(tpc[bool_array] - mean_pf_squared)
+    )
     # this goes from length^N -> length to get a length scale
     if pred_cls > 0:
         pred_cls = pred_cls ** (1 / 3) if len(im_shape) == 3 else pred_cls ** (1 / 2)
@@ -620,9 +644,7 @@ def tpc_to_cls(tpc: np.ndarray, binary_image: np.ndarray) -> float:
     bool_array = euc_dist_arr < end_dist
 
     # calculate the coefficient needed for the cls prediction
-    coeff = calc_coeff_for_cls_prediction(
-        norm_vol, euc_dist_arr, end_dist, int(img_volume), bool_array
-    )
+    coeff = calc_coeff_for_cls_prediction(norm_vol, int(img_volume), bool_array)
 
     pred_cls = calc_pred_cls(
         coeff, tpc, image_phase_fraction, phase_fraction_squared, bool_array, img_shape
