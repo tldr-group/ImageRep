@@ -1,7 +1,7 @@
 import numpy as np
 from itertools import product, chain
-from scipy.stats import norm
-from scipy.optimize import minimize
+from scipy.stats import norm  # type: ignore
+from scipy.optimize import minimize  # type: ignore
 
 
 # %% ======================== TWO-POINT CORRELATION METHODS ========================
@@ -282,6 +282,9 @@ def calc_pred_cls(
     return pred_cls
 
 
+# %% ======================== STATISTICAL CLS METHODS ========================
+
+
 def divide_img_to_subimages(img: np.ndarray, subimg_ratio) -> np.ndarray:
     """Divides an image to non-overlapping subimages from a certain ratio."""
     img = img[np.newaxis, :]
@@ -320,15 +323,25 @@ def image_stats(
     return errs
 
 
-def ns_from_dims(img_dims, integral_range: float) -> list:
+def n_samples_from_dims(img_dims: list[np.ndarray], cls: float) -> list:
+    """Translation from CLS -> number of samples of side length CLS in each
+    of the patches whose sizes are in $img_dims. This is the number of samples
+    made in our Bernoulli distribution.
+
+    :param img_dims: list of patch image dimensions
+    :type img_dims: list[np.ndarray]
+    :param cls: _description_
+    :type integral_range: float
+    :return: _description_
+    :rtype: list
+    """
     # translation from cls -> ns = (number of samples) from your
     # bernoulli distribution with feature size cls
 
-    # img dims is a list of image dimensions i.e [(h1, w1), (h2, w2)]
-    # from our sub images
+    # img dims is a list of image dimensions i.e [(h1, w1), (h2, w2)] from our patches
     n_dims = len(img_dims[0])
     # den = denominator
-    den = integral_range**n_dims
+    den = cls**n_dims
     # subimage (hyper)volume / integral range (hyper) volume
     return [np.prod(np.array(i)) / den for i in img_dims]
 
@@ -341,35 +354,76 @@ def bernouli(pf: float, ns: list[int], conf: float = 0.95) -> np.ndarray:
     return np.array(errs, dtype=np.float64)
 
 
-def test_cls_set(err_exp, pf, clss, img_dims):
-    # test all the clses in clss (=cls set)
-    # err exp is error from the pfs of the sub images, we compare to the
-    # ideal/theoretical of the bernoulli of the image divided into cls (hyoer)cubes
+def test_all_cls_in_range(
+    patch_pf_errors: np.ndarray,
+    image_pf: float,
+    cls_range: np.ndarray,
+    img_dims: list[np.ndarray],
+) -> float:
+    """Test all the CLS values in $cls_range by computing the difference between the
+    measured $patch_pf_errors and the expected pf_error based on the bernoulli assumption
+    for that CLS. The best CLS is the one which minimises this error.
+
+    :param patch_pf_errors: pf error of patches from measured pf
+    :type patch_pf_errors: np.ndarray
+    :param image_pf: measured image pf
+    :type image_pf: float
+    :param cls_range: range over which to test the CLSes
+    :type cls_range: np.ndarray
+    :param img_dims: list of patch image dimensions
+    :type img_dims: list[np.ndarray]
+    :return: best CLS in $cls_range
+    :rtype: int
+    """
     err_fit = []
-    for cls in clss:
-        ns = ns_from_dims(img_dims, cls)
-        # given that the cls is correct, this is the error in the standard statistical method
-        err_model = bernouli(pf, ns)
-        difference = abs(err_exp - err_model)
+    for cls in cls_range:
+        n_samples = n_samples_from_dims(img_dims, cls)
+        # given that the CLS is correct, this is the error in the standard statistical method
+        err_model = bernouli(image_pf, n_samples)
+        difference = abs(patch_pf_errors - err_model)
         err = np.mean(difference)
         err_fit.append(err)
-    cls = clss[np.argmin(err_fit)].item()
+    cls = cls_range[np.argmin(err_fit)].item()
     return cls
 
 
 def fit_statisical_cls_from_errors(
-    err_exp: list[float], img_dims, pf, max_cls=150
-) -> int:
-    # find the cls that best explains the phase fraction std errors from
-    # the various subimages i.e that best aligns with our bernoulli assumption
-    # which holds if the features are finite
-    err_exp = np.array(err_exp)
-    # coarse scan
-    cls = test_cls_set(err_exp, pf, np.arange(1, max_cls, 1), img_dims)
-    # fine scan
-    cls = test_cls_set(err_exp, pf, np.linspace(cls - 1, cls + 1, 50), img_dims)
-    # print(f'real cls = {cls}')
-    return cls
+    patch_pf_errors: list[float],
+    img_dims: list[np.ndarray],
+    image_pf: float,
+    max_cls: int = 150,
+) -> float:
+    """Find the CLS that best explains the $patch_pf_errors, given our
+    assumption the image is composed of M squares of length CLS sampled from a
+    Bernoulli distribution with probability $image_pf. We do this by performing
+    a coarse scan across CLSes based on our parameters and then doing a fine
+    scan around the best coarse value.
+
+    NB: the Bernoulli assumption holds if the features are finite; we also assume
+    the max feature size < 150px and the overall image size > 200px
+
+    :param patch_pf_errors: differences between a patch's phase fraction and the image phase fraction
+    :type patch_pf_errors: list[float]
+    :param img_dims: list of the patch sizes
+    :type img_dims: list[np.ndarray]
+    :param image_pf: measured image phase fraction
+    :type image_pf: float
+    :param max_cls: maximum allowed CLS, defaults to 150
+    :type max_cls: int, optional
+    :return: statistically fitted CLS
+    :rtype: int
+    """
+    patch_errors_arr = np.array(patch_pf_errors)
+    coarse_cls = test_all_cls_in_range(
+        patch_errors_arr, image_pf, np.arange(1, max_cls, 1), img_dims
+    )
+    fine_cls = test_all_cls_in_range(
+        patch_errors_arr,
+        image_pf,
+        np.linspace(coarse_cls - 1, coarse_cls + 1, 50),
+        img_dims,
+    )
+    return fine_cls
 
 
 def stat_analysis_error_classic(
@@ -394,7 +448,7 @@ def stat_analysis_error_classic(
     ratios.reverse()
     if binary_img.shape[0] > 1:
         ratios.append(1)
-    # avoid having too many small patches (as thier PF will be quite unstable)
+    # avoid having too many small patches (as their PF will be quite unstable)
     ratios = ratios[-4:]
     edge_lengths = [binary_img.shape[1] // r for r in ratios]
     img_dims = [np.array((l,) * (len(binary_img.shape) - 1)) for l in edge_lengths]
@@ -563,6 +617,9 @@ def tpc_to_cls(tpc: np.ndarray, binary_image: np.ndarray) -> float:
     return pred_cls
 
 
+# %% ======================== POST-CLS ERROR ESTIMATION ========================
+
+
 def fit_to_errs_function(dim: int, n_voxels: int, a: float, b: float) -> float:
     return a / n_voxels**b
 
@@ -648,6 +705,9 @@ def dims_from_n(n, equal_shape: bool, cls, dims):
         #    return ((n * den) / ((shape[0] + cls - 1) * (shape[1] + cls - 1))) - cls + 1
 
 
+# %% ======================== PUT IT ALL TOGETHER ========================
+
+
 def make_error_prediction(
     binary_img: np.ndarray,
     confidence: float = 0.95,
@@ -665,7 +725,7 @@ def make_error_prediction(
         binary_img,
     )
 
-    n = ns_from_dims([np.array(binary_img.shape)], integral_range)
+    n = n_samples_from_dims([np.array(binary_img.shape)], integral_range)
     # bern = bernouilli
     std_bern = (
         (1 / n[0]) * (phase_fraction * (1 - phase_fraction))
