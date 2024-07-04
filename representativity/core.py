@@ -285,8 +285,18 @@ def calc_pred_cls(
 # %% ======================== STATISTICAL CLS METHODS ========================
 
 
-def divide_img_to_subimages(img: np.ndarray, subimg_ratio) -> np.ndarray:
-    """Divides an image to non-overlapping subimages from a certain ratio."""
+def divide_img_to_subimages(img: np.ndarray, subimg_ratio: int) -> np.ndarray:
+    """Divide $img with edge length $L into non-overlapping patches/sub-images of edge length
+    $L/$subimg_ratio
+
+    :param img: image to patch
+    :type img: np.ndarray
+    :param subimg_ratio: ratio of img edge length / subimg edge length
+    :type subimg_ratio: int
+    :return: np array of $n_images non-overlapping patches from $img
+    :rtype: np.ndarray
+    """
+
     img = img[np.newaxis, :]
     threed = len(img.shape) == 4
     one_img_shape = np.array(img.shape)[1:]
@@ -300,11 +310,21 @@ def divide_img_to_subimages(img: np.ndarray, subimg_ratio) -> np.ndarray:
     im_to_divide = im_to_divide.swapaxes(2, 3)
     if threed:
         im_to_divide = im_to_divide.swapaxes(4, 5).swapaxes(3, 4)
+    # NB: in this case img.shape[0] === 1 and np.prod(n_images) == n_images
     return im_to_divide.reshape((np.prod(n_images) * img.shape[0], *subimg_shape))
 
 
-def calc_std_from_ratio(binary_img: np.ndarray, ratio):
-    """Calculates the standard deviation of the subimages of an image, divided by a certain ratio."""
+def calc_std_from_ratio(binary_img: np.ndarray, ratio: int):
+    """Split binary image (side length $L) into non-overlapping patches of side length
+    $L / $ratio, measure standard deviation of the $phase_fraction.
+
+    :param binary_img: 2/3D binary arr for the microstructure
+    :type binary_img: np.ndarray
+    :param ratio: side length ratio for patches edge length to image edge length
+    :type ratio: float
+    :return: standard deviation of patch phase fractions
+    :rtype: float?
+    """
     divided_img = divide_img_to_subimages(binary_img, ratio)
     along_axis = tuple(np.arange(1, len(binary_img.shape)))
     ddof = 1  # for unbiased std
@@ -312,14 +332,27 @@ def calc_std_from_ratio(binary_img: np.ndarray, ratio):
 
 
 def image_stats(
-    img: np.ndarray, pf: float, ratios, z_score: float = 1.96
+    binary_img: np.ndarray, image_pf: float, ratios: list[int], z_score: float = 1.96
 ) -> list[float]:
-    # for each of the edge length rations, calc std of phase fraction of
-    #  subimages of size image.shape / ratio
-    errs = []  # std_err of phase fraction
+    """For each of the side length $ratios (relative to full image) in $ratios,
+    calculate the standard deviation in phase fraction over the patches
+    (image split into smaller images of side length L_full / $ratio)
+
+    :param binary_img: 2/3D binary arr for the microstructure
+    :type binary_img: np.ndarray
+    :param image_pf: _description_
+    :type image_pf: float
+    :param ratios: list of ratios to divide image length by to create patches
+    :type ratios: list[float]
+    :param z_score: _description_, defaults to 1.96
+    :type z_score: float, optional
+    :return: list of patch phase fraction standard errors
+    :rtype: list[float]
+    """
+    errs = []  # std_err of patch phase fractions realtive to image pf
     for ratio in ratios:
-        std_ratio = calc_std_from_ratio(img, ratio)
-        errs.append(100 * ((z_score * std_ratio) / pf))
+        std_ratio = calc_std_from_ratio(binary_img, ratio)
+        errs.append(100 * ((z_score * std_ratio) / image_pf))
     return errs
 
 
@@ -330,20 +363,17 @@ def n_samples_from_dims(img_dims: list[np.ndarray], cls: float) -> list:
 
     :param img_dims: list of patch image dimensions
     :type img_dims: list[np.ndarray]
-    :param cls: _description_
+    :param cls: characteristic length scale/integral range - edge lengths
     :type integral_range: float
-    :return: _description_
+    :return: number of length $cls (hyper) cubes in image of size i in $img_dims
     :rtype: list
     """
-    # translation from cls -> ns = (number of samples) from your
-    # bernoulli distribution with feature size cls
-
     # img dims is a list of image dimensions i.e [(h1, w1), (h2, w2)] from our patches
     n_dims = len(img_dims[0])
     # den = denominator
-    den = cls**n_dims
+    cls_cube_volume = cls**n_dims
     # subimage (hyper)volume / integral range (hyper) volume
-    return [np.prod(np.array(i)) / den for i in img_dims]
+    return [np.prod(np.array(i)) / cls_cube_volume for i in img_dims]
 
 
 def bernouli(pf: float, ns: list[int], conf: float = 0.95) -> np.ndarray:
