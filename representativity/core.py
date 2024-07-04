@@ -168,7 +168,10 @@ def radial_tpc(
     """TPC entrypoint"""
     # this is a problem where arr not square, should take minimum of dimension (for now)
     # TODO: make desired length different in all dimensions
+    # TODO: does this need to be its own function that takes all the same arguments as two_point_...
     img_y_length: int = min(binary_img.shape)  # binary_img.shape[0]
+    # img_y_length: int = binary_img.shape[0]
+    print(f"desired length: {img_y_length}, shape: {binary_img.shape}")
     # desired length: dims of output of fft arr,
     desired_length = (img_y_length // 2) if periodic else (img_y_length - 1)
     return two_point_correlation(
@@ -189,6 +192,7 @@ def calc_coeff_for_cls_prediction(
     img_volume: int,
     bool_array: np.ndarray,
 ) -> float:
+
     # norm vol: normilisation volumes
     # dist_arr still euclidean dists of orthant indices from centre
     # end_dist: when tpc stops fluctuating
@@ -196,10 +200,14 @@ def calc_coeff_for_cls_prediction(
     # looking for C_r0 here
 
     # sum of normalisations of all vectors less than r_0/end_dist
-    sum_of_small_radii = np.sum(norm_vol[dist_arr < end_dist])
+    # sum_of_small_radii = np.sum(norm_vol[dist_arr < end_dist])
+    sum_of_small_radii = np.sum(norm_vol[bool_array])
     coeff_1 = img_volume / (img_volume - sum_of_small_radii)
     # TODO: check if np.sum(norm_vol[bool_array]) == np.sum(norm_vol[dist_arr < end_dist])
-    coeff_2 = (1 / img_volume) * (np.sum(bool_array) - np.sum(norm_vol[bool_array]))
+    # TODO: remove end dist and dist_arr args
+    # coeff_2 = (1 / img_volume) * (np.sum(bool_array) - np.sum(norm_vol[bool_array]))
+    coeff_2 = (1 / img_volume) * (np.sum(bool_array) - sum_of_small_radii)
+
     coeff_product = coeff_1 * coeff_2
     while coeff_product > 1:
         print(f"coeff product = {coeff_product}")
@@ -236,7 +244,9 @@ def find_end_dist_idx(
     return distances[1]
 
 
-def find_end_dist_tpc(pf: float, tpc: np.ndarray, dist_arr: np.ndarray) -> float:
+def find_end_dist_tpc(
+    phase_fraction: float, tpc: np.ndarray, dist_arr: np.ndarray
+) -> float:
     # assumption is image is at least 200 in every dimensoom
     # TODO: signpost in paper?
     max_img_dim = np.max(dist_arr)
@@ -246,11 +256,11 @@ def find_end_dist_tpc(pf: float, tpc: np.ndarray, dist_arr: np.ndarray) -> float
         distances = np.linspace(0, int(max_img_dim), 100)
     else:
         # this is the correct way as it reduces number of operations (but fails for small images)
-        distances = np.arange(0, np.max(dist_arr), 100)
+        distances = np.concatenate([np.arange(0, int(max_img_dim), 100)])
 
     # check the tpc change and the comparison to pf^2
     # over bigger and bigger discs:
-    return find_end_dist_idx(pf, tpc, dist_arr, distances)
+    return find_end_dist_idx(phase_fraction, tpc, dist_arr, distances)
 
 
 def calc_pred_cls(
@@ -428,6 +438,8 @@ def tpc_to_cls(tpc: np.ndarray, binary_image: np.ndarray) -> float:
     CLS is compared to the classical (statistical) method for CLS estimation and adjusted if
     less than 2/3x or more than 2X of CLS_stats.
 
+    NB: no guarantee end_dist < our $desired_length
+
     :param tpc: 2D array of orthant TPCs, shape (2*$desired_length, 2*$desired_length) in 2D
     :type tpc: np.ndarray
     :param binary_image: 2/3D binary arr for the microstructure
@@ -440,46 +452,54 @@ def tpc_to_cls(tpc: np.ndarray, binary_image: np.ndarray) -> float:
     # the middle index is the 0,0 TPC because of how the TPC function laid them out
     middle_idx = np.array(tpc.shape) // 2
     # this is the measured image phase fraction (i.e the product of the image with itself)
-    image_phase_fraction = tpc[tuple(map(slice, middle_idx, middle_idx + 1))][0][0]
-    # 'dist_arr_before' = before taking sqrts
+    image_phase_fraction = tpc[
+        tuple(map(slice, middle_idx, middle_idx + 1))
+    ].item()  # [0][0]
+    # 'raw_dist_arr' = before taking sqrts
     raw_dist_arr = np.indices(tpc.shape)
-    # middle index to get 0 distance
-    # arr indics != coordinates, we care about distances from centre of coords
-    raw_dist_arr = np.abs((raw_dist_arr.T - middle_idx.T).T)
+    # arr indices != coordinates, we care about distances from centre of coords so remap
+    remapped_dist_arr = np.abs((raw_dist_arr.T - middle_idx.T).T)
     img_volume = np.prod(img_shape)
     # normalising the tpc s.t. different vectors would have different weights,
     # According to their volumes.
-    # number of r s.t x + r \in x i.e same as other normlaiser
-    norm_vol = (np.array(img_shape).T - raw_dist_arr.T).T
+    # number of r s.t x + r \in x i.e same as other normaliser
+    norm_vol = (np.array(img_shape).T - remapped_dist_arr.T).T
     norm_vol = np.prod(norm_vol, axis=0) / img_volume
     # euclidean distances
-    euc_dist_arr: np.ndarray = np.sqrt(np.sum(raw_dist_arr**2, axis=0))
-    end_dist = find_end_dist_tpc(image_phase_fraction, tpc, dist_arr)  # =r_0
-    # no guarantee end_dist/r_0 < our desired length
-    print(f"end dist = {end_dist}")
+    euc_dist_arr: np.ndarray = np.sqrt(np.sum(remapped_dist_arr**2, axis=0))
+    # end dist = r0 = dist when tpc stops fluctuating
+    end_dist = find_end_dist_tpc(image_phase_fraction, tpc, euc_dist_arr)
+
     # take mean of tpcs in the outer ring width 10 from end dist
-    # this is a stabilisation step
-    pf_squared_end = np.mean(
+    tpc_phase_fraction_squared = np.mean(
         tpc[(euc_dist_arr >= end_dist - 10) & (euc_dist_arr <= end_dist)]
     )
     # take mean of this estimated pf_square from tpc and measured pf_squared from image
     # emprical result - broadly speaking mean is more stable
-    pf_squared = (pf_squared_end + image_phase_fraction**2) / 2
+    phase_fraction_squared = (tpc_phase_fraction_squared + image_phase_fraction**2) / 2
     bool_array = euc_dist_arr < end_dist
 
-    # calculate the coefficient for the cls prediction:
+    # calculate the coefficient needed for the cls prediction
     coeff = calc_coeff_for_cls_prediction(
         norm_vol, euc_dist_arr, end_dist, int(img_volume), bool_array
     )
+
     pred_cls = calc_pred_cls(
-        coeff, tpc, image_phase_fraction, pf_squared, bool_array, img_shape
+        coeff, tpc, image_phase_fraction, phase_fraction_squared, bool_array, img_shape
     )
+    # use classical apporach to see if CLS is off
     pred_is_off, sign = pred_cls_is_off(pred_cls, binary_image, image_phase_fraction)
     while pred_is_off:
         how_off = "negative" if sign > 0 else "positive"
         print(f"pred cls = {pred_cls} is too {how_off}, CHANGING TPC VALUES")
         tpc, pred_cls = change_pred_cls(
-            coeff, tpc, image_phase_fraction, pf_squared, bool_array, img_shape, sign
+            coeff,
+            tpc,
+            image_phase_fraction,
+            phase_fraction_squared,
+            bool_array,
+            img_shape,
+            sign,
         )
         pred_is_off, sign = pred_cls_is_off(
             pred_cls, binary_image, image_phase_fraction
@@ -497,13 +517,15 @@ def get_std_model(dim: int, n_voxels: int) -> float:
     return fit_to_errs_function(dim, n_voxels, *popt[f"{dim}d"])
 
 
-def normal_dist(x: np.ndarray, mean: float, std: float) -> np.ndarray:
+def normal_dist(
+    x: np.ndarray, mean: float | np.ndarray, std: float | np.ndarray
+) -> np.ndarray:
     return (1.0 / (std * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mean) / std) ** 2)
 
 
 def get_prediction_interval(
     image_pf, pred_std, pred_std_error_std, conf_level=0.95, n_divisions=101
-):
+) -> tuple[float, float]:
     """Get the prediction interval for the phase fraction of the material given the image phase
     fraction, the predicted standard deviation and the standard deviation of the prediction error.
     """
@@ -513,29 +535,27 @@ def get_prediction_interval(
     num_stds = min(pred_std / std_dist_std - pred_std / std_dist_std / 10, 6)
     # First, make the "weights" or "error" distribution, the normal distribution of the stds
     # where the prediction std is the mean of this distribution:
-    x_std_dist_bounds = [
+    x_std_dist_bounds = (
         pred_std - num_stds * std_dist_std,
         pred_std + num_stds * std_dist_std,
-    ]
-    x_std_dist: np.ndarray = np.linspace(
-        *x_std_dist_bounds, n_divisions
-    )  # type: ignore
+    )
+    x_std_dist: np.ndarray = np.linspace(*x_std_dist_bounds, n_divisions)
     std_dist = normal_dist(x_std_dist, mean=pred_std, std=std_dist_std)
     # Next, make the pf distributions, each row correspond to a different std, with
     # the same mean (observed pf) but different stds (x_std_dist), multiplied by the
     # weights distribution (std_dist).
     pf_locs = np.ones((n_divisions, n_divisions)) * image_pf
-    pf_x_bounds = [image_pf - num_stds * pred_std, image_pf + num_stds * pred_std]
-    pf_x_1d: np.ndarray = np.linspace(*pf_x_bounds, n_divisions)  # type: ignore
+    pf_x_bounds = (image_pf - num_stds * pred_std, image_pf + num_stds * pred_std)
+    pf_x_1d: np.ndarray = np.linspace(*pf_x_bounds, n_divisions)
     pf_mesh, std_mesh = np.meshgrid(pf_x_1d, x_std_dist)
     # Before normalising by weight:
     pf_dist_before_norm = normal_dist(pf_mesh, mean=pf_locs, std=std_mesh)
     # Normalise by weight:
     pf_dist = (pf_dist_before_norm.T * std_dist).T
     # Sum the distributions over the different stds
+    print(pf_dist.shape, x_std_dist.shape)
     # print(np.sum(pf_dist, axis=0).shape, np.diff(x_std_dist).shape)
-    print(np.diff(x_std_dist))
-    sum_dist_norm = np.sum(pf_dist, axis=0) * np.diff(x_std_dist)[0]  # [0]
+    sum_dist_norm = np.sum(pf_dist, axis=0) * np.diff(x_std_dist)  # [0]  # [0]
     # need a bit of normalization for symmetric bounds (it's very close to 1 already)
     sum_dist_norm /= np.trapz(sum_dist_norm, pf_x_1d)
     # Find the alpha confidence bounds
@@ -618,11 +638,11 @@ def make_error_prediction(
     l_for_err_targ = dims_from_n(n_for_err_targ, equal_shape, integral_range, n_dims)
     percentage_err_for_img = abs_err_for_img / phase_fraction
 
-    if n_dims == 3:
-        integral_range = integral_range[0]
-        l_for_err_targ = l_for_err_targ[0]
-        percentage_err_for_img = percentage_err_for_img[0]
-        abs_err_for_img = abs_err_for_img[0]
+    # if n_dims == 3:
+    # integral_range = integral_range[0]
+    # l_for_err_targ = l_for_err_targ[0]
+    # percentage_err_for_img = percentage_err_for_img[0]
+    # abs_err_for_img = abs_err_for_img[0]
 
     result = {
         "integral_range": integral_range,
