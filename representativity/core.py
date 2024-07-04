@@ -171,7 +171,6 @@ def radial_tpc(
     # TODO: does this need to be its own function that takes all the same arguments as two_point_...
     img_y_length: int = min(binary_img.shape)  # binary_img.shape[0]
     # img_y_length: int = binary_img.shape[0]
-    print(f"desired length: {img_y_length}, shape: {binary_img.shape}")
     # desired length: dims of output of fft arr,
     desired_length = (img_y_length // 2) if periodic else (img_y_length - 1)
     return two_point_correlation(
@@ -358,7 +357,9 @@ def test_cls_set(err_exp, pf, clss, img_dims):
     return cls
 
 
-def fit_cls(err_exp, img_dims, pf, max_cls=150):
+def fit_statisical_cls_from_errors(
+    err_exp: list[float], img_dims, pf, max_cls=150
+) -> int:
     # find the cls that best explains the phase fraction std errors from
     # the various subimages i.e that best aligns with our bernoulli assumption
     # which holds if the features are finite
@@ -372,53 +373,106 @@ def fit_cls(err_exp, img_dims, pf, max_cls=150):
 
 
 def stat_analysis_error_classic(
-    binary_img: np.ndarray, pf: float
-):  # TODO see if to delete this or not
+    binary_img: np.ndarray, image_phase_fraction: float
+) -> float:  # TODO see if to delete this or not
+    """Estimate the CLS of $binary_img using the statistical method: taking
+    different non-overlapping patches of the image in powers of 2
+    (i.e 1/2 patches, 1/4 patches, 1/8 patches), measuring the difference
+    between the phase fractions of these patches and the $image_phase_fraction
+    and fitting to find the CLS that best explains these errors.
 
-    # crop in increasing powers of 2
-    # TODO: binary_img.shape[1] is always one dimensions, should be the smallest dimension
-    # or dimension specific
-    ratios = [2**i for i in np.arange(1, int(np.log2(binary_img.shape[1])) - 5)]
+    :param binary_img: 2/3D binary arr for the microstructure
+    :type binary_img: np.ndarray
+    :param image_phase_fraction: measured phase fraction from the image
+    :type image_phase_fraction: float
+    :return: statisically predicted CLS
+    :rtype: float
+    """
+    # TODO: our ratios should be dimension specific
+    shortest_side = min(binary_img.shape)
+    ratios = [2**i for i in np.arange(1, int(np.log2(shortest_side)) - 5)]
     ratios.reverse()
     if binary_img.shape[0] > 1:
         ratios.append(1)
+    # avoid having too many small patches (as thier PF will be quite unstable)
     ratios = ratios[-4:]
     edge_lengths = [binary_img.shape[1] // r for r in ratios]
     img_dims = [np.array((l,) * (len(binary_img.shape) - 1)) for l in edge_lengths]
-    err_exp = image_stats(binary_img, pf, ratios)
-    real_cls = fit_cls(err_exp, img_dims, pf)
+    patch_pf_errors = image_stats(binary_img, image_phase_fraction, ratios)
+    statistical_cls = fit_statisical_cls_from_errors(
+        patch_pf_errors, img_dims, image_phase_fraction
+    )
     # TODO different size image 1000 vs 1500
-    return real_cls
+    return statistical_cls
 
 
-def pred_cls_is_off(pred_cls: float, binary_img: np.ndarray, pf: float):
-    # can compare our predicted cls to the standard way of calculating the cls
-    # standard way = taking different crops of the image then calculating the
-    # std deviation
+def pred_cls_is_off(
+    model_cls: float, binary_img: np.ndarray, image_phase_fraction: float
+) -> tuple[bool, int]:
+    """Compare our model's (FFT) predicted CLS to statistically predicted CLS. If our model's CLS
+    is less than 2/3x or more than 2x the statistical CLS, return True and the 'sign' of
+    the error (1 for underestimate, -1 for overestimate).
 
-    # cls in pixel length
-    if pred_cls < 1:
+    NB: statistical method is based on estimating feature size from non-overlapping
+    patches of the image with various side lengths.
+
+    :param model_cls: model predicted CLS (in pixels)
+    :type model_cls: float
+    :param binary_img: 2/3D binary arr for the microstructure
+    :type binary_img: np.ndarray
+    :param image_phase_fraction: measured phase fraction from the image
+    :type pf: float
+    :return: boolean if our cls is wrong and an integer for the direction
+    :rtype: tuple[bool, int]
+    """
+    if model_cls < 1:
         return True, 1
     # one image statistical/classical prediction of the cls
-    one_im_stat_pred = stat_analysis_error_classic(binary_img, pf)
-    if one_im_stat_pred > 1:  # could be erroneous stat. analysis prediction
+    statistical_cls = stat_analysis_error_classic(binary_img, image_phase_fraction)
+    if statistical_cls > 1:  # could be erroneous stat. analysis prediction
         # if pred cls too low or too high compared to statistical method,
         # return true and the direction of the error (1 for too low, -1 for too high)
-        if pred_cls / one_im_stat_pred < 2 / 3:
+        if model_cls / statistical_cls < 2 / 3:
             return True, 1
-        if pred_cls / one_im_stat_pred > 2:
+        if model_cls / statistical_cls > 2:
             return True, -1
     return False, 0
 
 
-def change_pred_cls(coeff, tpc, pf, pf_squared, bool_array, im_shape, sign):
-    """Changes the tpc function to be more positive or more negative, compared
-    to the fast stat. analysis cls pred. of the single img."""
-    # rationale is that changing the tpcs and then predicting is more
-    # likely to reutrn a 'good' cls than just snapping to the error
-    # bound regions of [(2/3) * stat_pred, 2 * stat_pred]
+def change_pred_cls(
+    coeff: float,
+    tpc: np.ndarray,
+    phase_fraction: float,
+    pf_squared: float,
+    bool_array: np.ndarray,
+    im_shape: tuple[int, ...],
+    sign: float,
+) -> tuple[np.ndarray, float]:
+    """If our estimated cls outside range of statistical/classical cls,
+    adjust the tpc values directly in the direction of the error
+    then recompute cls. We do this instead of just taking the statistical
+    cls or the highest tpc value inside the error bounds as adjusting
+    the tpcs and re-running the model is more likely to return a better
+    value for our model than just snapping to the error bound regions
+    of [(2/3) * stat_pred, 2 * stat_pred]
 
-    # pf_squared = measured image pf ^2
+    :param coeff: _description_
+    :type coeff: float
+    :param tpc: 2D array of orthant TPCs, shape (2*$desired_length, 2*$desired_length) in 2D
+    :type tpc: np.ndarray
+    :param phase_fraction: measured IMAGE phase fraction
+    :type phase_fraction: float
+    :param pf_squared: mean of image pf and tpc-estimated pf, squared
+    :type pf_squared: float
+    :param bool_array: all indices up to r_0/end_dist
+    :type bool_array: np.ndarray
+    :param im_shape: shape of binary array
+    :type im_shape: tuple[int, ...]
+    :param sign: whether the CLS is an under/overestimate
+    :type sign: float
+    :return: updated TPC 2D array and the new predicted CLS from that
+    :rtype: tuple[np.ndarray, float]
+    """
 
     if sign > 0:
         negatives = np.where(tpc - pf_squared < 0)
@@ -426,7 +480,9 @@ def change_pred_cls(coeff, tpc, pf, pf_squared, bool_array, im_shape, sign):
     else:
         positives = np.where(tpc - pf_squared > 0)
         tpc[positives] -= (tpc[positives] - pf_squared) / 10
-    pred_cls = calc_pred_cls(coeff, tpc, pf, pf_squared, bool_array, im_shape)
+    pred_cls = calc_pred_cls(
+        coeff, tpc, phase_fraction, pf_squared, bool_array, im_shape
+    )
     return tpc, pred_cls
 
 
@@ -563,9 +619,6 @@ def get_prediction_interval(
     half_conf_level = (1 + conf_level) / 2
     conf_level_beginning = np.where(cum_sum_sum_dist_norm > 1 - half_conf_level)[0][0]
     conf_level_end = np.where(cum_sum_sum_dist_norm > half_conf_level)[0][0]
-    # TODO: Check
-    # if conf_level_end[0].size == 0:
-    #    conf_level_end = -1
 
     # Calculate the interval
     return pf_x_1d[conf_level_beginning], pf_x_1d[conf_level_end]
