@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "representative"
+version = "0.0.1"
+authors = [
+  { name="Amir Dahari", email="a.dahari@imperial.ac.uk"},
+  { name="Ronan Docherty", email="ronan.docherty18@imperial.ac.uk"}
+]
+description = "Single-image phase fraction uncertainty quantification."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dynamic = ["dependencies"]
+
+[project.urls]
+"Homepage" = "https://github.com/tldr-group/Representativity"
+"Bug Tracker" = "https://github.com/tldr-group/Representativity/issues"
+
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools]
+packages = ["representativity"]
