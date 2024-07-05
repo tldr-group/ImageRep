@@ -181,131 +181,6 @@ def radial_tpc(
     )
 
 
-# %% ======================== CHARACTERISTIC LENGTH SCALE METHODS ========================
-
-
-def calc_coeff_for_cls_prediction(
-    norm_vol: np.ndarray,
-    img_volume: int,
-    bool_array: np.ndarray,
-) -> float:
-
-    # norm vol: normilisation volumes
-    # dist_arr still euclidean dists of orthant indices from centre
-    # end_dist: when tpc stops fluctuating
-    # bool arr: distances less than end_distance
-    # looking for C_r0 here
-
-    # sum of normalisations of all vectors less than r_0/end_dist
-    # sum_of_small_radii = np.sum(norm_vol[dist_arr < end_dist])
-    sum_of_small_radii = np.sum(norm_vol[bool_array])
-    coeff_1 = img_volume / (img_volume - sum_of_small_radii)
-    # coeff_2 = (1 / img_volume) * (np.sum(bool_array) - np.sum(norm_vol[bool_array]))
-    coeff_2 = (1 / img_volume) * (np.sum(bool_array) - sum_of_small_radii)
-
-    coeff_product = coeff_1 * coeff_2
-    while coeff_product > 1:
-        print(f"coeff product = {coeff_product}")
-        coeff_product /= 1.1
-    # output is effectively (but not exactly) C_r0
-    return coeff_1 / (1 - coeff_product)
-
-
-def find_end_dist_idx(
-    image_pf: float, tpc: np.ndarray, dist_arr: np.ndarray, ring_distances: np.ndarray
-) -> int:
-    """Find the (radial) distance before the TPC function plateaus. This means looking at the
-    percentage of all TPCs in a ring (width distances[i] - distances[i-1], usually 100) a
-    certain distance from the centre that are outside of 5% of the image phase fraction squared.
-    The TPC should tend to the (true) phase fraction squared, but the image phase fraction
-    is a good approximation.
-
-    If there less than 5% of all the TPCs in the ring are more than 5% out from the image
-    phase fraction at a certain distance D, return it as our end distance.
-
-    :param image_pf: measured image phase fraction
-    :type pf: float
-    :param tpc: 2D array of orthant TPCs, shape (2*$desired_length, 2*$desired_length) in 2D
-    :type tpc: np.ndarray
-    :param dist_arr: _description_
-    :type dist_arr: np.ndarray
-    :param ring_distances: list of ints that define start/stop of ring i.e [0, 100, 200, ...]
-    :type ring_distances: np.ndarray
-    :return: ring distance where the tpc stops fluctuating
-    :rtype: int
-    """
-
-    percentage = 0.05
-    small_change = (image_pf - image_pf**2) * percentage
-    for dist_i in np.arange(1, len(ring_distances) - 1):
-        start_dist, end_dist = ring_distances[dist_i], ring_distances[dist_i + 1]
-        bool_array = (dist_arr >= start_dist) & (dist_arr < end_dist)
-        sum_dev = np.sum(tpc[bool_array] - image_pf**2 > small_change)
-        deviation = sum_dev / np.sum(bool_array)
-        if deviation < 0.05:
-            return ring_distances[dist_i]
-    return ring_distances[1]
-
-
-def find_end_dist_tpc(
-    phase_fraction: float, tpc: np.ndarray, dist_arr: np.ndarray
-) -> float:
-    """Defines search range for endpoint, calls main fn"""
-    # Assumption is image is at least 200 in every dimensoom
-    # TODO: signpost in paper?
-    max_img_dim = np.max(dist_arr)
-    if max_img_dim < 200:
-        print(f"Max img dim of {max_img_dim} < 200px, using small method")
-        # this gives more unstable results but works for smaller images
-        distances = np.linspace(0, int(max_img_dim), 100)
-    else:
-        # this is the correct way as it reduces number of operations (but fails for small images)
-        distances = np.concatenate([np.arange(0, int(max_img_dim), 100)])
-
-    # check the tpc change and the comparison to pf^2
-    # over bigger and bigger discs:
-    return find_end_dist_idx(phase_fraction, tpc, dist_arr, distances)
-
-
-def calc_pred_cls(
-    coeff: float,
-    tpc: np.ndarray,
-    image_pf: float,
-    mean_pf_squared: float,
-    bool_array: np.ndarray,
-    im_shape: tuple[int, ...],
-) -> float:
-    """Calculate the model predicted CLS based on equation (11) in the paper.
-
-    NB: don't need |X_r|/|X| norm in summand as in psi in eq (9) as already taken care of due
-    to periodicity and coeffs found previously
-
-    :param coeff: normalisation coefficient (some function of C_r0)
-    :type coeff: float
-    :param tpc: 2D array of orthant TPCs, shape (2*$desired_length, 2*$desired_length) in 2D
-    :type tpc: np.ndarray
-    :param image_pf: measured image phase fraction
-    :type image_pf: float
-    :param mean_pf_squared: mean of measured image phase fraction and TPC-calculated phase fraction, squared
-    :type mean_pf_squared: float
-    :param bool_array: boolean array of indices < r0
-    :type bool_array: np.ndarray
-    :param im_shape: shape of $binary_img
-    :type im_shape: tuple[int, ...]
-    :return: characteristic length scale (CLS) / feature size of the phase in $binary_image
-    :rtype: float
-    """
-    # second term is integral of tpc - pf_squared
-    # TODO: check
-    pred_cls = (
-        coeff / (image_pf - mean_pf_squared) * np.sum(tpc[bool_array] - mean_pf_squared)
-    )
-    # this goes from length^N -> length to get a length scale
-    if pred_cls > 0:
-        pred_cls = pred_cls ** (1 / 3) if len(im_shape) == 3 else pred_cls ** (1 / 2)
-    return pred_cls
-
-
 # %% ======================== STATISTICAL CLS METHODS ========================
 
 
@@ -364,7 +239,7 @@ def image_stats(
 
     :param binary_img: 2/3D binary arr for the microstructure
     :type binary_img: np.ndarray
-    :param image_pf: _description_
+    :param image_pf: measured image phase fraction
     :type image_pf: float
     :param ratios: list of ratios to divide image length by to create patches
     :type ratios: list[float]
@@ -594,6 +469,134 @@ def change_pred_cls(
     return tpc, pred_cls
 
 
+# %% ======================== CHARACTERISTIC LENGTH SCALE METHODS ========================
+
+
+def calc_coeff_for_cls_prediction(
+    norm_vol: np.ndarray,
+    img_volume: int,
+    bool_array: np.ndarray,
+) -> float:
+    """Find the C_r0 equivalent we need for CLS prediction based on r0 (via $bool_array)
+    and $img_volume
+
+    :param norm_vol: normalisations needed to be applied to the radii < r0 before summing them
+    :type norm_vol: np.ndarray
+    :param img_volume: product of all image dimensions
+    :type img_volume: int
+    :param bool_array: boolean array of indices up to r0
+    :type bool_array: np.ndarray
+    :return: coeffs
+    :rtype: float
+    """
+    # sum of normalisations of all vectors less than r_0/end_dist
+    sum_of_small_radii = np.sum(norm_vol[bool_array])
+    coeff_1 = img_volume / (img_volume - sum_of_small_radii)
+    coeff_2 = (1 / img_volume) * (np.sum(bool_array) - sum_of_small_radii)
+
+    coeff_product = coeff_1 * coeff_2
+    while coeff_product > 1:
+        print(f"coeff product = {coeff_product}")
+        coeff_product /= 1.1
+    # output is effectively (but not exactly) C_r0
+    return coeff_1 / (1 - coeff_product)
+
+
+def find_end_dist_idx(
+    image_pf: float, tpc: np.ndarray, dist_arr: np.ndarray, ring_distances: np.ndarray
+) -> int:
+    """Find the (radial) distance before the TPC function plateaus. This means looking at the
+    percentage of all TPCs in a ring (width distances[i] - distances[i-1], usually 100) a
+    certain distance from the centre that are outside of 5% of the image phase fraction squared.
+    The TPC should tend to the (true) phase fraction squared, but the image phase fraction
+    is a good approximation.
+
+    If there less than 5% of all the TPCs in the ring are more than 5% out from the image
+    phase fraction at a certain distance D, return it as our end distance.
+
+    :param image_pf: measured image phase fraction
+    :type pf: float
+    :param tpc: 2D array of orthant TPCs, shape (2*$desired_length, 2*$desired_length) in 2D
+    :type tpc: np.ndarray
+    :param dist_arr: _description_
+    :type dist_arr: np.ndarray
+    :param ring_distances: list of ints that define start/stop of ring i.e [0, 100, 200, ...]
+    :type ring_distances: np.ndarray
+    :return: ring distance where the tpc stops fluctuating
+    :rtype: int
+    """
+
+    percentage = 0.05
+    small_change = (image_pf - image_pf**2) * percentage
+    for dist_i in np.arange(1, len(ring_distances) - 1):
+        start_dist, end_dist = ring_distances[dist_i], ring_distances[dist_i + 1]
+        bool_array = (dist_arr >= start_dist) & (dist_arr < end_dist)
+        sum_dev = np.sum(tpc[bool_array] - image_pf**2 > small_change)
+        deviation = sum_dev / np.sum(bool_array)
+        if deviation < 0.05:
+            return ring_distances[dist_i]
+    return ring_distances[1]
+
+
+def find_end_dist_tpc(
+    phase_fraction: float, tpc: np.ndarray, dist_arr: np.ndarray
+) -> float:
+    """Defines search range for endpoint, calls main fn"""
+    # Assumption is image is at least 200 in every dimensoom
+    # TODO: signpost in paper?
+    max_img_dim = np.max(dist_arr)
+    if max_img_dim < 200:
+        print(f"Max img dim of {max_img_dim} < 200px, using small method")
+        # this gives more unstable results but works for smaller images
+        distances = np.linspace(0, int(max_img_dim), 100)
+    else:
+        # this is the correct way as it reduces number of operations (but fails for small images)
+        distances = np.concatenate([np.arange(0, int(max_img_dim), 100)])
+
+    # check the tpc change and the comparison to pf^2
+    # over bigger and bigger discs:
+    return find_end_dist_idx(phase_fraction, tpc, dist_arr, distances)
+
+
+def calc_pred_cls(
+    coeff: float,
+    tpc: np.ndarray,
+    image_pf: float,
+    mean_pf_squared: float,
+    bool_array: np.ndarray,
+    im_shape: tuple[int, ...],
+) -> float:
+    """Calculate the model predicted CLS based on equation (11) in the paper.
+
+    NB: don't need |X_r|/|X| norm in summand as in psi in eq (9) as already taken care of due
+    to periodicity and coeffs found previously
+
+    :param coeff: normalisation coefficient (some function of C_r0)
+    :type coeff: float
+    :param tpc: 2D array of orthant TPCs, shape (2*$desired_length, 2*$desired_length) in 2D
+    :type tpc: np.ndarray
+    :param image_pf: measured image phase fraction
+    :type image_pf: float
+    :param mean_pf_squared: mean of measured image phase fraction and TPC-calculated phase fraction, squared
+    :type mean_pf_squared: float
+    :param bool_array: boolean array of indices < r0
+    :type bool_array: np.ndarray
+    :param im_shape: shape of $binary_img
+    :type im_shape: tuple[int, ...]
+    :return: characteristic length scale (CLS) / feature size of the phase in $binary_image
+    :rtype: float
+    """
+    # second term is integral of tpc - pf_squared
+    # TODO: check
+    pred_cls = (
+        coeff / (image_pf - mean_pf_squared) * np.sum(tpc[bool_array] - mean_pf_squared)
+    )
+    # this goes from length^N -> length to get a length scale
+    if pred_cls > 0:
+        pred_cls = pred_cls ** (1 / 3) if len(im_shape) == 3 else pred_cls ** (1 / 2)
+    return pred_cls
+
+
 def tpc_to_cls(tpc: np.ndarray, binary_image: np.ndarray) -> float:
     """Compute the Characteristic Length Scale (CLS) from the TPC array and microstructure.
     First, the distance where the TPC stops fluctuating (r_0) is found. Using this the TPC-estimated
@@ -677,6 +680,16 @@ def fit_to_errs_function(dim: int, n_voxels: int, a: float, b: float) -> float:
 
 
 def get_std_model(dim: int, n_voxels: int) -> float:
+    """Experimentally measured correction factors to adjust the std prediction of the model based on
+    measurements from the microlib library.
+
+    :param dim: whether 2D or 3D
+    :type dim: int
+    :param n_voxels: number of elements in the binary img
+    :type n_voxels: int
+    :return: correction factor
+    :rtype: float
+    """
     # fit from microlib
     popt = {"2d": [48.20175315, 0.4297919], "3d": [444.803518, 0.436974444]}
     return fit_to_errs_function(dim, n_voxels, *popt[f"{dim}d"])
@@ -689,10 +702,27 @@ def normal_dist(
 
 
 def get_prediction_interval(
-    image_pf, pred_std, pred_std_error_std, conf_level=0.95, n_divisions=101
+    image_pf: float,
+    pred_std: float,
+    pred_std_error_std: float,
+    conf_level: float = 0.95,
+    n_divisions: int = 101,
 ) -> tuple[float, float]:
     """Get the prediction interval for the phase fraction of the material given the image phase
     fraction, the predicted standard deviation and the standard deviation of the prediction error.
+
+    :param image_pf: measured image phase fraction
+    :type image_pf: float
+    :param pred_std: model predicted pf standard deviation around $image_pf
+    :type pred_std: float
+    :param pred_std_error_std: model error weighting
+    :type pred_std_error_std: float
+    :param conf_level: what confidence level this pf interval represents, defaults to 0.95
+    :type conf_level: float, optional
+    :param n_divisions: number of points over which to calculate the std around the image pf, defaults to 101
+    :type n_divisions: int, optional
+    :return: _description_
+    :rtype: tuple[float, float]
     """
     # have a large enough number of stds to converge to 0 at both ends,
     # but not too large to make the calculation slow:
@@ -734,20 +764,58 @@ def get_prediction_interval(
 
 
 def find_n_for_err_targ(
-    n, image_pf, pred_std_error_std, err_target, conf_level=0.95, n_divisions=101
+    n: int,
+    image_pf: float,
+    pred_std_error_std: float,
+    err_target: float,
+    conf_level: float = 0.95,
+    n_divisions: int = 101,
 ) -> float:
-    std_bern = ((1 / n) * (image_pf * (1 - image_pf))) ** 0.5
+    """Find the number of samples needed from a bernoulli distribution probability $image_pf needed
+    to reach a certain $err_target error in the phase fraction at a given $conf_level.
+
+    :param n: number of samples of length CLS (hyper)cubes currently in the image
+    :type n: int
+    :param image_pf: measured image phase fraction
+    :type image_pf: float
+    :param pred_std_error_std: model error weighting
+    :type pred_std_error_std: float
+    :param err_target: user-defined desired % error from 'true vf' i.e desired width of pf interval
+    :type err_target: float
+    :param conf_level: what confidence level this pf interval represents, defaults to 0.95
+    :type conf_level: float, optional
+    :param n_divisions: number of points over which to calculate the std around the image pf, defaults to 101
+    :type n_divisions: int, optional
+    :return: number of samples needed to reach error target
+    :rtype: float
+    """
+    std_bernoulli = ((1 / n) * (image_pf * (1 - image_pf))) ** 0.5
     pred_interval = get_prediction_interval(
-        image_pf, std_bern, pred_std_error_std, conf_level, n_divisions
+        image_pf, std_bernoulli, pred_std_error_std, conf_level, n_divisions
     )
     err_for_img = image_pf - pred_interval[0]
     return (err_target - err_for_img) ** 2
 
 
-def dims_from_n(n, equal_shape: bool, cls, dims):
+def dims_from_n(n_samples_needed: int, equal_shape: bool, cls: float, dims: int) -> int:
+    """Given $n_samples_needed from our bernoulli distribution of (hyper)cubes of edge length cls,
+    find the dimensions of the image needed.
+
+    :param n_samples_needed: number of samples from bernoulli dist. needed for given pf confidence
+    :type n_samples_needed: int
+    :param equal_shape: ?
+    :type equal_shape: bool
+    :param cls: characteristic length scale/feature size of binary image
+    :type cls: float
+    :param dims: 2 or 3 D
+    :type dims: int
+    :raises ValueError: _description_
+    :return: measured image length required to reach given confidence in phase fraction
+    :rtype: int
+    """
     den = cls**dims
     if equal_shape:
-        return (n * den) ** (1 / dims)
+        return (n_samples_needed * den) ** (1 / dims)
     else:
         # if dims == len(shape):
         raise ValueError("cannot define all the dimensions")
@@ -767,6 +835,25 @@ def make_error_prediction(
     equal_shape: bool = True,
     model_error: bool = True,
 ) -> dict:
+    """Given $binary_img, compute the $target_error % phase fraction bounds around the
+    measured phase fraction in $binary_img. Also find the length needed to reduce the
+    % error bounds to a given $target_error. All these intervals are found to $confidence
+    confidence, i.e the 'true' phase fraction will be found in measured pf +/- error% confidence%
+    of the time.
+
+    :param binary_img: 2/3D binary arr for the microstructur
+    :type binary_img: np.ndarray
+    :param confidence: confidence level of returned pf interval, defaults to 0.95
+    :type confidence: float, optional
+    :param target_error: user-specified desired phase fraction uncertainty, defaults to 0.05
+    :type target_error: float, optional
+    :param equal_shape: ???, defaults to True
+    :type equal_shape: bool, optional
+    :param model_error: whether to account for model error in the returned values, defaults to True
+    :type model_error: bool, optional
+    :return: _description_
+    :rtype: dict
+    """
     phase_fraction = np.mean(binary_img)
     n_dims = len(binary_img.shape)  # 2D or 3D
     n_elems = int(np.prod(binary_img.shape))
