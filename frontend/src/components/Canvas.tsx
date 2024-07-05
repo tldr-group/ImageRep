@@ -30,9 +30,6 @@ const getAspectCorrectedDims = (ih: number, iw: number, ch: number, cw: number, 
     return { w: nw, h: nh, ox: ((cw - (nw + dox * sf)) / 2), oy: doy * sf, sf: sf };
 }
 
-const postZoomImageDims = (originalSize: number, targetL: number, cRect: DOMRect, pRect: DOMRect) => {
-    //compute where corner of shrunk canv will be relative to pRect,
-}
 
 const PreviewCanvas = () => {
     const {
@@ -43,7 +40,9 @@ const PreviewCanvas = () => {
     } = useContext(AppContext)!
 
     const containerRef = useRef<HTMLDivElement>(null);
-    const animDivRef = useRef<HTMLDivElement>(null);
+    const frontDivRef = useRef<HTMLDivElement>(null);
+    const topDivRef = useRef<HTMLDivElement>(null);
+    const sideDivRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [canvDims, setCanvDims] = useState<{ h: number, w: number }>({ w: 300, h: 150 });
 
@@ -65,9 +64,8 @@ const PreviewCanvas = () => {
     }
 
     const drawFaces = (ctx: CanvasRenderingContext2D, face1: Array<Point>, face2: Array<Point>, sf: number, ox: number, oy: number) => {
-        drawPoints(ctx, face1, sf, ox, oy, "#f0f0f0") //"#dbdbdbff" 
-        drawPoints(ctx, face2, sf, ox, oy, "#ababab64")
-        //#f0f0f0
+        drawPoints(ctx, face1, sf, ox, oy, "#f0f0f0"); //"#dbdbdbff" 
+        drawPoints(ctx, face2, sf, ox, oy, "#ababab64");
     }
 
     const drawPoints = (ctx: CanvasRenderingContext2D, points: Array<Point>, sf: number, ox: number, oy: number, fill: string) => {
@@ -83,16 +81,17 @@ const PreviewCanvas = () => {
         ctx.fill();
     }
 
-    const animateDiv = (newW: number, newH: number) => {
+    const animateDiv = (div: HTMLDivElement, newW: number, newH: number) => {
         // Animate hidden bg div to show amount of data needed to measure
-        const div = animDivRef.current!;
         div.style.width = `${newW}px`
         div.style.height = `${newH}px`
         div.style.outline = '10px #b4b4b4';
         div.style.borderRadius = '10px';
         div.style.backgroundColor = '#b4b4b4c2';
+        //div.style.display = 'inline-block';
         // this creates the nice thick background lines 
         div.style.background = "repeating-linear-gradient(45deg, #b4b4b4d9, #b4b4b4d9 10px, #e5e5e5e3 10px, #e5e5e5e3 20px)";
+
 
         div.animate([ // visiblity fade
             { opacity: 0 },
@@ -180,13 +179,17 @@ const PreviewCanvas = () => {
             fill: 'forwards', // no reset 
             easing: 'ease-in-out'
         })
-        canvAnim.onfinish = (e) => { animateDiv(correctDims.w, correctDims.h) }
+        canvAnim.onfinish = (e) => {
+            animateDiv(frontDivRef.current!, correctDims.w, correctDims.h)
+        }
 
     }, [targetL])
 
     return (
         <div ref={containerRef} style={centredStyle}>
-            <div ref={animDivRef} style={{ position: 'absolute' }}></div>
+            <div ref={frontDivRef} style={{ position: 'absolute' }}></div>
+            <div ref={topDivRef} style={{ position: 'absolute' }}></div>
+            <div ref={sideDivRef} style={{ position: 'absolute' }}></div>
             <canvas ref={canvasRef} id={"preview"}></canvas>
         </div>
     );
