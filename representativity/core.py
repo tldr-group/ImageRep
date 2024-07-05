@@ -85,7 +85,7 @@ def two_point_correlation_orthant(
             binary_img, [(0, desired_length) for _ in range(n_dims)], "constant"
         )
 
-    num_elements = int(np.product(img_shape))
+    num_elements = int(np.prod(img_shape))
     # 2D tpc array up to $desired_legth * $desired_length
     tpc_desired = autocorrelation_orthant(
         binary_img, num_elements, n_dims, desired_length
@@ -534,7 +534,7 @@ def find_end_dist_idx(
         sum_dev = np.sum(tpc[bool_array] - image_pf**2 > small_change)
         deviation = sum_dev / np.sum(bool_array)
         if deviation < 0.05:
-            return ring_distances[dist_i]
+            return int(ring_distances[dist_i])
     return ring_distances[1]
 
 
@@ -594,7 +594,7 @@ def calc_pred_cls(
     # this goes from length^N -> length to get a length scale
     if pred_cls > 0:
         pred_cls = pred_cls ** (1 / 3) if len(im_shape) == 3 else pred_cls ** (1 / 2)
-    return pred_cls
+    return float(pred_cls)
 
 
 def tpc_to_cls(tpc: np.ndarray, binary_image: np.ndarray) -> float:
@@ -854,7 +854,7 @@ def make_error_prediction(
     :return: _description_
     :rtype: dict
     """
-    phase_fraction = np.mean(binary_img)
+    phase_fraction = float(np.mean(binary_img))
     n_dims = len(binary_img.shape)  # 2D or 3D
     n_elems = int(np.prod(binary_img.shape))
 
@@ -864,7 +864,9 @@ def make_error_prediction(
         binary_img,
     )
 
-    n = n_samples_from_dims([np.array(binary_img.shape)], integral_range)
+    n = n_samples_from_dims(
+        [np.array(binary_img.shape, dtype=np.int32)], integral_range
+    )
     # bern = bernouilli
     std_bern = (
         (1 / n[0]) * (phase_fraction * (1 - phase_fraction))
