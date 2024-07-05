@@ -111,12 +111,9 @@ def phase_fraction_app():
 
 
 def preprocess_arr(arr: np.ndarray) -> np.ndarray:
-    print(arr.shape)
     if len(arr.shape) == 3 and arr.shape[0] == 1:
         # weird (1, H, W) tiffs
         arr = arr[0, :, :]
-    print(arr.shape)
-
     return arr
 
 
@@ -128,7 +125,7 @@ def representativity(request) -> Response:
     selected_conf: float = float(request.values["selected_conf"]) / 100
     selected_err: float = float(request.values["selected_err"]) / 100
 
-    print(selected_phase, selected_conf, selected_err)
+    print(f"Phase: {selected_phase}, Conf: {selected_conf}, Err: {selected_err}")
 
     binary_img = np.where(arr == selected_phase, 1, 0)
 
@@ -136,15 +133,6 @@ def representativity(request) -> Response:
         binary_img, selected_conf, selected_err, model_error=False
     )  # make_error_prediction(binary_img, selected_conf, selected_err)
     # this can get stuck sometimes in the optimisation step (usually cls > 1)
-    print(result)
-    """
-    out = {
-        "abs_err": result[0] * np.mean(binary_img),
-        "percent_err": result[0],
-        "l": result[1],
-        "cls": result[2],
-    }
-    """
     out = {
         "abs_err": result["abs_err"],
         "percent_err": result["percent_err"] * 100,

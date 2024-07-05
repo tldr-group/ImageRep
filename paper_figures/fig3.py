@@ -1,9 +1,9 @@
-import json
+simport json
 import numpy as np
 from scipy.optimize import curve_fit
 import sys
 sys.path.append('../')
-from representativity import util
+from representativity.old import util
 import matplotlib.pyplot as plt
 from matplotlib import animation 
 from scipy.optimize import minimize
