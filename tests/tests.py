@@ -1,13 +1,14 @@
 import numpy as np
+
+np.random.seed(0)
 from tifffile import imread
 
 import representativity.core as model
 
 import unittest
 
-
-test_arr = np.array([[1, 0, 1], [0, 1, 1], [1, 0, 0]])
-non_periodic_gt = np.array(
+TEST_TPC_ARR = np.array([[1, 0, 1], [0, 1, 1], [1, 0, 0]])
+NON_PERIODIC_GT = np.array(
     [
         [0.0, 0.0, 3 / 9, 0.0, 1.0],
         [0.5, 0.25, 1 / 6, 0.5, 0.5],
@@ -17,7 +18,7 @@ non_periodic_gt = np.array(
     ]
 )
 
-periodic_gt = np.array(
+PERIODIC_GT = np.array(
     [
         [2 / 9, 4 / 9, 2 / 9, 2 / 9, 4 / 9],
         [4 / 9, 2 / 9, 2 / 9, 4 / 9, 2 / 9],
@@ -26,6 +27,10 @@ periodic_gt = np.array(
         [4 / 9, 2 / 9, 2 / 9, 4 / 9, 2 / 9],
     ]
 )
+
+DEFAULT_MICROSTRUCTURE = imread("tests/resources/default.tiff")[0]
+phases = np.unique(DEFAULT_MICROSTRUCTURE)
+DEFAULT_BINARY_IMG = np.where(DEFAULT_MICROSTRUCTURE == phases[1], 1, 0)
 
 
 def post_process_tpc(padded_tpc: np.ndarray) -> np.ndarray:
@@ -62,13 +67,23 @@ class UnitTests(unittest.TestCase):
     def test_2PC_on_test_arr(self):
         """Test the two point correlation function for a periodic and non-periodic 2D image"""
 
-        l = test_arr.shape[0]  # usually 3
-        for is_periodic, gt in zip((False, True), (non_periodic_gt, periodic_gt)):
+        l = TEST_TPC_ARR.shape[0]  # usually 3
+        for is_periodic, gt in zip((False, True), (NON_PERIODIC_GT, PERIODIC_GT)):
             padded_tpc = model.two_point_correlation(
-                test_arr, desired_length=l, volumetric=False, periodic=is_periodic
+                TEST_TPC_ARR, desired_length=l, volumetric=False, periodic=is_periodic
             )
             tpc = post_process_tpc(padded_tpc)
             assert np.allclose(tpc, gt)
+
+    def test_subimg_splitter(self):
+        for ratio in (2, 4, 8):
+            subimgs = model.divide_img_to_subimages(DEFAULT_BINARY_IMG, ratio)
+            assert len(subimgs) == ratio**2
+
+    def test_std_of_subimgs(self):
+        test_pf = 0.3
+        test_arr = np.random.binomial(1, test_pf, (400, 400))
+        print(model.calc_std_from_ratio(test_arr, 2))
 
 
 if __name__ == "__main__":
