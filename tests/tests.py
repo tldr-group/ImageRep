@@ -1,7 +1,9 @@
 import numpy as np
 
 np.random.seed(0)
+from skimage.draw import disk, rectangle
 from tifffile import imread
+import matplotlib.pyplot as plt
 
 import representativity.core as model
 
@@ -80,21 +82,72 @@ class UnitTests(unittest.TestCase):
             subimgs = model.divide_img_to_subimages(DEFAULT_BINARY_IMG, ratio)
             assert len(subimgs) == ratio**2
 
-    def test_std_of_subimgs(self):
-        test_pf = 0.3
-        test_arr = np.random.binomial(1, test_pf, (400, 400))
-        print(model.calc_std_from_ratio(test_arr, 2))
+
+class IntegrationTests(unittest.TestCase):
+    """Integration tests of component functions."""
+
+    def test_cls_disk(self):
+        """Measure CLS of $n_disks in binary arr with radius $radius. CLS should be ~= 2*$radius."""
+        print("## Test case: characteristic length scale on random disks")
+        y, x, n_disks, radius = 500, 500, 40, 40
+        arr = np.zeros((y, x), dtype=np.uint8)
+        for i in range(n_disks):
+            dx, dy = np.random.randint(0, y), np.random.randint(0, x)
+            rr, cc = disk((dy, dx), radius, shape=(y, x))
+            arr[rr, cc] = 1
+        vf = np.mean(arr)
+        tpc = model.radial_tpc(arr, False, False)
+        integral_range = model.tpc_to_cls(tpc, arr)
+        print(
+            f"CLS={integral_range:.3f}, VF={vf:.3f} for {n_disks} disks with diameter {2 * radius} on {x}x{y} image \n"
+        )
+        plt.imsave("disk.png", arr)
+        assert np.isclose(integral_range, 2 * radius, rtol=0.05)
+
+    def test_cls_squares(self):
+        print(
+            "## Test case: characteristic length scale on random squares of increasing size"
+        )
+        target_vf = 0.5
+        y, x, l = 500, 500, 10
+        n_rects = int((y / l) * target_vf) ** 2
+        print(n_rects)
+        arr = np.zeros((y, x), dtype=np.uint8)
+        for i in range(n_rects):
+            dx, dy = np.random.randint(0, y), np.random.randint(0, x)
+            rr, cc = rectangle((dy, dx), extent=(l, l), shape=(y, x))
+            arr[rr, cc] = 1
+
+        tpc = model.radial_tpc(arr, False, False)
+        integral_range = model.tpc_to_cls(tpc, arr)
+        plt.imsave("foo.png", arr)
+        print(integral_range, np.sqrt(2) * l)
+
+    def test_repr_pred(self):
+        """Measure the representativity of a crop of our default microstructure, finding the image edge length
+        needed to reach a given $desired_error. Then crop the microstructure to this (larger) edge length,
+        measuring the representativity and percent error again. If our model is correct (and conservative),
+         then this new refined percent error < predicted error from the first measurement.
+        """
+        print("## Test case: representativity estimation")
+        desired_error = 0.1
+        crop = DEFAULT_BINARY_IMG[:300, :300]
+        result = model.make_error_prediction(
+            crop, 0.95, desired_error, model_error=False
+        )
+        l_for_err = int(result["l"])
+        print(
+            f"Need edge length {l_for_err} for better than {desired_error:.3f}% phase fraction error, currently {result['percent_err']:.3f}%"
+        )
+        wider_crop = DEFAULT_BINARY_IMG[:l_for_err, :l_for_err]
+        refined_result = model.make_error_prediction(
+            wider_crop, 0.95, 0.05, model_error=False
+        )
+        print(
+            f"{refined_result['percent_err']:.3f}% phase fraction error at l={l_for_err}\n"
+        )
+        assert refined_result["percent_err"] < result["percent_err"]
 
 
 if __name__ == "__main__":
     unittest.main(argv=["example"])
-"""
-inp = imread("seg_stack.tiff")
-if inp.shape[0] == 1:
-    inp = inp[0, :, :]
-print(np.unique(inp))
-# 170 for default
-microstructure = np.where(inp == 127, 1, 0)
-
-make_error_prediction(microstructure, model_error=False)
-"""
