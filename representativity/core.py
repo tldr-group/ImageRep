@@ -707,7 +707,7 @@ def get_prediction_interval(
     pred_std_error_std: float,
     conf_level: float = 0.95,
     n_divisions: int = 101,
-) -> tuple[float, float]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Get the prediction interval for the phase fraction of the material given the image phase
     fraction, the predicted standard deviation and the standard deviation of the prediction error.
 
