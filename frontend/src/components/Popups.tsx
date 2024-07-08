@@ -51,6 +51,7 @@ export const ErrorMessage = () => {
 export const CLSModal = () => {
     const {
         analysisInfo: [analysisInfo,],
+        errVF: [errVF,],
         showWarning: [showWarning, setShowWarning],
     } = useContext(AppContext)!;
 
@@ -58,11 +59,13 @@ export const CLSModal = () => {
         setShowWarning("");
     }
 
-    const getText = (state: "" | "cls" | "size") => {
+    const getText = (state: "" | "cls" | "size" | "over") => {
         if (state == "cls") {
             return `Integral Range/feature size of ${analysisInfo?.integralRange.toFixed(2)} exceeds tested limit of ${IR_LIMIT_PX}px, results may be inaccurate.`
         } else if (state == "size") {
             return `Image size < 200 px in at least one dimension. Results may be unstable.`
+        } else if (state == "over") {
+            return `Image phase fraction uncertainty ${analysisInfo?.percentageErr.toFixed(2)}% already less than target uncertainty ${errVF.toFixed(2)}%`
         } else {
             return ""
         }

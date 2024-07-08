@@ -132,6 +132,8 @@ const App = () => {
             })
 
             if (obj["cls"] > IR_LIMIT_PX) { setShowWarning("cls") }
+            const minSide = Math.min(imageInfo?.width!, imageInfo?.height!)
+            if (obj["l"] < minSide) { setShowWarning("over") }
 
             setTargetL(obj["l"]);
         } catch (e) {

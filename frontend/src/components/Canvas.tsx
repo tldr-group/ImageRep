@@ -159,20 +159,25 @@ const PreviewCanvas = () => {
         if (targetL === null) { return; }
         const canvas = canvasRef.current!;
 
-        const sf = (targetL / imageInfo?.width!); // TODO: FIX WHEN DATA IS REAL
+        const shortestSide = Math.min(imageInfo?.width!, imageInfo?.height!);
+        const maxSF = (targetL / shortestSide);
+
+        const newCanvL = Math.min(canvDims.h, canvDims.w)
 
         const image = previewImg!
         const [ih, iw, ch, cw] = [image.naturalHeight, image.naturalWidth, canvDims.h, canvDims.w];
         const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, 0, 0, ADDITIONAL_SF);
         // centred-adjusted shift
-        const dx = (correctDims.w / 2) - (canvDims.w / (2 * sf));
-        const dy = (correctDims.h / 2) - (canvDims.h / (2 * sf));
+        const dx = (correctDims.w / 2) - (newCanvL / (2 * maxSF));
+        const dy = (correctDims.h / 2) - (newCanvL / (2 * maxSF));
         // image drawn centred on canvas, need to correct to shift top left of image to top left of div.
-        const shiftX = -(dx * sf + correctDims.ox);
-        const shiftY = -(dy * sf + correctDims.oy);
+        const shiftX = -(dx * maxSF + correctDims.ox);
+        const shiftY = -(dy * maxSF + correctDims.oy);
 
+
+        console.log(correctDims, dx, dy)
         const canvAnim = canvas.animate([
-            { transform: `scale(${1 / sf}) translate(${shiftX}px, ${shiftY}px)` },
+            { transform: `scale(${1 / maxSF}) translate(${0}px, ${0}px)` },
         ], {
             duration: 1600, //1.6s
             iterations: 1, // one shot
@@ -180,7 +185,7 @@ const PreviewCanvas = () => {
             easing: 'ease-in-out'
         })
         canvAnim.onfinish = (e) => {
-            animateDiv(frontDivRef.current!, correctDims.w, correctDims.h)
+            animateDiv(frontDivRef.current!, newCanvL, newCanvL)
         }
 
     }, [targetL])
