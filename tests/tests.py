@@ -101,7 +101,7 @@ class IntegrationTests(unittest.TestCase):
         print(
             f"CLS={integral_range:.3f}, VF={vf:.3f} for {n_disks} disks with diameter {2 * radius} on {x}x{y} image \n"
         )
-        plt.imsave("disk.png", arr)
+        # plt.imsave("disk.png", arr)
         assert np.isclose(integral_range, 2 * radius, rtol=0.05)
 
     def test_cls_squares(self):
@@ -120,7 +120,7 @@ class IntegrationTests(unittest.TestCase):
 
         tpc = model.radial_tpc(arr, False, False)
         integral_range = model.tpc_to_cls(tpc, arr)
-        plt.imsave("foo.png", arr)
+        # plt.imsave("foo.png", arr)
         print(integral_range, np.sqrt(2) * l)
 
     def test_repr_pred(self):
