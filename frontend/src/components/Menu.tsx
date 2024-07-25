@@ -226,6 +226,9 @@ const Result = () => {
 
     const copyBtn = () => { navigator.clipboard.writeText(copyText) }
 
+    const longestSide = Math.max(imageInfo?.width!, imageInfo?.height!)
+    const nMore = Math.pow((Math.ceil(l! / longestSide)), 2) - 1
+
     return (
         <>
             <Accordion defaultActiveKey={['0']} flush alwaysOpen>
@@ -245,7 +248,7 @@ const Result = () => {
                     <Accordion.Header ref={lResultRef}>Required Length for Target</Accordion.Header>
                     {/*Need to manually overwrite the style here because of werid bug*/}
                     <Accordion.Body style={{ visibility: "visible" }}>
-                        For a {errVF.toFixed(2)}% uncertainty in phase fraction, you <b>need to measure an image size of about {sizeText}</b> at the same resolution.
+                        For a {errVF.toFixed(2)}% uncertainty in phase fraction, you <b>need to measure a total image size of about {sizeText} (i.e. {nMore} more images)</b> at the same resolution.
                     </Accordion.Body>
                 </Accordion.Item>
             </Accordion >
