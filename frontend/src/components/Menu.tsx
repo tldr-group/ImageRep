@@ -14,7 +14,6 @@ import Table from "react-bootstrap/Table";
 import Accordion from 'react-bootstrap/Accordion';
 import { getPhaseFraction } from "./imageLogic";
 
-
 const centreStyle = { display: 'flex', justifyContent: 'space-evenly', alignItems: 'center', marginTop: '1em' }
 
 const _getCSSColour = (currentStateVal: any, targetStateVal: any, successPrefix: string, colourIdx: number): string => {
@@ -168,7 +167,6 @@ const Result = () => {
         );
 
     const perErr = analysisInfo?.percentageErr;
-    const [LB, UB] = [Math.max((1 - perErr! / 100) * phaseFrac, 0), Math.min((1 + perErr! / 100) * phaseFrac, 1)];
 
     const l = analysisInfo?.lForDefaultErr;
     const lStr = l?.toFixed(0);
@@ -186,6 +184,15 @@ const Result = () => {
         setErrVF(newErrVF);
         setMenuState('processing');
     }
+
+    const getDPofSigFig = (decimal: number) => {
+        const rounded = parseFloat(decimal.toPrecision(1));
+        const loc = Math.ceil(Math.abs(Math.log10(rounded)));
+        return loc
+    }
+
+    const absErr = analysisInfo?.absError!
+    const roundTo = getDPofSigFig(absErr);
 
     const c = colours[selectedPhase];
     const headerHex = rgbaToHex(c[0], c[1], c[2], c[3]);
@@ -213,6 +220,11 @@ const Result = () => {
         refs.map((r, i) => restyleAccordionHeaders(r, (i == 0)));
     }, [selectedPhase])
 
+    const beforeBoldText = `The phase fraction in the segmented image is ${phaseFrac.toFixed(3)}. Assuming perfect segmentation, the model proposed by Dahari et al. suggests that `
+    const boldText = `we can be ${selectedConf}% confident of the true phase fraction being within ${perErr?.toFixed(1)}% of this value (i.e. ${phaseFrac.toFixed(roundTo)}±${(absErr).toFixed(roundTo)})`
+    const copyText = beforeBoldText + boldText
+
+    const copyBtn = () => { navigator.clipboard.writeText(copyText) }
 
     return (
         <>
@@ -221,9 +233,12 @@ const Result = () => {
                     <Accordion.Header ref={pfResultRef}>Phase Fraction Uncertainty</Accordion.Header>
                     {/*Need to manually overwrite the style here because of werid bug*/}
                     <Accordion.Body style={{ visibility: "visible" }}>
-                        The <b>bulk phase fraction ϕ is within {perErr?.toFixed(3)}% of your image phase
-                            fraction Φ ({phaseFrac.toFixed(3)}) </b> with {selectedConf}% confidence.
-                        {/*<p><b><i>i.e,</i> {LB.toFixed(3)} ≤ ϕ ≤ {UB.toFixed(3)} with {selectedConf}% confidence.</b></p>*/}
+                        {beforeBoldText}<b>{boldText}</b>
+                        <InputGroup style={{ justifyContent: 'center', marginTop: '1em' }}>
+                            <InputGroup.Text id="btnGroupAddon">Copy:</InputGroup.Text>
+                            <Button variant="outline-secondary" onClick={copyBtn}>text</Button>
+                            <Button variant="outline-secondary">citation</Button>
+                        </InputGroup>
                     </Accordion.Body>
                 </Accordion.Item>
                 <Accordion.Item eventKey="1" >
