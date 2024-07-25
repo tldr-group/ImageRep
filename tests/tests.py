@@ -2,6 +2,7 @@ import numpy as np
 
 np.random.seed(0)
 from skimage.draw import disk, rectangle
+from skimage.data import binary_blobs
 from tifffile import imread
 import matplotlib.pyplot as plt
 
@@ -123,7 +124,38 @@ class IntegrationTests(unittest.TestCase):
         # plt.imsave("foo.png", arr)
         print(integral_range, np.sqrt(2) * l)
 
+    def test_blobs_vf_cls(self):
+        """Test the cls of random binary blobs, should be around the set length scale"""
+        print("## Test case: cls of random blobs")
+        h, l, vf = 750, 10, 0.4
+        percent_l = l / h
+        test_arr = binary_blobs(h, percent_l, 2, vf)
+        result = model.make_error_prediction(test_arr, model_error=False)
+        assert np.isclose(result["integral_range"], l, atol=5)
+
     def test_repr_pred(self):
+        """Test the percentage error of a random binomial size (500,500) - should be small"""
+        print("## Test case: representativity of random binomial")
+        test_arr = np.random.binomial(1, 0.5, (500, 500))
+        result = model.make_error_prediction(test_arr, model_error=False)
+        assert result["percent_err"] < 0.05
+
+    def test_binary(self):
+        """Test that abs_err of repr of phase 1 of binary = abs_err of phase 2 of binary"""
+        print("## Test case: repr of two phases of binary materials the same")
+        h, l, vf = 750, 10, 0.4
+        percent_l = l / h
+        test_arr = binary_blobs(h, percent_l, 2, vf)
+        inv_test_arr = ~test_arr
+        result_1 = model.make_error_prediction(test_arr, model_error=False)
+        result_2 = model.make_error_prediction(inv_test_arr, model_error=False)
+
+        print(
+            f"abs err phase 1: {result_1['abs_err']}, abs err phase 2: {result_2['abs_err']}"
+        )
+        assert np.isclose(result_1["abs_err"], result_2["abs_err"], rtol=0.001)
+
+    def test_repr_zoom_pred(self):
         """Measure the representativity of a crop of our default microstructure, finding the image edge length
         needed to reach a given $desired_error. Then crop the microstructure to this (larger) edge length,
         measuring the representativity and percent error again. If our model is correct (and conservative),
@@ -147,6 +179,8 @@ class IntegrationTests(unittest.TestCase):
             f"{refined_result['percent_err']:.3f}% phase fraction error at l={l_for_err}\n"
         )
         assert refined_result["percent_err"] < result["percent_err"]
+
+    # TODO: test that reprs of each phase of binary microstrucutre are the same
 
 
 if __name__ == "__main__":
