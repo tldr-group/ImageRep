@@ -4,6 +4,8 @@ from scipy.stats import norm  # type: ignore
 from scipy.optimize import minimize  # type: ignore
 
 
+DEFAULT_N_DIV = 301
+
 # %% ======================== TWO-POINT CORRELATION METHODS ========================
 
 
@@ -706,7 +708,7 @@ def get_prediction_interval(
     pred_std: float,
     pred_std_error_std: float,
     conf_level: float = 0.95,
-    n_divisions: int = 101,
+    n_divisions: int = DEFAULT_N_DIV,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Get the prediction interval for the phase fraction of the material given the image phase
     fraction, the predicted standard deviation and the standard deviation of the prediction error.
@@ -748,12 +750,14 @@ def get_prediction_interval(
     # Normalise by weight:
     pf_dist = (pf_dist_before_norm.T * std_dist).T
     # Sum the distributions over the different stds
-    print(pf_dist.shape, x_std_dist.shape)
-    # print(np.sum(pf_dist, axis=0).shape, np.diff(x_std_dist).shape)
-    sum_dist_norm = np.sum(pf_dist, axis=0) * np.diff(x_std_dist)  # [0]  # [0]
+    val = np.diff(x_std_dist)[0]
+    sum_dist_norm = np.sum(pf_dist, axis=0) * val
     # need a bit of normalization for symmetric bounds (it's very close to 1 already)
     sum_dist_norm /= np.trapz(sum_dist_norm, pf_x_1d)
     # Find the alpha confidence bounds
+    # TODO: return cum_sum_sum_dist_norm array over HTTP
+    # and write js function that does lines 759-762
+    # will need to send the array somehow
     cum_sum_sum_dist_norm = np.cumsum(sum_dist_norm * np.diff(pf_x_1d)[0])
     half_conf_level = (1 + conf_level) / 2
     conf_level_beginning = np.where(cum_sum_sum_dist_norm > 1 - half_conf_level)[0][0]
@@ -769,7 +773,7 @@ def find_n_for_err_targ(
     pred_std_error_std: float,
     err_target: float,
     conf_level: float = 0.95,
-    n_divisions: int = 101,
+    n_divisions: int = DEFAULT_N_DIV,
 ) -> float:
     """Find the number of samples needed from a bernoulli distribution probability $image_pf needed
     to reach a certain $err_target error in the phase fraction at a given $conf_level.
@@ -789,6 +793,7 @@ def find_n_for_err_targ(
     :return: number of samples needed to reach error target
     :rtype: float
     """
+    n = n[0]  # needs to be here during the optimize
     std_bernoulli = ((1 / n) * (image_pf * (1 - image_pf))) ** 0.5
     pred_interval = get_prediction_interval(
         image_pf, std_bernoulli, pred_std_error_std, conf_level, n_divisions
@@ -873,22 +878,34 @@ def make_error_prediction(
     ) ** 0.5  # TODO: this is the std of phi relative to Phi with
     std_model = get_std_model(n_dims, n_elems)
     abs_err_target = target_error * phase_fraction
+    z = 0
     if model_error:
         # calculate the absolute error for the image:
         conf_bounds = get_prediction_interval(
-            phase_fraction, std_bern, std_model, confidence
+            phase_fraction, std_bern, std_model, confidence, DEFAULT_N_DIV
         )
         abs_err_for_img = phase_fraction - conf_bounds[0]
         # calculate the n for the error target:
-        args = (phase_fraction, std_model, target_error, confidence)
-        n_for_err_targ = minimize(find_n_for_err_targ, n, args=args)
+        args = (
+            phase_fraction,
+            std_model,
+            abs_err_target,
+            confidence,
+        )  # was 'target_error'
+        n_for_err_targ = minimize(
+            find_n_for_err_targ, n, args=args, method="nelder-mead", bounds=[(10, 10e8)]
+        )
         n_for_err_targ = n_for_err_targ.x[0]
+
     else:  # TODO what is this useful for.. for when you trust the model completely?
         z = norm.interval(confidence)[1]
         abs_err_for_img = z * std_bern
         n_for_err_targ = (
             phase_fraction * (1 - phase_fraction) * (z / abs_err_target) ** 2
         )
+    print(f"N for err targ: {n_for_err_targ}")
+    # w model error n for err targ << w/out
+    # => weird length scales
     l_for_err_targ = dims_from_n(n_for_err_targ, equal_shape, integral_range, n_dims)
     percentage_err_for_img = abs_err_for_img / phase_fraction
 

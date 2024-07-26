@@ -130,7 +130,7 @@ def representativity(request) -> Response:
     binary_img = np.where(arr == selected_phase, 1, 0)
 
     result = make_error_prediction(
-        binary_img, selected_conf, selected_err, model_error=False
+        binary_img, selected_conf, selected_err, model_error=True
     )  # make_error_prediction(binary_img, selected_conf, selected_err)
     # this can get stuck sometimes in the optimisation step (usually cls > 1)
     out = {
