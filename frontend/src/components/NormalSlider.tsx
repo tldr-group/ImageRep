@@ -5,8 +5,8 @@ import { getPhaseFraction } from "./imageLogic";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
 
-const CANVAS_WIDTH = 600;
-const CANVAS_HEIGHT = 350;
+const CANVAS_WIDTH = 428 * 2;
+const CANVAS_HEIGHT = 200 * 1.5;
 const H_FOR_TEXT = 24;
 const SCALEBAR_WIDTH = 4;
 const H_GAUSS = CANVAS_HEIGHT - H_FOR_TEXT
@@ -165,7 +165,7 @@ const NormalSlider = () => {
     const drawText = (dataVals: Array<number>, xPositions: Array<number>) => {
         const canv = canvasRef.current!;
         const ctx = canv.getContext('2d')!;
-        ctx.font = "24px Noto Sans";
+        ctx.font = "32px Noto Sans"; // was 24
         ctx.fillStyle = DARK_GREY;
         for (let i = 0; i < dataVals.length; i++) {
             const offset = (i == 1) ? 24 : -8
@@ -208,11 +208,11 @@ const NormalSlider = () => {
     useEffect(() => {
         const result = getPredictionInterval(selectedConf / 100, analysisInfo?.pf!, analysisInfo?.cumSumSum!)
         const [lbData, ubData] = [result[0], result[1]]
-        const sigma = 0.5 * (ubData - lbData) // sigma should be fixed as ub and lb changes - this should be reflected in results as well
-        console.log(analysisInfo?.stdModel!)
+        const sigma = (ubData - lbData) / 4 // sigma should be fixed as ub and lb changes - this should be reflected in results as well
+        console.log(analysisInfo?.stdModel!, sigma)
         const newMaxY = normalDist(phaseFrac, phaseFrac, analysisInfo?.stdModel!)
-        const newStartPf = 0.5 * phaseFrac
-        const newEndPf = 1.5 * phaseFrac
+        const newStartPf = phaseFrac - 4 * sigma
+        const newEndPf = phaseFrac + 4 * sigma
         const newParams: NormalParams = { mu: phaseFrac, sigma: sigma, start_pf: newStartPf, end_pf: newEndPf, max_y: newMaxY }
         setParams(newParams)
     }, [analysisInfo])
@@ -227,9 +227,9 @@ const NormalSlider = () => {
     }, [selectedConf])
 
     return (
-        <div>
-            <canvas width={CANVAS_WIDTH} height={CANVAS_HEIGHT} ref={canvasRef} style={{ marginBottom: '0.5em' }} />
-            <InputGroup>
+        <div style={{ width: '100%' }}>
+            <canvas style={{ width: '70%', marginLeft: '15%', marginBottom: '0.5em' }} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} ref={canvasRef} />
+            <InputGroup style={{ width: '70%', marginLeft: '15%' }}> {/*style={{ width: '70%', marginLeft: '15%' }}*/}
                 <InputGroup.Text>Confidence in Phase Fraction Bounds (%):</InputGroup.Text>
 
                 <Form.Control type="number" min={0} max={100} value={selectedConf} step={0.5} onChange={(e) => setConf(e)} width={1} size="sm"></Form.Control>
