@@ -12,6 +12,7 @@ import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import Modal from 'react-bootstrap/Modal';
 import NormalSlider from "./NormalSlider";
+import ListGroup from 'react-bootstrap/ListGroup';
 
 import Accordion from 'react-bootstrap/Accordion';
 import { getPhaseFraction } from "./imageLogic";
@@ -213,12 +214,8 @@ const Result = () => {
         return loc
     }
 
-    const absErr = analysisInfo?.absError!
-    const roundTo = getDPofSigFig(absErr);
-
     const c = colours[selectedPhase];
     const headerHex = rgbaToHex(c[0], c[1], c[2], c[3]);
-
 
     useEffect(() => {
         const refs = [pfResultRef, lResultRef];
@@ -227,8 +224,13 @@ const Result = () => {
 
 
     const absErrFromPFB = (pfB![1] - pfB![0]) / 2
+    const perErrFromPFB = 100 * (((pfB![1] - pfB![0]) / 2) / phaseFrac)
+
+    const absErr = analysisInfo?.absError!
+    const roundTo = getDPofSigFig(absErrFromPFB);
+
     const beforeBoldText = `The phase fraction in the segmented image is ${phaseFrac.toFixed(3)}. Assuming perfect segmentation, the model proposed by Dahari et al. suggests that `
-    const boldText = `we can be ${selectedConf.toFixed(1)}% confident of the true phase fraction being within ${perErr?.toFixed(1)}% of this value (i.e. ${phaseFrac.toFixed(roundTo)}±${(absErrFromPFB).toFixed(roundTo)})`
+    const boldText = `we can be ${selectedConf.toFixed(1)}% confident of the true phase fraction being within ${perErrFromPFB?.toFixed(1)}% of this value (i.e. ${phaseFrac.toFixed(roundTo)}±${(absErrFromPFB).toFixed(roundTo)})`
     const copyText = beforeBoldText + boldText
 
     const copyBtn = () => { navigator.clipboard.writeText(copyText) }
@@ -291,7 +293,7 @@ const Result = () => {
                         <Accordion.Header ref={pfResultRef}>Phase Fraction Uncertainty</Accordion.Header>
                         {/*Need to manually overwrite the style here because of werid bug*/}
                         <Accordion.Body style={{ visibility: "visible" }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', justifyItems: 'center', marginTop: '1em', marginBottom: '1em' }}>
+                            <div style={{ display: 'flex', alignItems: 'center' }}>
                                 <NormalSlider ></NormalSlider>
                             </div>
                             {beforeBoldText}<b>{boldText}</b>
@@ -309,9 +311,32 @@ const Result = () => {
                             For a {errVF.toFixed(2)}% uncertainty in phase fraction, you <b>need to measure a total image size of about {sizeText} (i.e. {nMore} more images)</b> at the same resolution.
                         </Accordion.Body>
                     </Accordion.Item>
+                    <Accordion.Item eventKey="2" >
+                        <Accordion.Header style={{ color: 'red' }}>Warnings</Accordion.Header>
+                        <Accordion.Body style={{ visibility: "visible" }}>
+                            <ListGroup>
+                                <ListGroup.Item>Other errors are possible, and may be larger! (i.e, segmentation error)</ListGroup.Item>
+                                <ListGroup.Item>Not designed for periodic structures</ListGroup.Item>
+                                <ListGroup.Item>This is a (conservative) estimate - retry when you have measured the larger sample</ListGroup.Item>
+                                <ListGroup.Item>Porta ac consectetur ac</ListGroup.Item>
+                            </ListGroup>
+                            <p>Full details can be found in the <a href="comingsoon">paper</a>.</p>
+                        </Accordion.Body>
+                    </Accordion.Item>
+                    <Accordion.Item eventKey="3" >
+                        <Accordion.Header style={{ color: 'red' }}>More info</Accordion.Header>
+                        <Accordion.Body style={{ visibility: "visible" }}>
+                            <ListGroup>
+                                <ListGroup.Item variant="dark" style={{ cursor: "pointer" }} onClick={e => setShowInfo(true)}>Brief explanation</ListGroup.Item>
+                                <ListGroup.Item>Implementation in the <a href="https://github.com/tldr-group/Representativity">GitHub</a></ListGroup.Item>
+                                <ListGroup.Item>Full details can be found in the <a href="comingsoon">paper</a></ListGroup.Item>
+                            </ListGroup>
+                        </Accordion.Body>
+                    </Accordion.Item>
+
                 </Accordion >
 
-                <p>Full details can be found in the <a href="comingsoon">paper</a>.</p>
+
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="dark" onClick={handleClose}>
