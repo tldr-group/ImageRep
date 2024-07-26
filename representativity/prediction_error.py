@@ -20,7 +20,7 @@ def error_by_size_estimation(dim, run_number=0, std_not_cls=True):
     edge_lengths_pred = data_dim['edge_lengths_pred']
     stds = []
     for edge_length in edge_lengths_pred:
-        _, _, err, std, pfs = comparison_results(data_dim, micro_names, dim,
+        _, _, _, err, std, pfs = comparison_results(data_dim, micro_names, dim,
                                           str(edge_length), run_number, std_not_cls=std_not_cls)
         stds.append(std)
     return stds
@@ -40,26 +40,20 @@ def data_micros(dim):
 def comparison_results(data_dim, micro_names, dim, edge_length, run_number, std_not_cls=False):
     micros_data = [data_dim[n] for n in micro_names]
     pfs = np.array([m_data['vf'] for m_data in micros_data])
-    fit_data_all = np.array([m_data['fit_ir_vf'] for m_data in micros_data])
-    fit_err_pf = np.array([m_data['fit_err_vf'][edge_length] for m_data in micros_data])
-    pred_data_all = np.array([m_data[f'run_{run_number}']['pred_ir_vf'][edge_length] for m_data in micros_data])
-    # pred_ir_oi_pf = np.array([m_data[f'run_{run_number}']['pred_ir_one_im_fit_vf'][edge_length] for m_data in micros_data])
+    fit_cls_all = np.array([m_data['fit_ir_vf'] for m_data in micros_data])
+    pred_cls_all = np.array([m_data[f'run_{run_number}']['pred_ir_vf'][edge_length] for m_data in micros_data])
+    pred_cls_oi_all = np.array([m_data[f'run_{run_number}']['pred_ir_one_im_fit_vf'][edge_length] for m_data in micros_data])
 
-    pred_err_pf = np.array([m_data[f'run_{run_number}']['pred_err_vf'][edge_length] for m_data in micros_data])
     if std_not_cls:
         pfs = np.array(pfs)
         pfs_one_minus_pfs = pfs*(1-pfs)  
         dim_int = int(dim[0])
         edge_length = int(edge_length)
-        pred_data_all = ((pred_data_all/edge_length)**dim_int*pfs_one_minus_pfs)**0.5
-        fit_data_all = ((fit_data_all/edge_length)**dim_int*pfs_one_minus_pfs)**0.5
-    # ir_results = [fit_ir_pf, pred_ir_pf, pred_ir_oi_pf]
-    ir_results = [fit_data_all, pred_data_all]
-    err_results = [fit_err_pf, pred_err_pf]
-    pred_data = ir_results[1] 
-    fit_data = ir_results[0]
+        pred_cls_all = ((pred_cls_all/edge_length)**dim_int*pfs_one_minus_pfs)**0.5
+        fit_cls_all = ((fit_cls_all/edge_length)**dim_int*pfs_one_minus_pfs)**0.5
+    # ir_results = [fit_data_all, pred_data_all, pred_ir_oi_pf]
 
-    errs = (pred_data-fit_data)/pred_data  # percentage error of the prediction
+    errs = (pred_cls_all-fit_cls_all)/pred_cls_all  # percentage error of the prediction
     errs = np.sort(errs)  # easier to see the distribution of errors
     std = np.std(errs) 
     z = norm.interval(0.9)[1]
@@ -68,7 +62,7 @@ def comparison_results(data_dim, micro_names, dim, edge_length, run_number, std_
     # print(f'mean = {np.mean(errs)}')
     # print(f'mape = {np.mean(np.abs(errs))}')
     # print(f'error = {err}')
-    return pred_data, fit_data, err, std, pfs
+    return pred_cls_all, fit_cls_all, pred_cls_oi_all, err, std, pfs
 
 def pred_vs_fit_all_data(dim, edge_length, num_runs=5, std_not_cls=True):
     pred_data_all = []
@@ -78,21 +72,23 @@ def pred_vs_fit_all_data(dim, edge_length, num_runs=5, std_not_cls=True):
     pfs_all = []
     for i in range(num_runs):
         data_micro = data_micros(dim)
-        pred_data, fit_data, _, std, pfs = comparison_results(*data_micro, dim, edge_length, i, std_not_cls=std_not_cls)
+        pred_data, fit_data, pred_data_oi, _, std, pfs = comparison_results(*data_micro, dim, edge_length, i, std_not_cls=std_not_cls)
         pred_data_all.append(pred_data)
         # pred_data_oi_all.append(pred_oi_data)
         fit_data_all.append(fit_data)
+        pred_data_oi_all.append(pred_data_oi)
         stds.append(std)
         pfs_all.append(pfs) 
     pred_data_all = np.concatenate(pred_data_all)
     # pred_data_oi_all = np.concatenate(pred_data_oi_all)
     fit_data_all = np.concatenate(fit_data_all)
+    pred_data_oi_all = np.concatenate(pred_data_oi_all)
     pfs_all = np.concatenate(pfs_all)
     std = np.array(stds).sum(axis=0)/num_runs
-    return pred_data_all, fit_data_all, std, pfs_all
+    return pred_data_all, fit_data_all, pred_data_oi_all, std, pfs_all
 
 def plot_pred_vs_fit(dim, edge_length, num_runs=5, std_not_cls=True):
-    pred_data_all, fit_data_all, _, pfs = pred_vs_fit_all_data(dim, edge_length, num_runs, std_not_cls=std_not_cls)
+    pred_data_all, fit_data_all, _, _, pfs = pred_vs_fit_all_data(dim, edge_length, num_runs, std_not_cls=std_not_cls)
     pred_data_all, fit_data_all = np.array(pred_data_all), np.array(fit_data_all)
     
     errs = (fit_data_all-pred_data_all)/pred_data_all  # percentage error of the prediction
@@ -165,7 +161,7 @@ def optimal_slopes(dim, num_runs=5):
     slopes = []
     stds = []
     for edge_length in edge_lengths_pred:
-        pred_data, fit_data, std, pfs = pred_vs_fit_all_data(dim, str(edge_length), num_runs)
+        pred_data, fit_data, _, std, pfs = pred_vs_fit_all_data(dim, str(edge_length), num_runs)
         stds.append(std)
         optimal_slope = find_optimal_slope(pred_data, fit_data)
         slopes.append(optimal_slope)

@@ -137,6 +137,7 @@ def ps_error_prediction(dim, data, confidence, error_target):
                     start_idx = [np.random.randint(0, large_shape[i]-edge_length) for i in range(int(dim[0]))]
                     end_idx = [start_idx[i]+edge_length for i in range(int(dim[0]))]
                     small_im = large_im_stack[0][start_idx[0]:end_idx[0], start_idx[1]:end_idx[1]]
+                    # np.save(f'./small_im_{gen_name}_{args}_{edge_length}.npy', small_im)
                     small_im_pf = torch.mean(small_im)
                     one_im_stat_analysis_cls = util.one_img_stat_analysis_error(small_im, small_im.mean())
                     print(f'One image stat analysis cls: {one_im_stat_analysis_cls}')
