@@ -12,8 +12,9 @@ import { loadFromTIFF, loadFromImage } from "./components/imageLogic";
 import "./assets/scss/App.scss";
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const PATH = "http://127.0.0.1:5000";
+const PATH = "http://127.0.0.1:3000";
 const PF_ENDPOINT = PATH + "/phasefraction";
+//const PF_ENDPOINT = "https://representativity.azurewebsites.net/phasefraction"
 const REPR_ENDPOINT = PATH + "/repr";
 
 const MAX_FILE_SIZE_BYTES = 1024 * 1024 * 500; // 500MB
