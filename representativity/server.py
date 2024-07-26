@@ -136,6 +136,7 @@ def representativity(request) -> Response:
     out = {
         "abs_err": result["abs_err"],
         "percent_err": result["percent_err"] * 100,
+        "std_model": result["std_model"],
         "l": result["l"],
         "cls": result["integral_range"],
         "pf_1d": result["pf_1d"],

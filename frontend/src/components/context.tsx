@@ -12,6 +12,7 @@ const AppContextProvider = (props: {
     const [selectedConf, setSelectedConf] = useState<number>(95);
     const [errVF, setErrVF] = useState<number>(5);
     const [targetL, setTargetL] = useState<number | null>(null);
+    const [pfB, setPfB] = useState<number[] | null>(null);
     // server data
     const [accurateFractions, setAccurateFractions] = useState<{ [val: number]: number } | null>(null);
     const [analysisInfo, setAnalysisInfo] = useState<AnalysisInfo | null>(null);
@@ -32,6 +33,7 @@ const AppContextProvider = (props: {
                 selectedConf: [selectedConf, setSelectedConf],
                 errVF: [errVF, setErrVF],
                 targetL: [targetL, setTargetL],
+                pfB: [pfB, setPfB],
                 accurateFractions: [accurateFractions, setAccurateFractions],
                 analysisInfo: [analysisInfo, setAnalysisInfo],
                 menuState: [menuState, setMenuState],

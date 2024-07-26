@@ -25,6 +25,10 @@ interface contextProps {
         targetL: number | null,
         setTargetL: (e: number | null) => void,
     ];
+    pfB: [
+        pfB: number[] | null,
+        setpfB: (e: number[] | null) => void,
+    ];
     accurateFractions: [
         accurateFractions: { [val: number]: number } | null,
         setAccurateFractions: (e: { [val: number]: number } | null) => void,
@@ -100,10 +104,13 @@ export interface ImageLoadInfo {
 export interface AnalysisInfo {
     integralRange: number,
     z: number,
+    stdModel: number
     percentageErr: number,
     absError: number,
     lForDefaultErr: number,
-    vf: number
+    vf: number,
+    pf: Array<number>,
+    cumSumSum: Array<number>
 }
 
 export interface ErrorMessage {

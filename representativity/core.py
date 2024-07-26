@@ -922,6 +922,7 @@ def make_error_prediction(
     result = {
         "integral_range": integral_range,
         "z": z,
+        "std_model": std_model,
         "percent_err": percentage_err_for_img,
         "abs_err": abs_err_for_img,
         "l": l_for_err_targ,

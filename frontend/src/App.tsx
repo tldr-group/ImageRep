@@ -28,7 +28,8 @@ const App = () => {
         selectedConf: [selectedConf, setSelectedConf],
         errVF: [errVF, setErrVF],
         targetL: [targetL, setTargetL],
-        accurateFractions: [, setAccurateFractions],
+        pfB: [, setPfB],
+        accurateFractions: [accurateFractions, setAccurateFractions],
         analysisInfo: [, setAnalysisInfo],
         menuState: [menuState, setMenuState],
         errorState: [errorState, setErrorState],
@@ -124,22 +125,29 @@ const App = () => {
             const resp = await fetch(REPR_ENDPOINT, { method: 'POST', body: formData });
             const obj = await resp.json();
 
+            const absErr: number = obj["abs_err"]
+
             setMenuState('conf_result');
             setShowFullResults(true);
             setAnalysisInfo({
                 integralRange: obj["cls"],
                 z: 1,
+                stdModel: obj["std_model"],
                 percentageErr: obj["percent_err"],
-                absError: obj["abs_err"],
+                absError: absErr,
                 lForDefaultErr: obj["l"],
-                vf: 1
+                vf: 1,
+                pf: obj['pf_1d'],
+                cumSumSum: obj["cum_sum_sum"]
             })
+
+            const vals = imageInfo?.phaseVals!
+            const phaseFrac = accurateFractions![vals[selectedPhase - 1]]
+            setPfB([phaseFrac - absErr, phaseFrac + absErr])
 
             if (obj["cls"] > IR_LIMIT_PX) { setShowWarning("cls") }
             const minSide = Math.min(imageInfo?.width!, imageInfo?.height!)
             if (obj["l"] < minSide) { setShowWarning("over") }
-
-            console.log(obj["pf_1d"])
 
             setTargetL(obj["l"]);
         } catch (e) {

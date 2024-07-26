@@ -166,6 +166,7 @@ const Result = () => {
         selectedPhase: [selectedPhase,],
         selectedConf: [selectedConf, setSelectedConf],
         errVF: [errVF, setErrVF],
+        pfB: [pfB,],
         accurateFractions: [accurateFractions,],
         menuState: [, setMenuState],
         showInfo: [, setShowInfo],
@@ -224,8 +225,10 @@ const Result = () => {
         refs.map((r, i) => restyleAccordionHeaders(r, (i == 0), headerHex));
     }, [selectedPhase])
 
+
+    const absErrFromPFB = (pfB![1] - pfB![0]) / 2
     const beforeBoldText = `The phase fraction in the segmented image is ${phaseFrac.toFixed(3)}. Assuming perfect segmentation, the model proposed by Dahari et al. suggests that `
-    const boldText = `we can be ${selectedConf}% confident of the true phase fraction being within ${perErr?.toFixed(1)}% of this value (i.e. ${phaseFrac.toFixed(roundTo)}±${(absErr).toFixed(roundTo)})`
+    const boldText = `we can be ${selectedConf.toFixed(1)}% confident of the true phase fraction being within ${perErr?.toFixed(1)}% of this value (i.e. ${phaseFrac.toFixed(roundTo)}±${(absErrFromPFB).toFixed(roundTo)})`
     const copyText = beforeBoldText + boldText
 
     const copyBtn = () => { navigator.clipboard.writeText(copyText) }
