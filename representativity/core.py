@@ -2,7 +2,7 @@ import numpy as np
 from itertools import product, chain
 from scipy.stats import norm  # type: ignore
 from scipy.optimize import minimize  # type: ignore
-
+import json
 
 DEFAULT_N_DIV = 301
 
@@ -709,7 +709,7 @@ def get_prediction_interval(
     pred_std_error_std: float,
     conf_level: float = 0.95,
     n_divisions: int = DEFAULT_N_DIV,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[tuple[np.ndarray, np.ndarray], np.ndarray, np.ndarray]:
     """Get the prediction interval for the phase fraction of the material given the image phase
     fraction, the predicted standard deviation and the standard deviation of the prediction error.
 
@@ -755,8 +755,8 @@ def get_prediction_interval(
     # need a bit of normalization for symmetric bounds (it's very close to 1 already)
     sum_dist_norm /= np.trapz(sum_dist_norm, pf_x_1d)
     # Find the alpha confidence bounds
-    # TODO: return cum_sum_sum_dist_norm array over HTTP
-    # and write js function that does lines 759-762
+    # TODO: return cum_sum_sum_dist_norm and pf_x_1_d array over HTTP
+    # and write js function that does lines 762-764
     # will need to send the array somehow
     cum_sum_sum_dist_norm = np.cumsum(sum_dist_norm * np.diff(pf_x_1d)[0])
     half_conf_level = (1 + conf_level) / 2
@@ -764,7 +764,11 @@ def get_prediction_interval(
     conf_level_end = np.where(cum_sum_sum_dist_norm > half_conf_level)[0][0]
 
     # Calculate the interval
-    return pf_x_1d[conf_level_beginning], pf_x_1d[conf_level_end]
+    return (
+        (pf_x_1d[conf_level_beginning], pf_x_1d[conf_level_end]),
+        pf_x_1d,
+        cum_sum_sum_dist_norm,
+    )
 
 
 def find_n_for_err_targ(
@@ -795,7 +799,7 @@ def find_n_for_err_targ(
     """
     n = n[0]  # needs to be here during the optimize
     std_bernoulli = ((1 / n) * (image_pf * (1 - image_pf))) ** 0.5
-    pred_interval = get_prediction_interval(
+    pred_interval, _, _ = get_prediction_interval(
         image_pf, std_bernoulli, pred_std_error_std, conf_level, n_divisions
     )
     err_for_img = image_pf - pred_interval[0]
@@ -878,10 +882,10 @@ def make_error_prediction(
     ) ** 0.5  # TODO: this is the std of phi relative to Phi with
     std_model = get_std_model(n_dims, n_elems)
     abs_err_target = target_error * phase_fraction
-    z = 0
+    z, pf_1d, cum_sum_sum = 0, None, None
     if model_error:
         # calculate the absolute error for the image:
-        conf_bounds = get_prediction_interval(
+        conf_bounds, pf_1d, cum_sum_sum = get_prediction_interval(
             phase_fraction, std_bern, std_model, confidence, DEFAULT_N_DIV
         )
         abs_err_for_img = phase_fraction - conf_bounds[0]
@@ -921,5 +925,7 @@ def make_error_prediction(
         "percent_err": percentage_err_for_img,
         "abs_err": abs_err_for_img,
         "l": l_for_err_targ,
+        "pf_1d": list(pf_1d),
+        "cum_sum_sum": list(cum_sum_sum),
     }
     return result  # percentage_err_for_img, l_for_err_targ, integral_range

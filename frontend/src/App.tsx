@@ -137,6 +137,8 @@ const App = () => {
             const minSide = Math.min(imageInfo?.width!, imageInfo?.height!)
             if (obj["l"] < minSide) { setShowWarning("over") }
 
+            console.log(obj["pf_1d"])
+
             setTargetL(obj["l"]);
         } catch (e) {
             const error = e as Error;
@@ -167,9 +169,9 @@ const App = () => {
         <div className={`w-full h-full`}>
             <Topbar loadFromFile={appLoadFile} reset={reset}></Topbar>
             <div className={`flex`} style={{ margin: '1.5%' }} > {/*Canvas div on left, sidebar on right*/}
-                {previewImg && <DragDrop loadFromFile={appLoadFile} />}
+                {!previewImg && <DragDrop loadFromFile={appLoadFile} />}
                 {previewImg && <PreviewCanvas />}
-                <NormalSlider />
+                {false && <NormalSlider />}
             </div>
             <Menu />
             <ErrorMessage />

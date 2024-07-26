@@ -138,6 +138,8 @@ def representativity(request) -> Response:
         "percent_err": result["percent_err"] * 100,
         "l": result["l"],
         "cls": result["integral_range"],
+        "pf_1d": result["pf_1d"],
+        "cum_sum_sum": result["cum_sum_sum"],
     }
     print(out)
 
