@@ -114,7 +114,7 @@ class IntegrationTests(unittest.TestCase):
             "## Test case: characteristic length scale on random squares of increasing size"
         )
         target_vf = 0.5
-        y, x = 800, 800
+        y, x = 500, 500
         for l in [1, 5, 10, 15, 20]:
             n_rects = int((y / l) * target_vf) ** 2
             arr = np.zeros((y, x), dtype=np.uint8)
@@ -125,7 +125,6 @@ class IntegrationTests(unittest.TestCase):
 
             tpc = model.radial_tpc(arr, False, False)
             integral_range = model.tpc_to_cls(tpc, arr)
-            plt.imsave(f"s{l}.png", arr)
             print(f"square cls of length {l}: {integral_range} with {n_rects}")
 
     def test_cls_disks(self):
@@ -134,7 +133,7 @@ class IntegrationTests(unittest.TestCase):
         )
         # TODO: test TPC drops off around the radius
         target_vf = 0.5
-        y, x = 800, 800
+        y, x = 500, 500
         for l in [1, 5, 10, 15, 20]:
             n_disks = int((y / l) * target_vf) ** 2
             arr = np.zeros((y, x), dtype=np.uint8)
@@ -145,7 +144,6 @@ class IntegrationTests(unittest.TestCase):
 
             tpc = model.radial_tpc(arr, False, False)
             integral_range = model.tpc_to_cls(tpc, arr)
-            plt.imsave(f"d{l}.png", arr)
             print(
                 f"disk cls of radius {l}: {integral_range} with {n_disks} with vf: {np.mean(arr)}"
             )
@@ -156,14 +154,14 @@ class IntegrationTests(unittest.TestCase):
         h, l, vf = 750, 10, 0.4
         percent_l = l / h
         test_arr = binary_blobs(h, percent_l, 2, vf)
-        result = model.make_error_prediction(test_arr, model_error=False)
+        result = model.make_error_prediction(test_arr, model_error=True)
         assert np.isclose(result["integral_range"], l, atol=5)
 
     def test_repr_pred(self):
         """Test the percentage error of a random binomial size (500,500) - should be small"""
         print("## Test case: representativity of random binomial")
         test_arr = np.random.binomial(1, 0.5, (500, 500))
-        result = model.make_error_prediction(test_arr, model_error=False)
+        result = model.make_error_prediction(test_arr, model_error=True)
         assert result["percent_err"] < 0.05
 
     def test_binary(self):
@@ -173,8 +171,8 @@ class IntegrationTests(unittest.TestCase):
         percent_l = l / h
         test_arr = binary_blobs(h, percent_l, 2, vf)
         inv_test_arr = ~test_arr
-        result_1 = model.make_error_prediction(test_arr, model_error=False)
-        result_2 = model.make_error_prediction(inv_test_arr, model_error=False)
+        result_1 = model.make_error_prediction(test_arr, model_error=True)
+        result_2 = model.make_error_prediction(inv_test_arr, model_error=True)
 
         print(
             f"abs err phase 1: {result_1['abs_err']}, abs err phase 2: {result_2['abs_err']}"
@@ -191,7 +189,7 @@ class IntegrationTests(unittest.TestCase):
         desired_error = 0.1
         crop = DEFAULT_BINARY_IMG[:300, :300]
         result = model.make_error_prediction(
-            crop, 0.95, desired_error, model_error=False
+            crop, 0.95, desired_error, model_error=True
         )
         l_for_err = int(result["l"])
         print(
@@ -199,7 +197,7 @@ class IntegrationTests(unittest.TestCase):
         )
         wider_crop = DEFAULT_BINARY_IMG[:l_for_err, :l_for_err]
         refined_result = model.make_error_prediction(
-            wider_crop, 0.95, 0.05, model_error=False
+            wider_crop, 0.95, 0.05, model_error=True
         )
         print(
             f"{refined_result['percent_err']:.3f}% phase fraction error at l={l_for_err}\n"
