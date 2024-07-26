@@ -6,27 +6,35 @@ import numpy as np
 
 # fill_color = [1, 0.49803922, 0.05490196, 0.2]
 sigma_color = [0.4, 0.9, 0.0, 1]
+model_color = "tab:cyan"
+oi_color = "tab:orange"
 # fill_color_dark = fill_color.copy()
 # fill_color_dark[-1] = 0.5
 
 def scatter_plot(ax, res, title, xlabel, ylabel):
     
     pred_data, fit_data, oi_data = res
+    max_val = (np.max([np.max(fit_data), np.max(pred_data)]))
+    x = np.linspace(0,max_val,100)
+    ax.plot(x, x, label = 'Ideal predictions', color='black')
+
+    ax.scatter(fit_data, oi_data, alpha=0.7, s=0.3, c=oi_color, label='Classical predictions')
+    oi_errs = (fit_data-oi_data)/oi_data
+    oi_mean = np.mean(oi_errs)
+    ax.plot(x, x*(1-oi_mean), color=oi_color, linestyle='--', dashes=[2.5, 5], label="Mean")
     
-    ax.scatter(fit_data, oi_data, s=0.2, label='Classical predictions')
-    ax.scatter(fit_data, pred_data, s=0.2, c="orange", label='Model predictions')
-    
+    ax.scatter(fit_data, pred_data, alpha=0.5, s=0.3, c=model_color, label="Our model's predictions")
+    model_errs = (fit_data-pred_data)/pred_data 
+    model_mean = np.mean(model_errs)
+    ax.plot(x, x*(1-model_mean), color=model_color, linestyle='--', dashes=[2.5, 5], label="Mean")
+
     
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
     
-    errs = (fit_data-pred_data)/pred_data 
-    max_val = (np.max([np.max(fit_data), np.max(pred_data)]))
-    x = np.linspace(0,max_val,100)
-    ax.plot(x, x, label = 'Ideal predictions', color='black')
-    errs = np.sort(errs) 
-    std = np.std(errs) 
+    model_errs = np.sort(model_errs) 
+    std = np.std(model_errs) 
     
     # z = stats.norm.interval(0.9)[1]
     # err = std*z
@@ -79,7 +87,7 @@ for i, dim in enumerate(dims):
         
         scatter_plot(ax, res, ax_title, ax_xlabel, ax_ylabel)
         
-        if (j == 0 or not with_cls) and dim == '2D':
+        if (j == 0 or not with_cls) :
             ax.legend(loc='upper left')        
 
     # Fit a normal distribution to the data:
@@ -94,7 +102,7 @@ for i, dim in enumerate(dims):
     counts, bins = np.histogram(errs)
     
     max_val = np.max([np.max(errs), -np.min(errs)])
-    y, x, _ = ax2.hist(errs, range=[-max_val, max_val], bins=50, alpha=0.6, density=True)
+    y, x, _ = ax2.hist(errs, range=[-max_val, max_val], bins=50, alpha=0.6, color=model_color, density=True)
 
     # Plot the PDF.
     xmin, xmax = x.min(), x.max()
