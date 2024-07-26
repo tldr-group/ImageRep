@@ -4,6 +4,7 @@ import AppContext, { ImageLoadInfo, AnalysisInfo, IR_LIMIT_PX } from "./componen
 import Topbar from "./components/Topbar";
 import DragDrop from "./components/DragDrop";
 import PreviewCanvas from "./components/Canvas";
+import NormalSlider from "./components/NormalSlider";
 import { Menu } from "./components/Menu";
 import { ErrorMessage, CLSModal, MoreInfo } from "./components/Popups"
 
@@ -12,7 +13,7 @@ import { loadFromTIFF, loadFromImage } from "./components/imageLogic";
 import "./assets/scss/App.scss";
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const PATH = "http://127.0.0.1:3000";
+const PATH = "http://127.0.0.1:5000";
 const PF_ENDPOINT = PATH + "/phasefraction";
 //const PF_ENDPOINT = "https://representativity.azurewebsites.net/phasefraction"
 const REPR_ENDPOINT = PATH + "/repr";
@@ -166,8 +167,9 @@ const App = () => {
         <div className={`w-full h-full`}>
             <Topbar loadFromFile={appLoadFile} reset={reset}></Topbar>
             <div className={`flex`} style={{ margin: '1.5%' }} > {/*Canvas div on left, sidebar on right*/}
-                {!previewImg && <DragDrop loadFromFile={appLoadFile} />}
+                {previewImg && <DragDrop loadFromFile={appLoadFile} />}
                 {previewImg && <PreviewCanvas />}
+                <NormalSlider />
             </div>
             <Menu />
             <ErrorMessage />
