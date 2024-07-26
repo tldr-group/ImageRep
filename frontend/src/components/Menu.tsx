@@ -10,6 +10,8 @@ import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
+import Modal from 'react-bootstrap/Modal';
+import NormalSlider from "./NormalSlider";
 
 import Accordion from 'react-bootstrap/Accordion';
 import { getPhaseFraction } from "./imageLogic";
@@ -24,6 +26,24 @@ const _getCSSColour = (currentStateVal: any, targetStateVal: any, successPrefix:
 
     const outlineStr = (matches) ? successPrefix + hex : 'white'
     return outlineStr;
+}
+
+const restyleAccordionHeaders = (ref: React.RefObject<HTMLHeadingElement>, primary: boolean, hex: string) => {
+    const headerBGCSSName = "--bs-accordion-active-bg"
+    const headerTextCSSName = "--bs-accordion-active-color"
+    const headerDefaultBGCSSName = "--bs-accordion-bg"
+    const header = ref.current
+
+    const colour = (primary) ? hex : "#ffffff"
+
+    header?.style.setProperty(headerBGCSSName, colour)
+    header?.style.setProperty(headerTextCSSName, "#212529")
+
+    if (primary) {
+        header?.style.setProperty(headerDefaultBGCSSName, colour)
+        header?.style.setProperty('background-color', colour)
+    }
+    //header?.style.removeProperty("background-image")
 }
 
 const PhaseSelect = () => {
@@ -149,6 +169,7 @@ const Result = () => {
         accurateFractions: [accurateFractions,],
         menuState: [, setMenuState],
         showInfo: [, setShowInfo],
+        showFullResults: [showFullResults, setShowFullResults],
     } = useContext(AppContext)!
 
     // we have two errVFs here because we want the values in the text to reflect the old
@@ -197,27 +218,10 @@ const Result = () => {
     const c = colours[selectedPhase];
     const headerHex = rgbaToHex(c[0], c[1], c[2], c[3]);
 
-    const restyleAccordionHeaders = (ref: React.RefObject<HTMLHeadingElement>, primary: boolean) => {
-        const headerBGCSSName = "--bs-accordion-active-bg"
-        const headerTextCSSName = "--bs-accordion-active-color"
-        const headerDefaultBGCSSName = "--bs-accordion-bg"
-        const header = ref.current
-
-        const colour = (primary) ? headerHex : "#ffffff"
-
-        header?.style.setProperty(headerBGCSSName, colour)
-        header?.style.setProperty(headerTextCSSName, "#212529")
-
-        if (primary) {
-            header?.style.setProperty(headerDefaultBGCSSName, colour)
-            header?.style.setProperty('background-color', colour)
-        }
-        //header?.style.removeProperty("background-image")
-    }
 
     useEffect(() => {
         const refs = [pfResultRef, lResultRef];
-        refs.map((r, i) => restyleAccordionHeaders(r, (i == 0)));
+        refs.map((r, i) => restyleAccordionHeaders(r, (i == 0), headerHex));
     }, [selectedPhase])
 
     const beforeBoldText = `The phase fraction in the segmented image is ${phaseFrac.toFixed(3)}. Assuming perfect segmentation, the model proposed by Dahari et al. suggests that `
@@ -229,7 +233,7 @@ const Result = () => {
     const longestSide = Math.max(imageInfo?.width!, imageInfo?.height!)
     const nMore = Math.pow((Math.ceil(l! / longestSide)), 2) - 1
 
-    return (
+    const smallResults = (
         <>
             <Accordion defaultActiveKey={['0']} flush alwaysOpen>
                 <Accordion.Item eventKey="0">
@@ -271,6 +275,53 @@ const Result = () => {
             </div>
         </>
     )
+
+    const handleClose = () => { setShowFullResults(false) };
+    const largeResults = (<>
+        <Modal show={showFullResults} onHide={handleClose} size="lg">
+            <Modal.Header style={{ backgroundColor: '#212529', color: '#ffffff' }} closeVariant="white" closeButton>
+                <Modal.Title>Results!</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                <Accordion defaultActiveKey={['0']} flush alwaysOpen>
+                    <Accordion.Item eventKey="0">
+                        <Accordion.Header ref={pfResultRef}>Phase Fraction Uncertainty</Accordion.Header>
+                        {/*Need to manually overwrite the style here because of werid bug*/}
+                        <Accordion.Body style={{ visibility: "visible" }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', justifyItems: 'center', marginTop: '1em', marginBottom: '1em' }}>
+                                <NormalSlider ></NormalSlider>
+                            </div>
+                            {beforeBoldText}<b>{boldText}</b>
+                            <InputGroup style={{ justifyContent: 'center', marginTop: '1em' }}>
+                                <InputGroup.Text id="btnGroupAddon">Copy:</InputGroup.Text>
+                                <Button variant="outline-secondary" onClick={copyBtn}>text</Button>
+                                <Button variant="outline-secondary">citation</Button>
+                            </InputGroup>
+                        </Accordion.Body>
+                    </Accordion.Item>
+                    <Accordion.Item eventKey="1" >
+                        <Accordion.Header ref={lResultRef}>Required Length for Target</Accordion.Header>
+                        {/*Need to manually overwrite the style here because of werid bug*/}
+                        <Accordion.Body style={{ visibility: "visible" }}>
+                            For a {errVF.toFixed(2)}% uncertainty in phase fraction, you <b>need to measure a total image size of about {sizeText} (i.e. {nMore} more images)</b> at the same resolution.
+                        </Accordion.Body>
+                    </Accordion.Item>
+                </Accordion >
+
+                <p>Full details can be found in the <a href="comingsoon">paper</a>.</p>
+            </Modal.Body>
+            <Modal.Footer>
+                <Button variant="dark" onClick={handleClose}>
+                    Understood!
+                </Button>
+            </Modal.Footer>
+        </Modal >
+    </>)
+
+    return (<>
+        {(showFullResults == true) && largeResults}
+        {(showFullResults == false) && smallResults}
+    </>)
 }
 
 

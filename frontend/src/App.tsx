@@ -32,7 +32,8 @@ const App = () => {
         analysisInfo: [, setAnalysisInfo],
         menuState: [menuState, setMenuState],
         errorState: [errorState, setErrorState],
-        showWarning: [showWarning, setShowWarning]
+        showWarning: [showWarning, setShowWarning],
+        showFullResults: [, setShowFullResults]
     } = useContext(AppContext)!
 
 
@@ -124,6 +125,7 @@ const App = () => {
             const obj = await resp.json();
 
             setMenuState('conf_result');
+            setShowFullResults(true);
             setAnalysisInfo({
                 integralRange: obj["cls"],
                 z: 1,

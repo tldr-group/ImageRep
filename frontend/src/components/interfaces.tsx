@@ -49,6 +49,10 @@ interface contextProps {
     showInfo: [
         showInfo: boolean,
         setShowInfo: (e: boolean) => void
+    ],
+    showFullResults: [
+        showFullResults: boolean,
+        setShowFullResults: (e: boolean) => void
     ]
 };
 
