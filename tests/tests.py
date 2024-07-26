@@ -88,7 +88,10 @@ class IntegrationTests(unittest.TestCase):
     """Integration tests of component functions."""
 
     def test_cls_disk(self):
-        """Measure CLS of $n_disks in binary arr with radius $radius. CLS should be ~= 2*$radius."""
+        """Measure CLS of $n_disks in binary arr with radius $radius. CLS should be ~= 2*$radius.
+        should be between radius and 2 * radius
+        """
+        # TODO: change this s.t vf guaranteed in expectation
         print("## Test case: characteristic length scale on random disks")
         y, x, n_disks, radius = 500, 500, 40, 40
         arr = np.zeros((y, x), dtype=np.uint8)
@@ -106,6 +109,7 @@ class IntegrationTests(unittest.TestCase):
         assert np.isclose(integral_range, 2 * radius, rtol=0.05)
 
     def test_cls_squares(self):
+        # TODO: again should be around 0.5 * l < l
         print(
             "## Test case: characteristic length scale on random squares of increasing size"
         )
@@ -128,6 +132,7 @@ class IntegrationTests(unittest.TestCase):
         print(
             "## Test case: characteristic length scale on random disks of increasing size"
         )
+        # TODO: test TPC drops off around the radius
         target_vf = 0.5
         y, x = 800, 800
         for l in [1, 5, 10, 15, 20]:
@@ -141,7 +146,9 @@ class IntegrationTests(unittest.TestCase):
             tpc = model.radial_tpc(arr, False, False)
             integral_range = model.tpc_to_cls(tpc, arr)
             plt.imsave(f"d{l}.png", arr)
-            print(f"disk cls of radius {l}: {integral_range} with {n_disks}")
+            print(
+                f"disk cls of radius {l}: {integral_range} with {n_disks} with vf: {np.mean(arr)}"
+            )
 
     def test_blobs_vf_cls(self):
         """Test the cls of random binary blobs, should be around the set length scale"""
@@ -197,6 +204,7 @@ class IntegrationTests(unittest.TestCase):
         print(
             f"{refined_result['percent_err']:.3f}% phase fraction error at l={l_for_err}\n"
         )
+        # TODO: not correct - should be comparing to  desired error not percent err of old one
         assert refined_result["percent_err"] < result["percent_err"]
 
 
