@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 350;
-const H_FOR_TEXT = 20;
+const H_FOR_TEXT = 24;
 const SCALEBAR_WIDTH = 4;
 const H_GAUSS = CANVAS_HEIGHT - H_FOR_TEXT
 
@@ -29,6 +29,7 @@ const tmpMu = 0.4;
 const tmpSigma = 0.08;
 const [tmpStart, tmpEnd] = [0.2, 0.6];
 const tmpMax = normalDist(tmpMu, tmpMu, tmpSigma);
+const [tmpLB, tmpUB] = [tmpMu - 0.05, tmpMu + 0.05]
 
 
 interface DrawStyle {
@@ -45,20 +46,31 @@ interface NormalParams {
     sigma: number,
     start_pf: number,
     end_pf: number,
-    max_y: number
+    max_y: number,
+    conf_lb: number,
+    conf_ub: number,
 }
 
 const LIGHT_GREY = "#838383d9"
 const TRANS_RED = "#dc5e5e80"
+const DARK_GREY = "#363636f0"
 
-const xAxisStyle: DrawStyle = { fillColour: 'black', lineColour: LIGHT_GREY, lineWidth: 3, toFill: false, lineCap: null, lineDash: null }
-const yAxisStyle: DrawStyle = { fillColour: 'black', lineColour: LIGHT_GREY, lineWidth: 3, toFill: false, lineCap: null, lineDash: [4, 10] }
+const xAxisStyle: DrawStyle = { fillColour: LIGHT_GREY, lineColour: LIGHT_GREY, lineWidth: 3, toFill: false, lineCap: null, lineDash: null }
+const yAxisStyle: DrawStyle = { fillColour: LIGHT_GREY, lineColour: LIGHT_GREY, lineWidth: 3, toFill: false, lineCap: null, lineDash: [4, 10] }
 const curveStyle: DrawStyle = { fillColour: 'red', lineColour: 'red', lineWidth: 3, toFill: false, lineCap: null, lineDash: null }
 const shadeStyle: DrawStyle = { fillColour: TRANS_RED, lineColour: TRANS_RED, lineWidth: 3, toFill: true, lineCap: null, lineDash: null }
 
 const NormalSlider = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [params, setParams] = useState<NormalParams>({ mu: tmpMu, sigma: tmpSigma, start_pf: tmpStart, end_pf: tmpEnd, max_y: tmpMax });
+    const [params, setParams] = useState<NormalParams>({
+        mu: tmpMu,
+        sigma: tmpSigma,
+        start_pf: tmpStart,
+        end_pf: tmpEnd,
+        max_y: tmpMax,
+        conf_lb: tmpLB,
+        conf_ub: tmpUB
+    });
 
     const getShadedPoints = (newLB: number, newUB: number) => {
         const pxLBx = xDataToPx(newLB, params.start_pf, params.end_pf, CANVAS_WIDTH);
@@ -106,7 +118,16 @@ const NormalSlider = () => {
         }
     }
 
-    const drawText = (mu: number,) => { }
+    const drawText = (dataVals: Array<number>, xPositions: Array<number>) => {
+        const canv = canvasRef.current!;
+        const ctx = canv.getContext('2d')!;
+        ctx.font = "24px Noto Sans";
+        ctx.fillStyle = DARK_GREY;
+        for (let i = 0; i < dataVals.length; i++) {
+            const val = dataVals[i].toFixed(3)
+            ctx.fillText(val, xPositions[i] - 30, H_GAUSS + 24);
+        }
+    }
 
     useEffect(() => {
         // generate, draw
@@ -115,13 +136,14 @@ const NormalSlider = () => {
         const maxY = normalDist(params.mu, params.mu, params.sigma);
 
         const yPoints = yData.map((yd) => yDataToPx(yd, 0, maxY + 0.2, H_GAUSS));
-        const sp = getShadedPoints(0.35, 0.45);
+        const sp = getShadedPoints(params.conf_lb, params.conf_ub);
         console.log(sp)
 
         drawPoints([0, CANVAS_WIDTH], [H_GAUSS, H_GAUSS], xAxisStyle)
         drawPoints([CANVAS_WIDTH / 2, CANVAS_WIDTH / 2], [0, H_GAUSS], yAxisStyle)
         drawPoints(indices, yPoints, curveStyle);
         drawPoints(sp.xPoints, sp.yPoints, shadeStyle);
+        drawText([params.conf_lb, params.mu, params.conf_ub], [sp.xPoints[0], CANVAS_WIDTH / 2, sp.xPoints[sp.xPoints.length - 1]]);
     }, [])
 
     return (
