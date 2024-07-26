@@ -110,19 +110,38 @@ class IntegrationTests(unittest.TestCase):
             "## Test case: characteristic length scale on random squares of increasing size"
         )
         target_vf = 0.5
-        y, x, l = 500, 500, 10
-        n_rects = int((y / l) * target_vf) ** 2
-        print(n_rects)
-        arr = np.zeros((y, x), dtype=np.uint8)
-        for i in range(n_rects):
-            dx, dy = np.random.randint(0, y), np.random.randint(0, x)
-            rr, cc = rectangle((dy, dx), extent=(l, l), shape=(y, x))
-            arr[rr, cc] = 1
+        y, x = 800, 800
+        for l in [1, 5, 10, 15, 20]:
+            n_rects = int((y / l) * target_vf) ** 2
+            arr = np.zeros((y, x), dtype=np.uint8)
+            for i in range(n_rects):
+                dx, dy = np.random.randint(0, y), np.random.randint(0, x)
+                rr, cc = rectangle((dy, dx), extent=(l, l), shape=(y, x))
+                arr[rr, cc] = 1
 
-        tpc = model.radial_tpc(arr, False, False)
-        integral_range = model.tpc_to_cls(tpc, arr)
-        # plt.imsave("foo.png", arr)
-        print(integral_range, np.sqrt(2) * l)
+            tpc = model.radial_tpc(arr, False, False)
+            integral_range = model.tpc_to_cls(tpc, arr)
+            plt.imsave(f"s{l}.png", arr)
+            print(f"square cls of length {l}: {integral_range} with {n_rects}")
+
+    def test_cls_disks(self):
+        print(
+            "## Test case: characteristic length scale on random disks of increasing size"
+        )
+        target_vf = 0.5
+        y, x = 800, 800
+        for l in [1, 5, 10, 15, 20]:
+            n_disks = int((y / l) * target_vf) ** 2
+            arr = np.zeros((y, x), dtype=np.uint8)
+            for i in range(n_disks):
+                dx, dy = np.random.randint(0, y), np.random.randint(0, x)
+                rr, cc = disk((dy, dx), radius=l, shape=(y, x))
+                arr[rr, cc] = 1
+
+            tpc = model.radial_tpc(arr, False, False)
+            integral_range = model.tpc_to_cls(tpc, arr)
+            plt.imsave(f"d{l}.png", arr)
+            print(f"disk cls of radius {l}: {integral_range} with {n_disks}")
 
     def test_blobs_vf_cls(self):
         """Test the cls of random binary blobs, should be around the set length scale"""
@@ -179,8 +198,6 @@ class IntegrationTests(unittest.TestCase):
             f"{refined_result['percent_err']:.3f}% phase fraction error at l={l_for_err}\n"
         )
         assert refined_result["percent_err"] < result["percent_err"]
-
-    # TODO: test that reprs of each phase of binary microstrucutre are the same
 
 
 if __name__ == "__main__":
