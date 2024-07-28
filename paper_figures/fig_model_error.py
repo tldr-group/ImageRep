@@ -4,14 +4,12 @@ from scipy import stats
 import math
 import numpy as np
 
-# fill_color = [1, 0.49803922, 0.05490196, 0.2]
-sigma_color = [0.4, 0.9, 0.0, 1]
+sigma_color = "tab:pink"
 model_color = "tab:cyan"
 oi_color = "tab:orange"
-# fill_color_dark = fill_color.copy()
-# fill_color_dark[-1] = 0.5
+dashes = [2.5, 5]
 
-def scatter_plot(ax, res, title, xlabel, ylabel):
+def scatter_plot(ax, res, xlabel, ylabel):
     
     pred_data, fit_data, oi_data = res
     max_val = (np.max([np.max(fit_data), np.max(pred_data)]))
@@ -21,27 +19,19 @@ def scatter_plot(ax, res, title, xlabel, ylabel):
     ax.scatter(fit_data, oi_data, alpha=0.7, s=0.3, c=oi_color, label='Classical predictions')
     oi_errs = (fit_data-oi_data)/oi_data
     oi_mean = np.mean(oi_errs)
-    ax.plot(x, x*(1-oi_mean), color=oi_color, linestyle='--', dashes=[2.5, 5], label="Mean")
+    ax.plot(x, x*(1-oi_mean), color=oi_color, linestyle='--', dashes=[2.5, 5], label="Mean predictions")
     
     ax.scatter(fit_data, pred_data, alpha=0.5, s=0.3, c=model_color, label="Our model's predictions")
     model_errs = (fit_data-pred_data)/pred_data 
     model_mean = np.mean(model_errs)
-    ax.plot(x, x*(1-model_mean), color=model_color, linestyle='--', dashes=[2.5, 5], label="Mean")
+    ax.plot(x, x*(1-model_mean), color=model_color, linestyle='--', dashes=[2.5, 5], label="Mean predictions")
 
-    
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-    ax.set_title(title)
     
     model_errs = np.sort(model_errs) 
     std = np.std(model_errs) 
     
-    # z = stats.norm.interval(0.9)[1]
-    # err = std*z
-    # print(f'std = {std}')
-    # print(f'mean = {np.mean(errs)}')
-    # ax.plot(x ,x/(1+err), c=fill_color_dark, ls='--', linewidth=1)
-    # fill_1 = ax.fill_between(x, np.ones(x.shape[0])*(max_val),x/(1+err), alpha=0.2, label = f'95% confidence range', color=fill_color)
     ax.set_aspect('equal', adjustable='box')
 
 with_cls = False
@@ -58,17 +48,13 @@ for i, dim in enumerate(dims):
     dim_int = int(dim[0])
     cur_edge_length = int(edge_length[i])
     std_results = [((cls_res/cur_edge_length)**dim_int*vfs_one_minus_vfs)**0.5 for cls_res in cls_results]
-    # pred_std_all = ((pred_cls_all/cur_edge_length)**dim_int*vfs_one_minus_vfs)**0.5
-    # fit_std_all = ((fit_cls_all/cur_edge_length)**dim_int*vfs_one_minus_vfs)**0.5
-    # std_results = [pred_std_all, fit_std_all]
     dim_str = dim[0]
     x_labels = [f'True CLS $a_{int(dim[0])}$', f'True Phase Fraction std $\sigma_{int(dim[0])}$']
     cls_math = r'\tilde{a}_{2}' if dim == '2D' else r'\tilde{a}_{3}'
     std_math = r'\tilde{\sigma}_{2}' if dim == '2D' else r'\tilde{\sigma}_{3}'
     y_labels = ['Predicted CLS $%s$' %cls_math, 'Predicted Phase Fraction std $%s$' %std_math]
-    title_suffix = r'img size $%s^%s$' %(edge_length[i], dim_str)
-    titles = [f'{dim} CLS comparison, '+title_suffix, f'{dim} std comparison, '+title_suffix]
-    # sa_results = [err_exp_sa[pred_err_sa!=math.isnan], pred_err_sa[pred_err_sa!=math.nan]]
+    # title_suffix = r'Image size $%s^%s$' %(edge_length[i], dim_str)
+    # titles = [f'{dim} CLS comparison, '+title_suffix, f'{dim} std comparison, '+title_suffix]
     
     for j, res in enumerate([cls_results, std_results]):
         ax_idx = j
@@ -80,14 +66,12 @@ for i, dim in enumerate(dims):
  
         ax = axs[i, ax_idx]
         
-        # print(f'slope = {slope} and intercept = {intercept}')
         ax_xlabel = x_labels[j]
         ax_ylabel = y_labels[j]
-        ax_title = titles[j]
         
-        scatter_plot(ax, res, ax_title, ax_xlabel, ax_ylabel)
+        scatter_plot(ax, res, ax_xlabel, ax_ylabel)
         
-        if (j == 0 or not with_cls) :
+        if (j == 0 or not with_cls and i == 0):
             ax.legend(loc='upper left')        
 
     # Fit a normal distribution to the data:
@@ -102,7 +86,8 @@ for i, dim in enumerate(dims):
     counts, bins = np.histogram(errs)
     
     max_val = np.max([np.max(errs), -np.min(errs)])
-    y, x, _ = ax2.hist(errs, range=[-max_val, max_val], bins=50, alpha=0.6, color=model_color, density=True)
+    y, x, _ = ax2.hist(errs, range=[-max_val, max_val], bins=50, alpha=0.6, color=model_color, density=True, label="Our model's predictions")
+    mean_percentage_error = np.mean(errs)
 
     # Plot the PDF.
     xmin, xmax = x.min(), x.max()
@@ -110,18 +95,14 @@ for i, dim in enumerate(dims):
     x = np.linspace(xmin, xmax, 100)
     p = stats.norm.pdf(x, mu, std)
         
-    ax2.plot(x, p, linewidth=2, label=f'Fitted normal distribution')
-    title = f'{dim} std PE distribution, {title_suffix}' 
-    ax2.set_title(title)
     ax2.set_xlabel(r'Prediction Percentage Error ($\frac{\sigma_{%s}-\tilde{\sigma_{%s}}}{\tilde{\sigma_{%s}}}\cdot100$)' %(dim_str, dim_str, dim_str))
-    # err = std*stats.norm.interval(0.9)[1]
-    ax2.vlines(0, ymin=0, ymax=y.max(), color='black')
-    ax2.vlines(std, ymin=0, ymax=y.max(), ls='--', color=sigma_color, label = r'$\sigma_{mod}$')
-    # ax2.vlines(err, ymin=0, ymax=y.max(), ls='--', color=fill_color_dark, label = r'$\sigma_{mod}\cdot Z_{90\%}$')
-    # trunc_x = x[x<err]
-    # ax2.fill_between(trunc_x, p[x<err],np.zeros(trunc_x.shape[0]), alpha=0.2, color=fill_color)
+    ax2.vlines(0, ymin=0, ymax=y.max(), color='black', label = 'Ideal predictions')
+    ax2.vlines(mean_percentage_error, ymin=0, ymax=y.max(), linestyles=[(0,(2.5, 5))], color=model_color, label = r'Mean predictions')
+    ax2.plot(x, p, linewidth=2,label=f'Fitted normal distribution')
+    ax2.vlines(std, ymin=0, ymax=y.max(), ls='--', color=sigma_color, label = r'Standard deviation $\sigma_{mod}$')
+    
     if i == 0:
-        ax2.legend()
+        ax2.legend(loc='upper left')
 
     # Plot the std error by size of edge length:
     ax3 = axs[i, ax_idx+1]
@@ -138,9 +119,15 @@ for i, dim in enumerate(dims):
     ax3.set_xlabel('Img size')
     ax3.set_xticks(edge_lengths[::2], [r'$%s^%s$'%(i,dim_str) for i in edge_lengths[::2]])
     ax3.set_ylabel(r'Model percentage error std $\sigma_{mod}$ [%]')
-    ax3.set_title(f'Error by Edge Length {dim}')
     if i == 0:
         ax3.legend(loc='upper right')
+    
+
+if not with_cls:
+    titles_1st_row = ['(a)', '(b)', '(c)']
+    [ax.set_title(titles_1st_row[i]) for i, ax in enumerate(axs[0])]
+    titles_2nd_row = ['(d)', '(e)', '(f)']
+    [ax.set_title(titles_2nd_row[i]) for i, ax in enumerate(axs[1])]
 
 plt.tight_layout()
 fig.savefig('fig_model_error.pdf', format='pdf')         
