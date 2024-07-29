@@ -2,11 +2,11 @@ import { ImageLoadInfo } from "./interfaces"
 
 const UTIF = require("./UTIF.js");
 
-const checkPhases = (arr: Uint8ClampedArray) => {
+const checkPhases = (arr: Uint8ClampedArray, nChannels: number = 4) => {
     // given 2D image data, find N unique values, if > 6 call it unsegmented
     // ASSUMES RGBA ARRAYS: valid as UTIF decodes to RGBA
-    const uniqueColours = arr.filter((_, i, __) => { return i % 4 == 0 })
-    const uniqueValues = [... new Set(uniqueColours)]; // create Set (only unique vals) then unpack into arr
+    const uniqueColours = arr.filter((_, i, __) => { return i % nChannels == 0 })
+    const uniqueValues = [... new Set(uniqueColours)].sort(); // create Set (only unique vals) then unpack into arr
     const nPhases = uniqueValues.length;
     const segmented = (nPhases < 6) ? true : false;
     // TODO: if data RGBA then opacity will be counted as phase - this is bug
@@ -14,26 +14,31 @@ const checkPhases = (arr: Uint8ClampedArray) => {
     return { nPhases: nPhases, segmented: segmented, vals: uniqueValues };
 }
 
-export const replaceGreyscaleWithColours = (arr: Uint8ClampedArray, mapping: { [greyVal: number]: Array<number> }) => {
-    const nPixels = Math.floor(arr.length / 4);
+const findNChannels = (arr: Uint8ClampedArray, ih: number, iw: number) => {
+    return Math.round(arr.length / (ih * iw))
+}
+
+export const replaceGreyscaleWithColours = (arr: Uint8ClampedArray, mapping: { [greyVal: number]: Array<number> }, nChannels: number = 4) => {
+    const nPixels = Math.floor(arr.length / nChannels);
     const out = new Uint8ClampedArray(nPixels * 4).fill(0);
-    for (let i = 0; i < arr.length; i = i + 4) {
-        const queryVal = arr[i];
+    for (let i = 0; i < nPixels; i = i + 1) {
+        const queryVal = arr[nChannels * i];
         if (queryVal in mapping) {
             const [R, G, B, A] = mapping[queryVal];
-            out[i] = R;
-            out[i + 1] = G;
-            out[i + 2] = B;
-            out[i + 3] = A;
+            out[4 * i] = R;
+            out[4 * i + 1] = G;
+            out[4 * i + 2] = B;
+            out[4 * i + 3] = A;
         }
     }
     return out;
 }
 
-export const getPhaseFraction = (arr: Uint8ClampedArray, val: number) => {
-    const uniqueVals = arr.filter((_, i, __) => { return i % 4 == 0 })
+export const getPhaseFraction = (arr: Uint8ClampedArray, val: number, nChannels: number = 4) => {
+    console.log('ahhhh')
+    const uniqueVals = arr.filter((_, i, __) => { return i % nChannels == 0 })
     const matching = uniqueVals.filter((v) => v == val);
-    return (100 * matching.length) / (arr.length / 4);
+    return (100 * matching.length) / (arr.length / nChannels);
 }
 
 export const loadFromTIFF = (tiffBuffer: ArrayBuffer): ImageLoadInfo => {
@@ -100,7 +105,9 @@ export const loadFromImage = async (href: string): Promise<ImageLoadInfo> => {
     await img.decode();
 
     const imgData = getImageDataFromImage(img);
-    const phaseCheck = checkPhases(imgData.data);
+    const nChannels = findNChannels(imgData.data, img.height, img.width)
+    console.log('n channels:' + String(nChannels))
+    const phaseCheck = checkPhases(imgData.data, nChannels);
 
     return {
         file: null,
