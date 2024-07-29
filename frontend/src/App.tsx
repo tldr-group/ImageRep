@@ -14,8 +14,12 @@ import "./assets/scss/App.scss";
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const PATH = "http://127.0.0.1:5000";
-const PF_ENDPOINT = PATH + "/phasefraction";
+//const PATH = "http://localhost:7071/api";
+//const PATH = "https://representative.azurewebsites.net/api"
+const PF_ENDPOINT = PATH + "/phasefraction"
 //const PF_ENDPOINT = "https://representativity.azurewebsites.net/phasefraction"
+
+//const REPR_ENDPOINT = PATH + "/repr";
 const REPR_ENDPOINT = PATH + "/repr";
 
 const MAX_FILE_SIZE_BYTES = 1024 * 1024 * 500; // 500MB

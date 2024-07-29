@@ -12,10 +12,12 @@ fig2 copy.py
 *.png
 *.npy
 
+.vscode
 frontend/node_modules
 frontend/dist
 *.kra
-deploy
+deploy*/
 deploy.sh
-.vscode
+deploy.zip
+
 tests/tmp.py

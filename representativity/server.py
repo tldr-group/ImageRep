@@ -142,7 +142,6 @@ def representativity(request) -> Response:
         "pf_1d": result["pf_1d"],
         "cum_sum_sum": result["cum_sum_sum"],
     }
-    print(out)
 
     response = Response(json.dumps(out), status=200)
     return response

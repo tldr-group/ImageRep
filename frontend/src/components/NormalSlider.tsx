@@ -255,7 +255,7 @@ const NormalSlider = () => {
         <div style={{ width: '100%' }}>
             <canvas style={{ width: '70%', marginLeft: '15%', marginBottom: '0.5em' }} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} ref={canvasRef} />
             <InputGroup style={{ width: '70%', marginLeft: '15%' }}> {/*style={{ width: '70%', marginLeft: '15%' }}*/}
-                <InputGroup.Text>Confidence in Phase Fraction Bounds (%):</InputGroup.Text>
+                <InputGroup.Text>Confidence in p.f. bounds (%):</InputGroup.Text>
 
                 <Form.Control type="number" min={0} max={100} value={selectedConf} step={0.5} onChange={(e) => setConf(e)} width={1} size="sm"></Form.Control>
                 <Form.Range min={80} max={100} value={selectedConf} step={0.1} onChange={(e) => setConf(e)} />
