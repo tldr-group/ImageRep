@@ -36,7 +36,8 @@ const PreviewCanvas = () => {
         imageInfo: [imageInfo,],
         previewImg: [previewImg, setPreviewImg],
         selectedPhase: [selectedPhase,],
-        targetL: [targetL,]
+        targetL: [targetL,],
+        menuState: [menuState,]
     } = useContext(AppContext)!
 
     const containerRef = useRef<HTMLDivElement>(null);
@@ -157,6 +158,7 @@ const PreviewCanvas = () => {
         // Animated shrink of canvas into top left corner of parent div
         // sf is original width / target length
         if (targetL === null) { return; }
+        if (menuState != 'conf_result') { return }
         const canvas = canvasRef.current!;
 
         const shortestSide = Math.min(imageInfo?.width!, imageInfo?.height!);
@@ -188,7 +190,7 @@ const PreviewCanvas = () => {
             animateDiv(frontDivRef.current!, newCanvL, newCanvL)
         }
 
-    }, [targetL])
+    }, [menuState])
 
     return (
         <div ref={containerRef} style={centredStyle}>

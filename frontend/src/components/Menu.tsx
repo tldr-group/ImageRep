@@ -169,9 +169,8 @@ const Result = () => {
         errVF: [errVF, setErrVF],
         pfB: [pfB,],
         accurateFractions: [accurateFractions,],
-        menuState: [, setMenuState],
+        menuState: [menuState, setMenuState],
         showInfo: [, setShowInfo],
-        showFullResults: [showFullResults, setShowFullResults],
     } = useContext(AppContext)!
 
     // we have two errVFs here because we want the values in the text to reflect the old
@@ -281,9 +280,12 @@ const Result = () => {
         </>
     )
 
-    const handleClose = () => { setShowFullResults(false) };
+    const handleClose = () => { setMenuState('conf_result') };
+
+    const showFull = (menuState == 'conf_result_full')
+
     const largeResults = (<>
-        <Modal show={showFullResults} onHide={handleClose} size="lg">
+        <Modal show={showFull} onHide={handleClose} size="lg">
             <Modal.Header style={{ backgroundColor: '#212529', color: '#ffffff' }} closeVariant="white" closeButton>
                 <Modal.Title>Results!</Modal.Title>
             </Modal.Header>
@@ -310,6 +312,12 @@ const Result = () => {
                         {/* TODO: add visualise button here! */}
                         <Accordion.Body style={{ visibility: "visible" }}>
                             For a {errVF.toFixed(2)}% uncertainty in phase fraction, you <b>need to measure a total image size of about {sizeText} (i.e. {nMore} more images)</b> at the same resolution.
+                            <div style={{ alignItems: 'right', display: 'flex-end', alignContent: 'right', }}>
+                                <Button variant="dark" onClick={handleClose} style={{ marginRight: '2em' }}>
+                                    Visualise!
+                                </Button>
+                            </div>
+
                         </Accordion.Body>
                     </Accordion.Item>
                     <Accordion.Item eventKey="2" >
@@ -343,8 +351,8 @@ const Result = () => {
     </>)
 
     return (<>
-        {(showFullResults == true) && largeResults}
-        {(showFullResults == false) && smallResults}
+        {(showFull == true) && largeResults}
+        {(showFull == false) && smallResults}
     </>)
 }
 
@@ -357,6 +365,8 @@ const getMenuInfo = (state: MenuState) => {
             return { title: "Choose Parameters", innerHTML: <ConfidenceSelect /> }
         case 'processing':
             return { title: "Processing", innerHTML: <div style={centreStyle}><Spinner /></div> }
+        case 'conf_result_full':
+            return { title: "Results", innerHTML: <Result /> }
         case 'conf_result':
             return { title: "Results", innerHTML: <Result /> }
         case 'hidden': // fall through
@@ -368,7 +378,6 @@ const getMenuInfo = (state: MenuState) => {
 export const Menu = () => {
     const {
         menuState: [menuState,],
-        showFullResults: [showFullResults,]
     } = useContext(AppContext)!
 
     const [collapse, setCollapse] = useState<boolean>(false);
@@ -377,7 +386,7 @@ export const Menu = () => {
 
     return (
         <>
-            {(showFullResults) ? getMenuInfo(menuState).innerHTML :
+            {(menuState == 'conf_result_full') ? getMenuInfo(menuState).innerHTML :
                 <ToastContainer className="p-5" position="bottom-end" >
                     <Toast show={!hide}>
                         <Toast.Header className="roundedme-2" closeButton={false}>

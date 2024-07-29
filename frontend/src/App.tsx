@@ -34,7 +34,6 @@ const App = () => {
         menuState: [menuState, setMenuState],
         errorState: [errorState, setErrorState],
         showWarning: [showWarning, setShowWarning],
-        showFullResults: [, setShowFullResults]
     } = useContext(AppContext)!
 
 
@@ -127,8 +126,7 @@ const App = () => {
 
             const absErr: number = obj["abs_err"]
 
-            setMenuState('conf_result');
-            setShowFullResults(true);
+            setMenuState('conf_result_full');
             setAnalysisInfo({
                 integralRange: obj["cls"],
                 z: 1,

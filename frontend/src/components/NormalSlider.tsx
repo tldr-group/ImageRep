@@ -8,8 +8,7 @@ import { head } from "underscore";
 
 const CANVAS_WIDTH = 428 * 2;
 const CANVAS_HEIGHT = 240 * 1.5;
-const TOP_VSPACE = 30
-const H_FOR_TEXT = 100;
+const H_FOR_TEXT = 80;
 const TEXT_OFFSET = 30;
 const SCALEBAR_WIDTH = 4;
 const H_GAUSS = CANVAS_HEIGHT - H_FOR_TEXT
@@ -86,7 +85,6 @@ const NormalSlider = () => {
         errVF: [errVF, setErrVF],
         pfB: [pfB, setPfB],
         accurateFractions: [accurateFractions,],
-        showFullResults: [showFullResults, setShowFullResults],
     } = useContext(AppContext)!
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -170,11 +168,12 @@ const NormalSlider = () => {
         const ctx = canv.getContext('2d')!;
         ctx.font = "28px Noto Sans"; // was 24
         ctx.fillStyle = headerHex;
-        ctx.fillText('Likelihood of true ϕ', 10, 40);
+        ctx.fillText('Likelihood of material p.f.', 10, 40);
 
+        const epsY = 24
         ctx.fillStyle = DARK_GREY;
-        ctx.fillText('ϕ of image', CANVAS_WIDTH / 2 - 60, CANVAS_HEIGHT - H_FOR_TEXT / 2 + 10);
-        ctx.fillText('Phase fraction (ϕ)', 10, CANVAS_HEIGHT - H_FOR_TEXT / 2 + 10);
+        ctx.fillText('p.f. of image', CANVAS_WIDTH / 2 - 60, CANVAS_HEIGHT - H_FOR_TEXT / 2 + epsY);
+        ctx.fillText('Phase Fraction (p.f.)', 10, CANVAS_HEIGHT - H_FOR_TEXT / 2 + epsY);
     }
 
     const drawText = (dataVals: Array<number>, xPositions: Array<number>, yOffset: number = TEXT_OFFSET, fontSize: number = 32) => {

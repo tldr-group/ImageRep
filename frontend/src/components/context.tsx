@@ -21,7 +21,6 @@ const AppContextProvider = (props: {
     const [errorState, setErrorState] = useState<ErrorMessage>({ msg: "", stackTrace: "" });
     const [showWarning, setShowWarning] = useState<"" | "cls" | "size" | "over">("");
     const [showInfo, setShowInfo] = useState<boolean>(false);
-    const [showFullResults, setShowFullResults] = useState<boolean>(false);
 
 
     return (
@@ -40,7 +39,6 @@ const AppContextProvider = (props: {
                 errorState: [errorState, setErrorState],
                 showWarning: [showWarning, setShowWarning],
                 showInfo: [showInfo, setShowInfo],
-                showFullResults: [showFullResults, setShowFullResults],
             }}
         >
             {props.children}
