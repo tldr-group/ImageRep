@@ -168,7 +168,8 @@ const NormalSlider = () => {
         const ctx = canv.getContext('2d')!;
         ctx.font = "28px Noto Sans"; // was 24
         ctx.fillStyle = headerHex;
-        ctx.fillText('Likelihood of material p.f.', 10, 40);
+        ctx.fillText("Likelihood of the", 10, 40);
+        ctx.fillText("material's p.f.", 24, 70);
 
         const epsY = 24
         ctx.fillStyle = DARK_GREY;
@@ -258,7 +259,7 @@ const NormalSlider = () => {
                 <InputGroup.Text>Confidence in p.f. bounds (%):</InputGroup.Text>
 
                 <Form.Control type="number" min={0} max={100} value={selectedConf} step={0.5} onChange={(e) => setConf(e)} width={1} size="sm"></Form.Control>
-                <Form.Range min={80} max={100} value={selectedConf} step={0.1} onChange={(e) => setConf(e)} />
+                <Form.Range min={80} max={99.999} value={selectedConf} step={0.1} onChange={(e) => setConf(e)} />
             </InputGroup>
         </div>)
 }

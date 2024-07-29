@@ -229,19 +229,21 @@ const Result = () => {
     const roundTo = getDPofSigFig(absErrFromPFB);
 
     const beforeBoldText = `The phase fraction in the segmented image is ${phaseFrac.toFixed(3)}. Assuming perfect segmentation, the model proposed by Dahari et al. suggests that `
-    const boldText = `we can be ${selectedConf.toFixed(1)}% confident of the true phase fraction being within ${perErrFromPFB?.toFixed(1)}% of this value (i.e. ${phaseFrac.toFixed(roundTo)}±${(absErrFromPFB).toFixed(roundTo)})`
+    const boldText = `we can be ${selectedConf.toFixed(1)}% confident that the material's phase fraction is within ${perErrFromPFB?.toFixed(1)}% of this value (i.e. ${phaseFrac.toFixed(roundTo)}±${(absErrFromPFB).toFixed(roundTo)})`
     const copyText = beforeBoldText + boldText
 
     const copyBtn = () => { navigator.clipboard.writeText(copyText) }
 
     const longestSide = Math.max(imageInfo?.width!, imageInfo?.height!)
-    const nMore = Math.pow((Math.ceil(l! / longestSide)), 2) - 1
+    const nMore = Math.pow((Math.ceil(l! / longestSide)), imageInfo?.nDims!) - 1
+
+    const title = "Phase Fraction Estimation of the Material"
 
     const smallResults = (
         <>
-            <Accordion defaultActiveKey={['0']} flush alwaysOpen>
+            <Accordion defaultActiveKey={['0', '1']} flush alwaysOpen>
                 <Accordion.Item eventKey="0">
-                    <Accordion.Header ref={pfResultRef}>Phase Fraction Uncertainty</Accordion.Header>
+                    <Accordion.Header ref={pfResultRef}>{title}</Accordion.Header>
                     {/*Need to manually overwrite the style here because of werid bug*/}
                     <Accordion.Body style={{ visibility: "visible" }}>
                         {beforeBoldText}<b>{boldText}</b>
@@ -294,9 +296,9 @@ const Result = () => {
                 <Modal.Title>Results!</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <Accordion defaultActiveKey={['0']} flush alwaysOpen>
+                <Accordion defaultActiveKey={['0', '1']} flush alwaysOpen>
                     <Accordion.Item eventKey="0">
-                        <Accordion.Header ref={pfResultRef}>Phase Fraction Uncertainty</Accordion.Header>
+                        <Accordion.Header ref={pfResultRef}>{title}</Accordion.Header>
                         {/*Need to manually overwrite the style here because of werid bug*/}
                         <Accordion.Body style={{ visibility: "visible" }}>
                             <div style={{ display: 'flex', alignItems: 'center' }}>

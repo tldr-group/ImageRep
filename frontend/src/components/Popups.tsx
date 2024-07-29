@@ -107,7 +107,7 @@ export const MoreInfo = () => {
                     <Modal.Title>About the Model</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    <p>How sure are we that our measured phase fraction in a material represents the 'true' or bulk phase fraction?
+                    <p>How sure are we that our measured phase fraction in a material represents the bulk phase fraction?
                         We can never know for certain, but our model allows us to assess the uncertainty.
                     </p>
                     <p>
@@ -119,7 +119,7 @@ export const MoreInfo = () => {
                     <p>
                         For finite-sized features in large images, the variance in the bulk phase fraction is some function of the CLS,
                         so by determining it for our measured image we can establish uncertainty bounds on the bulk phase fraction given
-                        the measured phase fractions. Put another way, <b>we can state the true phase fraction lies within some d% of
+                        the measured phase fractions. Put another way, <b>we can state the material's phase fraction lies within some d% of
                             the measured phase fraction with c% of the time.</b>
                     </p>
 
