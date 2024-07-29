@@ -307,6 +307,7 @@ const Result = () => {
                     <Accordion.Item eventKey="1" >
                         <Accordion.Header ref={lResultRef}>Required Length for Target</Accordion.Header>
                         {/*Need to manually overwrite the style here because of werid bug*/}
+                        {/* TODO: add visualise button here! */}
                         <Accordion.Body style={{ visibility: "visible" }}>
                             For a {errVF.toFixed(2)}% uncertainty in phase fraction, you <b>need to measure a total image size of about {sizeText} (i.e. {nMore} more images)</b> at the same resolution.
                         </Accordion.Body>
@@ -318,25 +319,20 @@ const Result = () => {
                                 <ListGroup.Item>Other errors are possible, and may be larger! (i.e, segmentation error)</ListGroup.Item>
                                 <ListGroup.Item>Not designed for periodic structures</ListGroup.Item>
                                 <ListGroup.Item>This is a (conservative) estimate - retry when you have measured the larger sample</ListGroup.Item>
-                                <ListGroup.Item>Porta ac consectetur ac</ListGroup.Item>
                             </ListGroup>
-                            <p>Full details can be found in the <a href="comingsoon">paper</a>.</p>
                         </Accordion.Body>
                     </Accordion.Item>
                     <Accordion.Item eventKey="3" >
                         <Accordion.Header style={{ color: 'red' }}>More info</Accordion.Header>
                         <Accordion.Body style={{ visibility: "visible" }}>
                             <ListGroup>
-                                <ListGroup.Item variant="dark" style={{ cursor: "pointer" }} onClick={e => setShowInfo(true)}>Brief explanation</ListGroup.Item>
+                                <ListGroup.Item variant="dark" style={{ cursor: "pointer" }} onClick={e => setShowInfo(true)}>Click for Brief explanation!</ListGroup.Item>
                                 <ListGroup.Item>Implementation in the <a href="https://github.com/tldr-group/Representativity">GitHub</a></ListGroup.Item>
                                 <ListGroup.Item>Full details can be found in the <a href="comingsoon">paper</a></ListGroup.Item>
                             </ListGroup>
                         </Accordion.Body>
                     </Accordion.Item>
-
                 </Accordion >
-
-
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="dark" onClick={handleClose}>
@@ -371,24 +367,29 @@ const getMenuInfo = (state: MenuState) => {
 
 export const Menu = () => {
     const {
-        menuState: [menuState,]
+        menuState: [menuState,],
+        showFullResults: [showFullResults,]
     } = useContext(AppContext)!
 
     const [collapse, setCollapse] = useState<boolean>(false);
 
+    const hide = (menuState == 'hidden')
+
     return (
         <>
-            <ToastContainer className="p-5" position="bottom-end" >
-                <Toast show={menuState != 'hidden'}>
-                    <Toast.Header className="roundedme-2" closeButton={false}>
-                        <strong className="me-auto" style={{ fontSize: '1.5em' }}>{getMenuInfo(menuState).title}</strong>
-                        <Button onClick={(e) => setCollapse(!collapse)} variant="outline-dark" size="sm">{collapse ? `▼` : `▲`}</Button>
-                    </Toast.Header>
-                    <Toast.Body>
-                        {(collapse == false) && getMenuInfo(menuState).innerHTML}
-                    </Toast.Body>
-                </Toast>
-            </ToastContainer>
+            {(showFullResults) ? getMenuInfo(menuState).innerHTML :
+                <ToastContainer className="p-5" position="bottom-end" >
+                    <Toast show={!hide}>
+                        <Toast.Header className="roundedme-2" closeButton={false}>
+                            <strong className="me-auto" style={{ fontSize: '1.5em' }}>{getMenuInfo(menuState).title}</strong>
+                            <Button onClick={(e) => setCollapse(!collapse)} variant="outline-dark" size="sm">{collapse ? `▼` : `▲`}</Button>
+                        </Toast.Header>
+                        <Toast.Body>
+                            {(collapse == false) && getMenuInfo(menuState).innerHTML}
+                        </Toast.Body>
+                    </Toast>
+                </ToastContainer>}
+
         </>
     )
 }
