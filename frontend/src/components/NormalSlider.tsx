@@ -4,10 +4,13 @@ import { getPhaseFraction } from "./imageLogic";
 
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
+import { head } from "underscore";
 
 const CANVAS_WIDTH = 428 * 2;
-const CANVAS_HEIGHT = 200 * 1.5;
-const H_FOR_TEXT = 24;
+const CANVAS_HEIGHT = 240 * 1.5;
+const TOP_VSPACE = 30
+const H_FOR_TEXT = 100;
+const TEXT_OFFSET = 30;
 const SCALEBAR_WIDTH = 4;
 const H_GAUSS = CANVAS_HEIGHT - H_FOR_TEXT
 
@@ -162,16 +165,37 @@ const NormalSlider = () => {
         }
     }
 
-    const drawText = (dataVals: Array<number>, xPositions: Array<number>) => {
+    const drawLabels = () => {
         const canv = canvasRef.current!;
         const ctx = canv.getContext('2d')!;
-        ctx.font = "32px Noto Sans"; // was 24
+        ctx.font = "28px Noto Sans"; // was 24
+        ctx.fillStyle = headerHex;
+        ctx.fillText('Likelihood of true ϕ', 10, 40);
+
+        ctx.fillStyle = DARK_GREY;
+        ctx.fillText('ϕ of image', CANVAS_WIDTH / 2 - 60, CANVAS_HEIGHT - H_FOR_TEXT / 2 + 10);
+        ctx.fillText('Phase fraction (ϕ)', 10, CANVAS_HEIGHT - H_FOR_TEXT / 2 + 10);
+    }
+
+    const drawText = (dataVals: Array<number>, xPositions: Array<number>, yOffset: number = TEXT_OFFSET, fontSize: number = 32) => {
+        const canv = canvasRef.current!;
+        const ctx = canv.getContext('2d')!;
+        ctx.font = `${fontSize}px Noto Sans`; // was 24
         ctx.fillStyle = DARK_GREY;
         for (let i = 0; i < dataVals.length; i++) {
-            const offset = (i == 1) ? 24 : -8
             const val = dataVals[i].toFixed(3)
-            ctx.fillText(val, xPositions[i] - 30, H_GAUSS + offset);
+            ctx.fillText(val, xPositions[i] - 30, H_GAUSS + yOffset);
         }
+    }
+
+    const drawExtrema = (i0: number = 30, i1: number = CANVAS_WIDTH - 30) => {
+        const xData = [i0, i1].map((x) => xPxToData((x), params.start_pf, params.end_pf, CANVAS_WIDTH));
+        drawText(xData, [i0, i1], -(10), 24)
+        const l = 8
+        for (let x of [i0, i1]) {
+            drawPoints([x, x], [H_GAUSS - l, H_GAUSS + l], xAxisStyle)
+        }
+
     }
 
     const redraw = () => {
@@ -188,12 +212,14 @@ const NormalSlider = () => {
         shadeStyle.lineColour = shadedHex;
         shadeStyle.fillColour = shadedHex;
 
-        clearCanv()
+        clearCanv();
         drawPoints([0, CANVAS_WIDTH], [H_GAUSS, H_GAUSS], xAxisStyle)
+        drawExtrema();
         drawPoints([CANVAS_WIDTH / 2, CANVAS_WIDTH / 2], [0, H_GAUSS], yAxisStyle)
         drawPoints(indices, yPoints, curveStyle);
         drawPoints(sp.xPoints, sp.yPoints, shadeStyle);
         drawText([pfB[0], params.mu, pfB[1]!], [sp.xPoints[0], CANVAS_WIDTH / 2, sp.xPoints[sp.xPoints.length - 1]]);
+        drawLabels();
     }
 
     const setConf = (e: any) => {
