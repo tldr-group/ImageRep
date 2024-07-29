@@ -281,6 +281,10 @@ const Result = () => {
     )
 
     const handleClose = () => { setMenuState('conf_result') };
+    const handleShowFull = () => {
+        setMenuState('hidden');
+        setShowInfo(true);
+    };
 
     const showFull = (menuState == 'conf_result_full')
 
@@ -312,8 +316,8 @@ const Result = () => {
                         {/* TODO: add visualise button here! */}
                         <Accordion.Body style={{ visibility: "visible" }}>
                             For a {errVF.toFixed(2)}% uncertainty in phase fraction, you <b>need to measure a total image size of about {sizeText} (i.e. {nMore} more images)</b> at the same resolution.
-                            <div style={{ alignItems: 'right', display: 'flex-end', alignContent: 'right', }}>
-                                <Button variant="dark" onClick={handleClose} style={{ marginRight: '2em' }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', }}>
+                                <Button variant="dark" onClick={handleClose}>
                                     Visualise!
                                 </Button>
                             </div>
@@ -334,7 +338,7 @@ const Result = () => {
                         <Accordion.Header style={{ color: 'red' }}>More info</Accordion.Header>
                         <Accordion.Body style={{ visibility: "visible" }}>
                             <ListGroup>
-                                <ListGroup.Item variant="dark" style={{ cursor: "pointer" }} onClick={e => setShowInfo(true)}>Click for Brief explanation!</ListGroup.Item>
+                                <ListGroup.Item variant="dark" style={{ cursor: "pointer" }} onClick={e => handleShowFull()}>Click for Brief explanation!</ListGroup.Item>
                                 <ListGroup.Item>Implementation in the <a href="https://github.com/tldr-group/Representativity">GitHub</a></ListGroup.Item>
                                 <ListGroup.Item>Full details can be found in the <a href="comingsoon">paper</a></ListGroup.Item>
                             </ListGroup>

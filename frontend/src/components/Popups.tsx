@@ -91,10 +91,14 @@ export const MoreInfo = () => {
     const {
         imageInfo: [imageInfo,],
         analysisInfo: [analysisInfo,],
-        showInfo: [showInfo, setShowInfo]
+        showInfo: [showInfo, setShowInfo],
+        menuState: [, setMenuState]
     } = useContext(AppContext)!;
 
-    const handleClose = () => { setShowInfo(false) };
+    const handleClose = () => {
+        setShowInfo(false);
+        setMenuState('conf_result');
+    };
 
     return (
         <>
