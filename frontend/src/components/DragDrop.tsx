@@ -9,6 +9,8 @@ export const dragDropStyle = {
 }
 const flexCenterClasses = "flex items-center justify-center";
 
+const isMobile = (window.innerWidth < 800)
+
 const DragDrop = ({ loadFromFile }: DragDropProps): JSX.Element => {
     // Drag and drop for file upload
     const handleDrag = (e: any) => { e.preventDefault(); }
@@ -27,7 +29,7 @@ const DragDrop = ({ loadFromFile }: DragDropProps): JSX.Element => {
             onDragOver={handleDrag}
             onDrop={handeDrop}
         >
-            <span>Drag microstructure file!</span>
+            {(!isMobile) && <span>Drag microstructure file!</span>}
         </div>
     );
 }

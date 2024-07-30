@@ -23,17 +23,37 @@ interface contextProps {
     ];
     targetL: [
         targetL: number | null,
-        setTargetL: (e: number) => void,
+        setTargetL: (e: number | null) => void,
     ];
+    pfB: [
+        pfB: number[] | null,
+        setpfB: (e: number[] | null) => void,
+    ];
+    accurateFractions: [
+        accurateFractions: { [val: number]: number } | null,
+        setAccurateFractions: (e: { [val: number]: number } | null) => void,
+    ]
     analysisInfo: [
         analysisInfo: AnalysisInfo | null,
-        setAnalysisInfo: (e: AnalysisInfo) => void
+        setAnalysisInfo: (e: AnalysisInfo | null) => void
     ]
     // what do I need to store from azure? cls, z, l
     menuState: [
         menuState: MenuState,
         setMenuState: (e: MenuState) => void
     ];
+    errorState: [
+        errorState: ErrorMessage,
+        setErrorState: (e: ErrorMessage) => void
+    ];
+    showWarning: [
+        showWarning: "" | "cls" | "size" | "over",
+        setShowWarning: (e: "" | "cls" | "size" | "over") => void
+    ]
+    showInfo: [
+        showInfo: boolean,
+        setShowInfo: (e: boolean) => void
+    ],
 };
 
 const AppContext = createContext<contextProps | null>(null);
@@ -42,6 +62,11 @@ export default AppContext;
 
 export interface DragDropProps {
     loadFromFile: (file: File) => void;
+}
+
+export interface TopbarProps {
+    loadFromFile: (file: File) => void;
+    reset: () => void;
 }
 
 export function rgbaToHex(r: number, g: number, b: number, a: number) {
@@ -54,9 +79,9 @@ export function rgbaToHex(r: number, g: number, b: number, a: number) {
 }
 
 export const colours: number[][] = [[255, 255, 255, 255], [31, 119, 180, 255], [255, 127, 14, 255], [44, 160, 44, 255], [214, 39, 40, 255], [148, 103, 189, 255], [140, 86, 75, 255]]
+export const IR_LIMIT_PX = 70
 
-
-export type MenuState = "hidden" | "phase" | "conf" | "processing" | "conf_result" | "length" | "length_result"
+export type MenuState = "hidden" | "phase" | "conf" | "processing" | "conf_result_full" | "conf_result" | "length"
 
 
 export interface ImageLoadInfo {
@@ -75,8 +100,21 @@ export interface ImageLoadInfo {
 export interface AnalysisInfo {
     integralRange: number,
     z: number,
+    stdModel: number
     percentageErr: number,
     absError: number,
     lForDefaultErr: number,
-    vf: number
+    vf: number,
+    pf: Array<number>,
+    cumSumSum: Array<number>
+}
+
+export interface ErrorMessage {
+    msg: string;
+    stackTrace: string;
+}
+
+export interface Point {
+    x: number;
+    y: number
 }
