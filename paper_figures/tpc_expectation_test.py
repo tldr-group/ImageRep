@@ -1,8 +1,6 @@
-from representativity import util, core
-import torch
+from representativity import core
 import matplotlib.pyplot as plt
 import numpy as np
-from representativity.correction_fitting import microlib_statistics as ms
 from scipy.spatial.distance import cdist
 import time
 from scipy.stats import norm
