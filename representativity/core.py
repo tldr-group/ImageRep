@@ -171,8 +171,8 @@ def radial_tpc(
     # this is a problem where arr not square, should take minimum of dimension (for now)
     # TODO: make desired length different in all dimensions
     # TODO: does this need to be its own function that takes all the same arguments as two_point_...
-    # img_y_length: int = min(binary_img.shape)
-    img_y_length = binary_img.shape[0]
+    img_y_length: int = min(binary_img.shape)
+    # img_y_length = binary_img.shape[0]
     # img_y_length: int = binary_img.shape[0]
     # desired length: dims of output of fft arr,
     desired_length = (img_y_length // 2) if periodic else (img_y_length - 1)
