@@ -132,7 +132,6 @@ def plot_likelihood_of_phi(image_pf, pred_std, std_dist_std):
     # mu, std = norm.fit(sum_dist_norm)
     # p = norm.pdf(pf_x_1d, mu, std)
     # print(mu, std)
-
     # both need a bit of normalization for symmetric bounds (they're both very close to 1)
     sum_dist_norm /= np.trapz(sum_dist_norm, pf_x_1d)
     mid_std_dist /= np.trapz(mid_std_dist, pf_x_1d)
