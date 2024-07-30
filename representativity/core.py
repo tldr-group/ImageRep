@@ -699,7 +699,7 @@ def get_std_model(dim: int, n_voxels: int) -> float:
 
 def normal_dist(
     x: np.ndarray, mean: float | np.ndarray, std: float | np.ndarray
-) -> np.ndarray:
+) -> np.ndarray:  #
     return (1.0 / (std * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mean) / std) ** 2)
 
 
