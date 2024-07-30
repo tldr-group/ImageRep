@@ -1,10 +1,8 @@
 import numpy as np
 import torch
-import slicegan
+from representativity import slicegan, core
 from scipy import stats, ndimage
 from matplotlib import pyplot as plt
-
-import core
 
 
 def load_generator(Project_path):

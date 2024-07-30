@@ -677,7 +677,9 @@ def tpc_to_cls(tpc: np.ndarray, binary_image: np.ndarray) -> float:
 # %% ======================== POST-CLS ERROR ESTIMATION ========================
 
 
-def fit_to_errs_function(dim: int, n_voxels: int, a: float, b: float) -> float:
+def fit_to_errs_function(
+    dim: int, n_voxels: int | np.ndarray, a: float, b: float
+) -> float | np.ndarray:
     return a / n_voxels**b
 
 
