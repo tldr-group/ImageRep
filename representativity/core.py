@@ -536,7 +536,7 @@ def find_end_dist_idx(
         bool_array = (dist_arr >= start_dist) & (dist_arr < end_dist)
         sum_dev = np.sum(tpc[bool_array] - image_pf**2 > small_change)
         deviation = sum_dev / np.sum(bool_array)
-        if deviation < 0.05:
+        if deviation < 0.03:
             return int(ring_distances[dist_i])
     return ring_distances[1]
 
