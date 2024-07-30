@@ -616,7 +616,7 @@ def tpc_to_cls(tpc: np.ndarray, binary_image: np.ndarray) -> float:
     :return: CLS of the binary microstructure (roughly the feature size)
     :rtype: float
     """
-
+    # tpc = np.array(tpc)
     img_shape = binary_image.shape
     # the middle index is the 0,0 TPC because of how the TPC function laid them out
     middle_idx = np.array(tpc.shape) // 2
@@ -803,6 +803,7 @@ def find_n_for_err_targ(
         image_pf, std_bernoulli, pred_std_error_std, conf_level, n_divisions
     )
     err_for_img = image_pf - pred_interval[0]
+    # was np.abs( ...). TODO: check which is better
     return (err_target - err_for_img) ** 2
 
 
