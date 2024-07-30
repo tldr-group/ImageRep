@@ -103,7 +103,7 @@ def compare_statistical_fit_error(
         all_data[f"data_gen_{mode}"][n]["fit_err_vf"][imsize] = fit_errs_vf[i]
 
 
-def json_preprocessing(microlib_path: str):
+def json_preprocessing(microlib_path: str = "/home/amir/microlibDataset/"):
     """
     This function is used to load the data from the microlib dataset, and to prepare the json file
     """

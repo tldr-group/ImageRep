@@ -1,7 +1,7 @@
 import json
 import numpy as np
 import time
-from representativity import util, core, slicegan
+from representativity import core
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
