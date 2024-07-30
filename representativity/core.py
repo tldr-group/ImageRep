@@ -140,7 +140,7 @@ def two_point_correlation(
         flipped_img = np.flip(binary_img, flip_list)
 
         tpc_orthant = two_point_correlation_orthant(
-            flipped_img, n_dims, desired_length, periodic
+            flipped_img, n_dims, desired_length + 1, periodic
         )
         original_tpc_orthant = np.flip(tpc_orthant, flip_list)
         orthants[axis + (1,)] = original_tpc_orthant
@@ -158,7 +158,7 @@ def two_point_correlation(
         # axis_idx looks like (100, 100)
         # slice to input: mapping of orthant axis to location in result i.e [0:100, 0:100]
         slice_to_input = tuple(
-            map(slice, axis_idx, axis_idx + desired_length)
+            map(slice, axis_idx, axis_idx + desired_length + 1)
         )  # TODO: check with A, this used to be + 1
         result[slice_to_input] = orthants[axis]
     return result
@@ -171,7 +171,8 @@ def radial_tpc(
     # this is a problem where arr not square, should take minimum of dimension (for now)
     # TODO: make desired length different in all dimensions
     # TODO: does this need to be its own function that takes all the same arguments as two_point_...
-    img_y_length: int = min(binary_img.shape)  # binary_img.shape[0]
+    # img_y_length: int = min(binary_img.shape)
+    img_y_length = binary_img.shape[0]
     # img_y_length: int = binary_img.shape[0]
     # desired length: dims of output of fft arr,
     desired_length = (img_y_length // 2) if periodic else (img_y_length - 1)
@@ -806,7 +807,7 @@ def find_n_for_err_targ(
     )
     err_for_img = image_pf - pred_interval[0]
     # was np.abs( ...). TODO: check which is better
-    return (err_target - err_for_img) ** 2
+    return np.abs(err_target - err_for_img)  # ** 2
 
 
 def dims_from_n(n_samples_needed: int, equal_shape: bool, cls: float, dims: int) -> int:
@@ -885,7 +886,7 @@ def make_error_prediction(
     ) ** 0.5  # TODO: this is the std of phi relative to Phi with
     std_model = get_std_model(n_dims, n_elems)
     abs_err_target = target_error * phase_fraction
-    z, pf_1d, cum_sum_sum = 0, None, None
+    z, pf_1d, cum_sum_sum = 0, [0], [0]
     if model_error:
         # calculate the absolute error for the image:
         conf_bounds, pf_1d, cum_sum_sum = get_prediction_interval(

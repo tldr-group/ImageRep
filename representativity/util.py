@@ -1,6 +1,13 @@
 import numpy as np
-import torch
-from representativity import slicegan, core
+
+from representativity import core
+
+try:
+    import torch
+    from representativity import slicegan
+except ImportError:
+    print("Couldn't import torch, slicegan related code will not work!")
+
 from scipy import stats, ndimage
 from matplotlib import pyplot as plt
 
@@ -94,27 +101,30 @@ def real_image_stats(img, ls, pf, repeats=4000, conf=0.95):
         if dims == 1:
             for _ in range(repeats):
                 bm, xm = img.shape
-                x = torch.randint(0, xm - l, (1,))
-                b = torch.randint(0, bm, (1,))
+                x = np.random.randint(
+                    0,
+                    xm - l,
+                )
+                b = np.random.randint(0, bm)
                 crop = img[b, x : x + l]
-                pfs.append(torch.mean(crop).cpu())
+                pfs.append(np.mean(crop))
         elif dims == 2:
             for _ in range(repeats):
                 bm, xm, ym = img.shape
-                x = torch.randint(0, xm - l, (1,))
-                y = torch.randint(0, ym - l, (1,))
-                b = torch.randint(0, bm, (1,))
+                x = np.random.randint(0, xm - l)
+                y = np.random.randint(0, ym - l)
+                b = np.random.randint(0, bm)
                 crop = img[b, x : x + l, y : y + l]
-                pfs.append(torch.mean(crop).cpu())
+                pfs.append(np.mean(crop))
         else:  # 3D
             for _ in range(repeats):
                 bm, xm, ym, zm = img.shape
-                x = torch.randint(0, xm - l, (1,))
-                y = torch.randint(0, ym - l, (1,))
-                z = torch.randint(0, zm - l, (1,))
-                b = torch.randint(0, bm, (1,))
+                x = np.random.randint(0, xm - l)
+                y = np.random.randint(0, ym - l)
+                z = np.random.randint(0, zm - l)
+                b = np.random.randint(0, bm)
                 crop = img[b, x : x + l, y : y + l, z : z + l]
-                pfs.append(torch.mean(crop).cpu())
+                pfs.append(np.mean(crop))
         pfs = np.array(pfs)
         ddof = 1  # for unbiased std
         std = np.std(pfs, ddof=ddof)
