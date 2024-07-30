@@ -118,6 +118,7 @@ def ps_error_prediction(dim, data, confidence, error_target):
     large_im_repeats = 1
     in_the_bounds_w_model = []
     in_the_bounds_wo_model = []
+    iters = 0
     for generator, params in ps_generators.items():
         for value_comb in product(*params.values()):
             args = {key: value for key, value in zip(params.keys(), value_comb)}
@@ -143,6 +144,8 @@ def ps_error_prediction(dim, data, confidence, error_target):
                     print(f'One image stat analysis cls: {one_im_stat_analysis_cls}')
                     one_im_clss.append(one_im_stat_analysis_cls)
                     for i in range(2):
+                        print(f'Iteration {iters}')
+                        iters += 1
                         with_model = i == 0
                         im_err, l_for_err_target, cls = util.make_error_prediction(small_im, 
                                 conf=confidence, err_targ=error_target, model_error=with_model, n_divisions=301)

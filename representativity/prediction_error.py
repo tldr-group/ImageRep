@@ -8,6 +8,10 @@ from scipy.optimize import minimize
 from scipy.optimize import curve_fit
 from functools import partial
 
+import os
+
+print(os.getcwd())
+
 '''
 File: prediction_error.py
 
