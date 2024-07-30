@@ -176,6 +176,10 @@ const Result = () => {
     // we have two errVFs here because we want the values in the text to reflect the old
     // errVF, the one they sent to the server and the slider to represent the new one
     // which they are setting for recalculate.
+
+    // TODO: THERE IS RACE CONDITION BETWEEN ACCURATE PFS AND RESULTS: I.E IF ONE
+    // NOT RETURNED WEBSITE FALLS OVER - NOT GOOD. FIX
+    // MAY EVEN BE LAG IN COUNTING PHASE FRACS
     const [newErrVF, setNewErrVF] = useState<number>(5);
     const pfResultRef = useRef<HTMLHeadingElement>(null);
     const lResultRef = useRef<HTMLHeadingElement>(null);

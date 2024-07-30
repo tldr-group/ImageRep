@@ -56,8 +56,6 @@ const PreviewCanvas = () => {
         const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, faceData.dox, faceData.doy, ADDITIONAL_SF);
         ctx?.clearRect(0, 0, canvas.width, canvas.height);
         if (faceData.dox > 0) {
-            console.log(faceData)
-            console.log(correctDims.oy)
             drawFaces(ctx!, faceData.face1, faceData.face2, correctDims.sf, correctDims.ox, correctDims.oy)
         }
         ctx?.drawImage(image, correctDims.ox, correctDims.oy, correctDims.w, correctDims.h);

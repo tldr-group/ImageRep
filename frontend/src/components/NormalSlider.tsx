@@ -113,7 +113,6 @@ const NormalSlider = () => {
         const pxLBx = xDataToPx(newLB, params.start_pf, params.end_pf, CANVAS_WIDTH);
         const pxUBx = xDataToPx(newUB, params.start_pf, params.end_pf, CANVAS_WIDTH);
 
-        console.log(pxLBx, pxUBx, newLB, newUB)
 
         const nNew = pxUBx - pxLBx;
         const inds = [...Array(nNew).keys()].map((x) => (x + pxLBx));
@@ -235,7 +234,7 @@ const NormalSlider = () => {
         const result = getPredictionInterval(selectedConf / 100, analysisInfo?.pf!, analysisInfo?.cumSumSum!)
         const [lbData, ubData] = [result[0], result[1]]
         const sigma = (ubData - lbData) / 4 // sigma should be fixed as ub and lb changes - this should be reflected in results as well
-        console.log(analysisInfo?.stdModel!, sigma)
+
         const newMaxY = normalDist(phaseFrac, phaseFrac, analysisInfo?.stdModel!)
         const newStartPf = phaseFrac - 4 * sigma
         const newEndPf = phaseFrac + 4 * sigma

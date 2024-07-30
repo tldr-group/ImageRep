@@ -546,7 +546,7 @@ def find_end_dist_tpc(
     """Defines search range for endpoint, calls main fn"""
     # Assumption is image is at least 200 in every dimensoom
     # TODO: signpost in paper?
-    max_img_dim = np.max(dist_arr)
+    max_img_dim = np.max(dist_arr)  # len(dist_arr)  # np.max(dist_arr)
     if max_img_dim < 200:
         print(f"Max img dim of {max_img_dim} < 200px, using small method")
         # this gives more unstable results but works for smaller images

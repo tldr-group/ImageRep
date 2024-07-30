@@ -14,8 +14,9 @@ import "./assets/scss/App.scss";
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 //const PATH = "http://127.0.0.1:5000";
+const PATH = "https://samba-segment.azurewebsites.net";
 //const PATH = "http://localhost:7071/api";
-const PATH = "https://representative.azurewebsites.net/api"
+//const PATH = "https://representative.azurewebsites.net/api"
 const PF_ENDPOINT = PATH + "/phasefraction"
 //const PF_ENDPOINT = "https://representativity.azurewebsites.net/phasefraction"
 
@@ -129,6 +130,8 @@ const App = () => {
             const obj = await resp.json();
 
             const absErr: number = obj["abs_err"]
+
+            console.log(obj)
 
             setMenuState('conf_result_full');
             setAnalysisInfo({
