@@ -4,37 +4,34 @@ import tifffile
 import json
 import numpy as np
 import torch
-from representativity.old import util
+from representativity import util
 from torch.nn.functional import interpolate
-
 
 def sample_error(img, ls, vf=0.5):
     err = []
     dims = len(img.shape) - 1
     for l in ls:
         if dims == 1:
-            vfs = torch.mean(img[:, : l * l], dim=(1))
-        elif dims == 2:
+            vfs = torch.mean(img[:, :l*l], dim=(1))
+        elif dims == 2:  
             vfs = torch.mean(img[:, :l, :l], dim=(1, 2))
         else:  # 3D
-            new_l = int(l ** (2 / 3))
+            new_l = int(l**(2/3))
             vfs = torch.mean(img[:, :new_l, :new_l, :new_l], dim=(1, 2, 3))
         std = torch.std(vfs.cpu())
-        err.append(100 * ((1.96 * std) / vf))  # percentage of error from 0.5
+        err.append(100*((1.96*std)/vf))  # percentage of error from 0.5
     return err
-
 
 errs = []
 berns = []
 
-
 def generate_microlib_data():
-    mode = "2D"
+    mode = '2D'
     # Dataset path and list of subfolders
     # with open("micro_names.json", "r") as fp:  # TODO change this later
-    # micro_names = json.load(fp)
-    plotting = [f"microstructure{f}" for f in [228, 235, 205, 177]]
-    projects = [f"/home/amir/microlibDataset/{p}/{p}" for p in plotting]
+        # micro_names = json.load(fp)
+    plotting = [f'microstructure{f}' for f in [228, 235, 205, 177]]
+    projects = [f'/home/amir/microlibDataset/{p}/{p}' for p in plotting]
     # Load generator network
     netG = util.load_generator(projects[0])
     # Edge lengths to test
@@ -46,74 +43,73 @@ def generate_microlib_data():
 
     num_projects = len(projects)
     projects = projects[:num_projects]
-    reps = 1000 if mode == "2D" else 400
+    reps = 1000 if mode=='2D' else 400
     for j, proj in enumerate(projects):
         # Make an image of micro
         netG.load_state_dict(torch.load(proj + "_Gen.pt"))
-        img = util.generate_image(netG, lf=l, reps=reps, threed=mode == "3D")
+        img = util.generate_image(netG,lf=l,reps=reps, threed=mode=='3D')
         print(img.size())
         if img.any():
             microstructure_name = proj.split("/")[-1]
             vf = torch.mean(img).cpu().item()
             img = [img]
-            print(f"starting tpc")
-            img_dims = [np.array((l,) * (len(img.shape) - 1)) for l in edge_lengths]
+            print(f'starting tpc')
+            img_dims = [np.array((l,)*(len(img.shape)-1)) for l in edge_lengths]
             err_exp = util.real_image_stats(img, edge_lengths, vf)
     return data
 
 
 # with open("data_gen.json", "r") as fp:
-#     data = json.load(fp)['generated_data']
+#     data = json.load(fp)['generated_data'] 
 
-n = "microstructure205"
-img3 = tifffile.imread(f"/home/amir/microlibDataset/{n}/{n}.tif")
+n = 'microstructure205'
+img3 = tifffile.imread(f'/home/amir/microlibDataset/{n}/{n}.tif')
 d = generate_microlib_data()
 
 
-ls = torch.arange(300, 800, 20)
+ls = torch.arange(300,800, 20)
 img_dims = [np.array((l, l)) for l in ls]
 ns = util.ns_from_dims(img_dims, 1)
-img1 = torch.rand((1000, 1, ls[-1], ls[-1]), device=torch.device("cuda:0")).float()
-img1[img1 <= d["vf"]] = 0
-img1[img1 > d["vf"]] = 1
-img1 = 1 - img1
-errs.append(sample_error(img1[:, 0], ls, d["vf"]))
-berns.append(util.bernouli(d["vf"], ns))
+img1 = torch.rand((1000, 1, ls[-1],ls[-1]), device = torch.device('cuda:0')).float()
+img1[img1<=d['vf']] = 0
+img1[img1>d['vf']] = 1
+img1 = 1-img1
+errs.append(sample_error(img1[:,0], ls, d['vf']))
+berns.append(util.bernouli(d['vf'], ns))
 
-img2 = interpolate(
-    img1[:, :, : ls[-1] // 2, : ls[-1] // 2], scale_factor=(2, 2), mode="nearest"
-)
-errs.append(sample_error(img2[:, 0], ls, d["vf"]))
+img2 = interpolate(img1[:,:,:ls[-1]//2, :ls[-1]//2], scale_factor=(2,2), mode='nearest')
+errs.append(sample_error(img2[:,0], ls, d['vf']))
 ns = util.ns_from_dims(img_dims, 2)
-berns.append(util.bernouli(d["vf"], ns))
+berns.append(util.bernouli(d['vf'], ns))
 
-errs.append(d[f"err_exp_vf"][::4])
-ns = util.ns_from_dims(img_dims, d["fac_vf"])
-berns.append(util.bernouli(d["vf"], ns))
+errs.append(d[f'err_exp_vf'][::4])
+ns = util.ns_from_dims(img_dims, d['fac_vf'])
+berns.append(util.bernouli(d['vf'], ns))
 
-fig, axs = plt.subplots(2, 2)
-fig.set_size_inches(8, 8)
-l = 150
-axs[0, 0].imshow(img1[0, 0, :l, :l].cpu(), cmap="gray")
-axs[0, 1].imshow(img2[0, 0, :l, :l].cpu(), cmap="gray")
-axs[1, 0].imshow(img3[0, :150, :150], cmap="gray")
+fig, axs = plt.subplots(2,2)
+fig.set_size_inches(8,8)
+l=150
+axs[0,0].imshow(img1[0,0, :l, :l].cpu(), cmap='gray')
+axs[0,1].imshow(img2[0,0, :l, :l].cpu(), cmap='gray')
+axs[1,0].imshow(img3[0, :150, :150], cmap='gray')
 
-cs = ["r", "b", "g"]
-labs = ["a) random 1x1", "b) random 2x2", "c) micrograph 205"]
+cs = ['r', 'b', 'g']
+labs = ['a) random 1x1', 'b) random 2x2', 'c) micrograph 205']
 for l, err, bern, c in zip(labs, errs, berns, cs):
-    axs[1, 1].scatter(ls, err, c=c, s=8, marker="x")
-    axs[1, 1].plot(ls, bern, lw=1, c=c, label=l)
-axs[1, 1].legend()
-axs[0, 0].set_title("a) Random 1x1 (vf = 0.845, $a_2$ = 1)")
-axs[0, 1].set_title("b) Random 2x2 (vf = 0.845, $a_2$ = 2)")
-axs[1, 0].set_title("c) Micro. 205 (vf = 0.845, $a_2$ = 7.526)")
-axs[1, 1].set_title("d) Experimental integral range fit")
-axs[1, 1].set_xlabel("Image length size [pixels]")
-axs[1, 1].set_ylabel("Volume fraction percentage error [%]")
-axs[1, 1].set_ylim(bottom=0)
+    axs[1,1].scatter(ls, err, c=c, s=8,marker = 'x')
+    axs[1,1].plot(ls, bern, lw=1, c=c, label=l)
+axs[1,1].legend()
+axs[0,0].set_title('a) Random 1x1 (vf = 0.845, $a_2$ = 1)')
+axs[0,1].set_title('b) Random 2x2 (vf = 0.845, $a_2$ = 2)')
+axs[1,0].set_title('c) Micro. 205 (vf = 0.845, $a_2$ = 7.526)')
+axs[1,1].set_title('d) Experimental integral range fit')
+axs[1,1].set_xlabel('Image length size [pixels]')
+axs[1,1].set_ylabel('Volume fraction percentage error [%]')
+axs[1,1].set_ylim(bottom=0)
 plt.tight_layout()
 for ax in axs.ravel()[:3]:
     ax.set_xticks([])
     ax.set_yticks([])
 
-plt.savefig("fig1.pdf", format="pdf")
+plt.savefig('fig1.pdf', format='pdf')         
+
