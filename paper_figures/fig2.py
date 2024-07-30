@@ -9,6 +9,7 @@ from scipy import stats
 import torch
 from representativity import util, microlib_statistics
 from torch.nn.functional import interpolate
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # with open("data_gen2.json", "r") as fp:
 #     data = json.load(fp)["generated_data"]
@@ -22,9 +23,10 @@ plotting_ims = [f'microstructure{f}' for f in [235, 228, 205,177]]
 # plotting = [k for k in data.keys()]
 l = len(plotting_ims)
 fig, axs = plt.subplots(l, 3)
-fig.set_size_inches(12, l*4)
+fig.set_size_inches(12, l*3.5)
 preds = [[],[]]
 irs = [[],[]]
+colors = {"cls": 'tab:orange', "stds": 'tab:green'}
 
 all_data, micros, netG, v_names, run_v_names = microlib_statistics.json_preprocessing()
 lens_for_fit = list(range(500, 1000, 20))  # lengths of images for fitting L_characteristic
@@ -38,7 +40,7 @@ for i, p in enumerate(plotting_ims):
         continue
     imsize = 1600
     lf = imsize//32 + 2  # the size of G's input
-    many_images = util.generate_image(netG, lf=lf, threed=False, reps=50)
+    many_images = util.generate_image(netG, lf=lf, threed=False, reps=10)
     pf = many_images.mean().cpu().numpy()
     small_imsize = 512
     img = many_images[0].detach().cpu().numpy()[:small_imsize, :small_imsize]
@@ -46,49 +48,41 @@ for i, p in enumerate(plotting_ims):
     csets = [['black', 'black'], ['gray', 'gray']]
     conf = 0.95
     errs = util.real_image_stats(many_images, lens_for_fit, pf, conf=conf)
+    sizes_for_fit = [[lf,lf] for lf in lens_for_fit]
+    real_cls = util.fit_cls(errs, sizes_for_fit, pf)
     stds = errs / stats.norm.interval(conf)[1] * pf / 100
+    std_fit = (real_cls**2/(np.array(lens_for_fit)**2)*pf*(1-pf))**0.5
     # print(stds)
     vars = stds**2
     # from variations to L_characteristic using image size and phase fraction
     clss = (np.array(lens_for_fit)**2*vars/pf/(1-pf))**0.5
     print(clss)
     
-    # cs = csets[j]
-    # img_dims = [np.array([int(im_len)]*2) for im_len in d['ls']]
-    # ns = util.ns_from_dims(img_dims, d[f'ir_{met}'])
-    # berns_vf = util.bernouli(d[f'{met}'], ns)
-    # axs[i, 1].scatter(d['ls'], d[f'err_exp_{met}'], c=cs[0], s=8, marker = 'x', label = f'{met} errors from sampling')
-    axs[i, 1].plot(lens_for_fit, clss, label = f'Characteristic length scale')
+    axs_twin = axs[i, 1].twinx()
+    stds_scatter = axs_twin.scatter(lens_for_fit, stds, s=8, color=colors["stds"], label = f'Standard deviations')
+    twin_fit = axs_twin.plot(lens_for_fit, std_fit, color=colors["stds"], label = f'Standard deviations fit')
+    axs_twin.tick_params(axis='y', labelcolor=colors["stds"])
+    axs_twin.set_ylim(0, 0.025)
+    cls_scatter = axs[i, 1].scatter(lens_for_fit, clss, s=8, color=colors["cls"], label = f'Characteristic length scales')
+    cls_fit = axs[i, 1].hlines(real_cls, lens_for_fit[0], lens_for_fit[-1], color=colors["cls"], label = f'Characteristic length scales fit')
+    axs[i, 1].tick_params(axis='y', labelcolor=colors["cls"])
     axs[i, 1].set_ylim(0, 28)
-    # # axs[i, 1].plot(d[f'ls'], d[f'err_model_{met}'], c=cs[0], label = f'{met} errors from bernouli') 
-    # y = d[f'tpc_{met}'][0]  # TODO write that in sa tpc, only the first direction is shown, or do something else, maybe normalise the tpc? We can do sum, because that's how we calculate the ir!
-    # x = d[f'tpc_{met}_dist']
-    # y = np.array(y)
     
-    # # TODO erase this afterwards:
-    # if met=='vf':
-    #     ir = np.round(d[f'ir_vf'], 1)
-    #     axs[i, 2].plot(x, y, c=cs[1], label=f'Volume fraction 2PC')
-    #     axs[i, 2].axhline(d['vf']**2, linestyle='dashed', label='$p^2$')
-    # axs[i, 2].plot([0,ir],[d['vf']**2-0.02, d['vf']**2-0.02], c='green', linewidth=3, label=r'$\tilde{a}_2$')
-    # ticks = [0, int(ir), 20, 40, 60, 80, 100]
-    # ticklabels = map(str, ticks)
-    # axs[i, 2].set_xticks(ticks)
-    # axs[i, 2].set_xticklabels(ticklabels)
-    # axs[i,2].fill_between(x, d['vf']**2, y, alpha=0.5, label=f'Integrated part')
-    # axs[i,2].legend()
-        
-        
-    # # axs[i, 2].scatter(x[knee], y_data[knee]/y.max(), c =cs[1], marker = 'x', label=f'{met} ir from tpc', s=100)
-    # ir = d[f'ir_{met}']
-    # pred_ir = util.tpc_to_ir(d[f'tpc_{met}_dist'], d[f'tpc_{met}']) 
-    # pred_ir = pred_ir * 1.61
-    # # axs[i, 2].scatter(x[round(pred_ir)], y[round(pred_ir)], c =cs[1], marker = 'x', label=f'{met} predicted tpc IR', s=100)
-    # # axs[i, 2].scatter(x[round(ir)], y[round(ir)], facecolors='none', edgecolors = cs[1], label=f'{met} fitted IR', s=100)
+    dims = len(img.shape)
+    # print(f'starting tpc radial')
+    tpc = util.tpc_radial(img, threed=False)
+    cls = util.tpc_to_cls(tpc, img, img.shape)
 
-    # irs[j].append(ir)
-    # if i ==0:
-    #     axs[i,1].legend()
+    contour = axs[i, 2].contourf(tpc, cmap='plasma', levels = 200)
+    divider = make_axes_locatable(axs[i, 2])
+    cax = divider.append_axes('right', size='5%', pad=0.05)
+    fig.colorbar(contour, cax=cax, orientation='vertical')
+        
+    if i == 0:
+        plots = [stds_scatter, twin_fit[0], cls_scatter, cls_fit]
+        label_plots = [plot.get_label() for plot in plots]
+        axs[i,1].legend(plots, label_plots)
+        
     #     axs[i,2].legend()
     # axs[i,1].set_xlabel('Image length size [pixels]')
     # axs[i,1].set_ylabel('Volume fraction percentage error [%]')
