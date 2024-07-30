@@ -102,7 +102,7 @@ for i, p in enumerate(plotting_ims):
         label_plots = [plot.get_label() for plot in plots]
         axs[i, 1].legend(plots, label_plots)
 
-    #     axs[i,2].legend()
+    axs[i,2].legend()
     # axs[i,1].set_xlabel('Image length size [pixels]')
     # axs[i,1].set_ylabel('Volume fraction percentage error [%]')
     # axs[i,2].set_ylabel('2-point correlation function')
