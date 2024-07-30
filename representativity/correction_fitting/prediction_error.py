@@ -1,12 +1,17 @@
 import json
 import numpy as np
 import time
-from representativity import util
+from representativity import util, core, slicegan
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 from scipy.optimize import curve_fit
 from functools import partial
+
+from os import getcwd, path, mkdir
+
+CWD = getcwd()
+DATA_PATH = path.join(CWD, "representativity/correction_fitting")
 
 """
 File: prediction_error.py
@@ -34,10 +39,10 @@ def error_by_size_estimation(dim, run_number=0, std_not_cls=True):
 
 
 def data_micros(dim):
-    with open("microlib_statistics_periodic.json", "r") as fp:
+    with open(f"{DATA_PATH}/microlib_statistics_periodic.json", "r") as fp:
         datafull = json.load(fp)
 
-    with open("micro_names.json", "r") as fp:
+    with open(f"{DATA_PATH}/micro_names.json", "r") as fp:
         micro_names = json.load(fp)
 
     dim_data = datafull[f"data_gen_{dim}"]
@@ -145,6 +150,11 @@ def plot_pred_vs_fit(dim, edge_length, num_runs=5, std_not_cls=True):
     plt.title(f"Prediction vs. Fit Data {dim}")
     ax = plt.gca()
     ax.set_aspect("equal", adjustable="box")
+
+    try:
+        mkdir("pred_vs_fit_all_runs_periodic_cut")
+    except FileExistsError:
+        pass
     plt.savefig(
         f"pred_vs_fit_all_runs_periodic_cut/pred_vs_fit_{dim}_{edge_length}.png"
     )
@@ -159,14 +169,14 @@ def std_error_by_size(dim, edge_lengths, num_runs=5, start_idx=0, std_not_cls=Tr
     stds = np.array(stds).sum(axis=0) / num_runs
     n_voxels = np.array([edge ** int(dim[0]) for edge in edge_lengths])
     stds, n_voxels = stds[start_idx:], n_voxels[start_idx:]
-    popt, pcov = curve_fit(partial(util.fit_to_errs_function, dim), n_voxels, stds)
+    popt, pcov = curve_fit(partial(core.fit_to_errs_function, dim), n_voxels, stds)
     # img_sizes = [(l,)*2 for l in edge_lengths]
     # pfs, irs = [0.1, 0.2, 0.4], [40, 40, 40]
     # for i in range(len(pfs)):
     # erros_inherent = util.bernouli(pfs[i], util.ns_from_dims(img_sizes, irs[i]),conf=0.95)
     # plt.plot(edge_lengths, erros_inherent, label=f'Inherent error IR = {irs[i]}, pf = {pfs[i]}')
     print(f"popt: {popt}")
-    prediction_error = util.fit_to_errs_function(dim, n_voxels, *popt)
+    prediction_error = core.fit_to_errs_function(dim, n_voxels, *popt)
     return prediction_error, stds
 
 
@@ -197,8 +207,8 @@ def find_optimal_slope(pred_data, fit_data):
 
 
 def optimal_slopes(dim, num_runs=5):
-    data_micros = data_micros(dim)
-    edge_lengths_pred = data_micros[0]["edge_lengths_pred"]
+    data_micro = data_micros(dim)
+    edge_lengths_pred = data_micro[0]["edge_lengths_pred"]
     slopes = []
     stds = []
     for edge_length in edge_lengths_pred:
