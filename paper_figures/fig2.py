@@ -44,9 +44,10 @@ for i, p in enumerate(plotting_ims):
     imsize = 1600
     lf = imsize // 32 + 2  # the size of G's input
     many_images = util.generate_image(netG, lf=lf, threed=False, reps=10)
-    pf = many_images.mean().cpu().numpy()
+    many_images = many_images.detach().cpu().numpy()
+    pf = many_images.mean()
     small_imsize = 512
-    img = many_images[0].detach().cpu().numpy()[:small_imsize, :small_imsize]
+    img = many_images[0][:small_imsize, :small_imsize]
 
     csets = [["black", "black"], ["gray", "gray"]]
     conf = 0.95
@@ -90,9 +91,14 @@ for i, p in enumerate(plotting_ims):
     dims = len(img.shape)
     # print(f'starting tpc radial')
     tpc = core.radial_tpc(img, volumetric=False)
+    tpc_im = tpc[256-40:256+40, 256-40:256+40]
     cls = core.tpc_to_cls(tpc, img)
 
-    contour = axs[i, 2].contourf(tpc, cmap="plasma", levels=200)
+    contour = axs[i, 2].contourf(tpc_im, cmap="plasma", levels=200)
+    circle_real = plt.Circle((40, 40), real_cls, fill=False, color=colors["stds"])
+    circle_pred = plt.Circle((40, 40), cls, fill=False, color=colors["cls"])
+    axs[i, 2].add_artist(circle_real)
+    axs[i, 2].add_artist(circle_pred)
     divider = make_axes_locatable(axs[i, 2])
     cax = divider.append_axes("right", size="5%", pad=0.05)
     fig.colorbar(contour, cax=cax, orientation="vertical")
@@ -102,7 +108,7 @@ for i, p in enumerate(plotting_ims):
         label_plots = [plot.get_label() for plot in plots]
         axs[i, 1].legend(plots, label_plots)
 
-    #     axs[i,2].legend()
+    # axs[i,2].legend()
     # axs[i,1].set_xlabel('Image length size [pixels]')
     # axs[i,1].set_ylabel('Volume fraction percentage error [%]')
     # axs[i,2].set_ylabel('2-point correlation function')
@@ -123,7 +129,7 @@ for i, p in enumerate(plotting_ims):
 
     # im = np.stack([im]*3, axis=-1)
     # im[-si_size:,-si_size:] = subim
-    # axs[i, 0].imshow(im)
+    axs[i, 0].imshow(img, cmap="gray")
     # axs[i, 0].set_xticks([])
     # axs[i, 0].set_yticks([])
     # axs[i, 0].set_ylabel(f'M{n[1:]}')
