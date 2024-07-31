@@ -3,7 +3,7 @@
 You take a micrograph of a material. You segment it, and measure the phase fractions. How sure are you that the phase fraction of the whole material is close to your measurements? 
 
 <p align="center">
-    <img src="https://sambasegment.blob.core.windows.net/resources/repr_repo.gif">
+    <img src="https://sambasegment.blob.core.windows.net/resources/repr_repo_v2.gif">
 </p>
 
 ## Local Installation Instructions
