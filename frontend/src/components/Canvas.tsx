@@ -157,28 +157,26 @@ const PreviewCanvas = () => {
         // sf is original width / target length
         if (targetL === null) { return; }
         if (menuState != 'conf_result') { return }
+
         const canvas = canvasRef.current!;
-
-        const shortestSide = Math.min(imageInfo?.width!, imageInfo?.height!);
-        const longestSide = Math.max(imageInfo?.width!, imageInfo?.height!);
-        if (targetL < shortestSide) { return }; // if already representative
-        const maxSF = (targetL / longestSide);
-
-
-        const newCanvL = Math.min(canvDims.h, canvDims.w)
-
         const image = previewImg!
         const [ih, iw, ch, cw] = [image.naturalHeight, image.naturalWidth, canvDims.h, canvDims.w];
         const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, 0, 0, ADDITIONAL_SF);
-        // centred-adjusted shift
-        const dx = (correctDims.w / 2) - (newCanvL / (2 * maxSF));
-        const dy = (correctDims.h / 2) - (newCanvL / (2 * maxSF));
-        // image drawn centred on canvas, need to correct to shift top left of image to top left of div.
-        const shiftX = -(dx * maxSF + correctDims.ox);
-        const shiftY = -(dy * maxSF + correctDims.oy);
 
 
-        console.log(correctDims, dx, dy)
+        const shortestSideCanv = Math.min(canvDims.h, canvDims.w)
+        const longestSideCanv = Math.max(correctDims.h, correctDims.w)
+        const newCanvL = shortestSideCanv
+
+        const shortestSideData = Math.min(imageInfo?.width!, imageInfo?.height!);
+        const longestSideData = Math.max(imageInfo?.width!, imageInfo?.height!);
+
+        if (targetL < shortestSideData) { return }; // if already representative
+        const newDataToCanv = newCanvL / targetL
+
+        const longestSideShrunkCanv = newDataToCanv * longestSideData
+        const maxSF = longestSideCanv / longestSideShrunkCanv
+
         const canvAnim = canvas.animate([
             { transform: `scale(${1 / maxSF}) translate(${0}px, ${0}px)` },
         ], {
