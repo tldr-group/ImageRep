@@ -1,10 +1,12 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { DragDropProps } from "./interfaces";
 
+const DEFAULT_IMAGE = "../assets/default.tiff";
+
 export const dragDropStyle = {
     height: '75vh', width: '75vw',
     outline: '10px dashed #b5bab6', color: '#b5bab6',
-    fontSize: '3.5em', justifyContent: 'center', alignItems: 'center',
+    fontSize: '3em', justifyContent: 'center', alignItems: 'center',
     borderRadius: '10px', padding: '10px', display: 'flex', margin: 'auto'
 }
 const flexCenterClasses = "flex items-center justify-center";
@@ -24,12 +26,24 @@ const DragDrop = ({ loadFromFile }: DragDropProps): JSX.Element => {
             };
         };
     };
+
+    const viewExample = async () => {
+        const url = new URL(DEFAULT_IMAGE, location.origin);
+        console.log(url)
+        const resp = await fetch(url);
+        const data = await resp.blob();
+        const metadata = { type: data.type }
+        const file = new File([data], 'default.tiff', metadata)
+        console.log(file)
+        loadFromFile(file)
+    }
+
     return (
         <div style={dragDropStyle}
             onDragOver={handleDrag}
             onDrop={handeDrop}
         >
-            {(!isMobile) && <span>Drag microstructure file!</span>}
+            {(!isMobile) && <span>Drag microstructure file or <a style={{ cursor: "pointer", color: 'blue' }} onClick={viewExample}> view example!</a></span>}
         </div>
     );
 }

@@ -160,8 +160,10 @@ const PreviewCanvas = () => {
         const canvas = canvasRef.current!;
 
         const shortestSide = Math.min(imageInfo?.width!, imageInfo?.height!);
+        const longestSide = Math.max(imageInfo?.width!, imageInfo?.height!);
         if (targetL < shortestSide) { return }; // if already representative
-        const maxSF = (targetL / shortestSide);
+        const maxSF = (targetL / longestSide);
+
 
         const newCanvL = Math.min(canvDims.h, canvDims.w)
 
