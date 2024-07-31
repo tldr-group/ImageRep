@@ -241,7 +241,6 @@ const Result = () => {
     const longestSide = Math.max(imageInfo?.width!, imageInfo?.height!)
     const ii = imageInfo
     const vol = (ii?.nDims! == 3) ? (ii?.height! * ii?.width! * ii?.width!) : (ii?.height! * ii?.width!)
-    console.log(vol)
     const nMore = (Math.ceil(Math.pow(l!, imageInfo?.nDims!) / vol)) - 1
 
     const title = "Phase Fraction Estimation of the Material"

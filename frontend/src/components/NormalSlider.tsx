@@ -4,7 +4,6 @@ import { getPhaseFraction } from "./imageLogic";
 
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
-import { head } from "underscore";
 
 const CANVAS_WIDTH = 428 * 2;
 const CANVAS_HEIGHT = 240 * 1.5;
@@ -47,7 +46,6 @@ const tmpMu = 0.4;
 const tmpSigma = 0.08;
 const [tmpStart, tmpEnd] = [0.2, 0.6];
 const tmpMax = normalDist(tmpMu, tmpMu, tmpSigma);
-const [tmpLB, tmpUB] = [tmpMu - 0.05, tmpMu + 0.05]
 
 
 interface DrawStyle {
@@ -194,6 +192,10 @@ const NormalSlider = () => {
         for (let x of [i0, i1]) {
             drawPoints([x, x], [H_GAUSS - l, H_GAUSS + l], xAxisStyle)
         }
+        const tl = 12
+        const mx = CANVAS_WIDTH / 2
+        drawPoints([mx - tl, mx + tl], [2, 2], xAxisStyle)
+        drawText([params.max_y], [70 + CANVAS_WIDTH / 2], (-0.94 * H_GAUSS), 24)
 
     }
 
@@ -235,7 +237,7 @@ const NormalSlider = () => {
         const [lbData, ubData] = [result[0], result[1]]
         const sigma = (ubData - lbData) / 4 // sigma should be fixed as ub and lb changes - this should be reflected in results as well
 
-        const newMaxY = normalDist(phaseFrac, phaseFrac, analysisInfo?.stdModel!)
+        const newMaxY = normalDist(phaseFrac, phaseFrac, sigma)
         const newStartPf = phaseFrac - 4 * sigma
         const newEndPf = phaseFrac + 4 * sigma
         const newParams: NormalParams = { mu: phaseFrac, sigma: sigma, start_pf: newStartPf, end_pf: newEndPf, max_y: newMaxY }
