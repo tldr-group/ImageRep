@@ -172,6 +172,8 @@ const App = () => {
         setSelectedPhase(0);
         setErrVF(5);
         setSelectedConf(95);
+        setErrorState({ msg: "", stackTrace: "" });
+        setShowWarning("");
     }
 
     useEffect(() => { // TODO: fetch from API instead
