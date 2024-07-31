@@ -8,14 +8,9 @@ You take a micrograph of a material. You segment it, and measure the phase fract
 Here we define 'representativity' as [1]
 > A microstructure is $(c, d)$-property representative if the measured value of the microstructural property deviates by no more than $d\%$ from the bulk material property, with at least $c\%$ confidence. For example, if $(c,d)=(95,3)$, and the property is phase-fraction, this means we can be $95\%$ confident that the measured phase-fraction is within $3\%$ of the bulk material phase-fraction. 
 
-We introduce the 'ImageRep' model for performing fast phase-fraction representativity estimation from a single microstructural image. This is achieved by estimating the Two-Point Correlation (TPC) function of the image via the FFT. From the TPC the 'Integral Range' can be directly determined - the Integral Range has previously been determined using (slow) statistical methods. We then represent the image as binary squares of length 'Integral Range' which are samples from a Bernoulli distribution with a probability determined by the measured phase fraction. From this we can establish the uncertainty in the phase fraction in the image, **and** the image size that would be needed to meet a given target uncertainty.
+We introduce the 'ImageRep' model for performing fast phase-fraction representativity estimation from a single microstructural image. This is achieved by estimating the Two-Point Correlation (TPC) function of the image via the FFT. From the TPC the 'Integral Range' can be directly determined - the Integral Range has previously been determined using (slow) statistical methods. We then represent the image as binary squares of length 'Integral Range' which are samples from a Bernoulli distribution with a probability determined by the measured phase fraction. From this we can establish the uncertainty in the phase fraction in the image to a given confidence, **and** the image size that would be needed to meet a given target uncertainty.
 
 If you use this model in your research, [please cite us](CITATION.cff).
-
-## Limitations:
--
-- 
--
 
 ## TODO:
 - Website name (imagerep.com) (isitrepresentative.com) (howrepresentativeismysample.com)
@@ -24,15 +19,24 @@ If you use this model in your research, [please cite us](CITATION.cff).
 - cls for squares, fix other tests
 - update readme/example notebook (add static figure @ top of readme)
 - licence: todo
-- 
 
-## Website
+## Usage:
+
+This model can be used as python package - see [`example.ipynb`](example.ipynb) or via the [website](https://representative9984.z33.web.core.windows.net/).
 
 <p align="center">
     <img src="https://sambasegment.blob.core.windows.net/resources/repr_repo_v2.gif">
 </p>
 
 NB: the website may run out of memory for large volumes (>1000x1000x1000) - if this happens run the model locally or contact us
+
+## Limitations:
+- **This is not the only source of uncertainty!** Other sources *i.e,* segmentation uncertainty, also contribute and may be larger
+- For multi-phase materials, this model estimates the uncertainty in phase-fraction of a single (chosen) phase, counting all the others as a single phase (*i.e,* a binary microstructure)
+- Not validated for for images smaller than 200x200 or 200x200x200
+- Not validated for large integral ranges/features sizes (>70 px) 
+- Not designed for periodic structures
+- 'Length needed for target uncertainty' is an intentionally conservative estimate - retry when you have measured the larger sample to see a more accurate estimate of that uncertainty
 
 ## Local Installation Instructions
 
