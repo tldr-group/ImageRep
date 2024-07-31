@@ -8,5 +8,19 @@ authors:
   - name: Samuel J. Cooper
     orcid: 0000-0003-4055-6903
 title: "Predicting Microstructural Representativity from a Single Image"
-doi: ARXIV
+doi: ARXIV_DOI
 url: "https://github.com/tldr-group/Representativity"
+preferred-citation:
+  type: article
+  authors:
+  - name: Amir Dahari
+    orcid: 0000-0003-0142-8597
+  - name: Ronan Docherty
+    orcid: 0000-0002-7332-0924
+  - name: Samuel J. Cooper
+    orcid: 0000-0003-4055-6903
+  doi: ARXIV_DOI
+  journal: "arXiV preprint"
+  month: 8
+  title: "Predicting Microstructural Representativity from a Single Image"
+  year: 2024
