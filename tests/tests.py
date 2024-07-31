@@ -62,8 +62,9 @@ class UnitTests(unittest.TestCase):
                 img = np.zeros(shape) + val
                 is_volumetric = True if n_dims > 2 else False
                 padded_tpc = model.two_point_correlation(
-                    img, desired_length=3, volumetric=is_volumetric, periodic=False
+                    img, desired_length=l - 1, volumetric=is_volumetric, periodic=False
                 )
+                print(padded_tpc)
                 tpc = post_process_tpc(padded_tpc)
                 assert np.allclose(tpc, img)
 
@@ -72,10 +73,12 @@ class UnitTests(unittest.TestCase):
 
         l = TEST_TPC_ARR.shape[0]  # usually 3
         for is_periodic, gt in zip((False, True), (NON_PERIODIC_GT, PERIODIC_GT)):
-            padded_tpc = model.two_point_correlation(
-                TEST_TPC_ARR, desired_length=l, volumetric=False, periodic=is_periodic
+            tpc = model.two_point_correlation(
+                TEST_TPC_ARR,
+                desired_length=l - 1,
+                volumetric=False,
+                periodic=is_periodic,
             )
-            tpc = post_process_tpc(padded_tpc)
             assert np.allclose(tpc, gt)
 
     def test_subimg_splitter(self):
