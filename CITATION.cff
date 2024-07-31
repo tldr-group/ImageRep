@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this model, please cite it as below."
+authors:
+  - name: Amir Dahari
+    orcid: 0000-0003-0142-8597
+  - name: Ronan Docherty
+    orcid: 0000-0002-7332-0924
+  - name: Samuel J. Cooper
+    orcid: 0000-0003-4055-6903
+title: "Predicting Microstructural Representativity from a Single Image"
+doi: ARXIV
+url: "https://github.com/tldr-group/Representativity"

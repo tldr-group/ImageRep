@@ -4,10 +4,18 @@
 
 [Try it out!](https://representative9984.z33.web.core.windows.net/)
 
-You take a micrograph of a material. You segment it, and measure the phase fractions. How sure are you that the phase fraction of the whole material is close to your measurements?  We define 'representativity' as
+You take a micrograph of a material. You segment it, and measure the phase fractions. How sure are you that the phase fraction of the whole material is close to your measurements?  
+Here we define 'representativity' as [1]
 > A microstructure is $(c, d)$-property representative if the measured value of the microstructural property deviates by no more than $d\%$ from the bulk material property, with at least $c\%$ confidence. For example, if $(c,d)=(95,3)$, and the property is phase-fraction, this means we can be $95\%$ confident that the measured phase-fraction is within $3\%$ of the bulk material phase-fraction. 
 
-We introduce the 'ImageRep' model for performing fast phase-fraction representativity estimation from a single microstructural image. This is achieved by estimating the Two-Point Correlation (TPC) function of the image via an FFT. From the TPC the 'Integral Range' can be directly determined - the Integral Range has previously been determined using (slow) statistical methods. We then represent the image as binary squares of length 'Integral Range' which are samples from a Bernoulli distribution with a probability determined by the measured phase fraction. From this we can establish the uncertainty in the phase fraction in the image, **and** the image size that would be needed to meet a given target uncertainty.
+We introduce the 'ImageRep' model for performing fast phase-fraction representativity estimation from a single microstructural image. This is achieved by estimating the Two-Point Correlation (TPC) function of the image via the FFT. From the TPC the 'Integral Range' can be directly determined - the Integral Range has previously been determined using (slow) statistical methods. We then represent the image as binary squares of length 'Integral Range' which are samples from a Bernoulli distribution with a probability determined by the measured phase fraction. From this we can establish the uncertainty in the phase fraction in the image, **and** the image size that would be needed to meet a given target uncertainty.
+
+If you use this model in your research, [please cite us](CITATION.cff).
+
+## Limitations:
+-
+- 
+-
 
 ## TODO:
 - Website name (imagerep.com) (isitrepresentative.com) (howrepresentativeismysample.com)
