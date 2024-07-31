@@ -418,9 +418,9 @@ def pred_cls_is_off(
     if statistical_cls > 1:  # could be erroneous stat. analysis prediction
         # if pred cls too low or too high compared to statistical method,
         # return true and the direction of the error (1 for too low, -1 for too high)
-        if model_cls / statistical_cls < 2 / 3:
+        if model_cls / statistical_cls < 1 / 3:
             return True, 1
-        if model_cls / statistical_cls > 2:
+        if model_cls / statistical_cls > 3:
             return True, -1
     return False, 0
 
