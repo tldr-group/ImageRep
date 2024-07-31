@@ -14,9 +14,7 @@ If you use this model in your research, [please cite us](CITATION.cff).
 
 ## TODO:
 - Website name (imagerep.com) (isitrepresentative.com) (howrepresentativeismysample.com)
-- fix zoom
 - fix 3D
-- cls for squares, fix other tests
 - update readme/example notebook (add static figure @ top of readme)
 - licence: todo
 
@@ -44,7 +42,7 @@ These instructions are for installing and running the model locally. They assume
 
 ### Preliminaries
 
-Install [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) (ideally via a manager like [nvm](https://github.com/nvm-sh/nvm)). Clone this repo and change directory:
+Install [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) (ideally via a manager like [nvm](https://github.com/nvm-sh/nvm)) if you want to run the website. Clone this repo and change directory:
 ```
 git clone https://github.com/tldr-group/Representativity && cd Representativity
 ```
@@ -59,11 +57,16 @@ git clone https://github.com/tldr-group/Representativity && cd Representativity
 pip install -e .
 ```
 
+**NOTE: this is all you need to do if you wish to use the model via the python package.** To run the website locally, follow the rest of the instructions.
+
 2. With your virtual environment activated, and inside the `representativity/` directory, run
 
 ```
 python -m flask --app server run
 ```
+
+The server should now be running on `http://127.0.0.1:500` and listening for requests!
+
 
 3. If you want to reproduce (all) the figures, you'll need `pytorch` and some additional dependencies. It may be worth using [conda](https://www.anaconda.com/) to install `pytorch` as this will interact correctly with your GPU. Run
 ```
