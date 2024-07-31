@@ -11,6 +11,7 @@ import torch
 from representativity import core, util
 from representativity.correction_fitting import microlib_statistics
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy.ndimage import zoom 
 
 # with open("data_gen2.json", "r") as fp:
 #     data = json.load(fp)["generated_data"]
@@ -46,7 +47,7 @@ for i, p in enumerate(plotting_ims):
     many_images = util.generate_image(netG, lf=lf, threed=False, reps=10)
     many_images = many_images.detach().cpu().numpy()
     pf = many_images.mean()
-    small_imsize = 512
+    small_imsize = 400
     img = many_images[0][:small_imsize, :small_imsize]
 
     csets = [["black", "black"], ["gray", "gray"]]
@@ -88,17 +89,22 @@ for i, p in enumerate(plotting_ims):
     axs[i, 1].tick_params(axis="y", labelcolor=colors["cls"])
     axs[i, 1].set_ylim(0, 28)
 
+    center = 40
     dims = len(img.shape)
     # print(f'starting tpc radial')
     tpc = core.radial_tpc(img, volumetric=False)
-    tpc_im = tpc[256-40:256+40, 256-40:256+40]
+    center_im = small_imsize // 2
+    tpc_im = tpc[center_im-center:center_im+center, center_im-center:center_im+center]
     cls = core.tpc_to_cls(tpc, img)
 
     contour = axs[i, 2].contourf(tpc_im, cmap="plasma", levels=200)
-    circle_real = plt.Circle((40, 40), real_cls, fill=False, color=colors["stds"])
-    circle_pred = plt.Circle((40, 40), cls, fill=False, color=colors["cls"])
+    circle_real = plt.Circle((center, center), real_cls, fill=False, color=colors["stds"])
+    circle_pred = plt.Circle((center, center), cls, fill=False, color=colors["cls"])
     axs[i, 2].add_artist(circle_real)
     axs[i, 2].add_artist(circle_pred)
+    x_ticks = axs[i, 2].get_xticks()[1:-1]
+    axs[i, 2].set_xticks(x_ticks, np.int64(np.array(x_ticks) - center))
+    axs[i, 2].set_yticks(x_ticks, np.int64(np.array(x_ticks) - center))
     divider = make_axes_locatable(axs[i, 2])
     cax = divider.append_axes("right", size="5%", pad=0.05)
     fig.colorbar(contour, cax=cax, orientation="vertical")
@@ -108,30 +114,30 @@ for i, p in enumerate(plotting_ims):
         label_plots = [plot.get_label() for plot in plots]
         axs[i, 1].legend(plots, label_plots)
 
-    # axs[i,2].legend()
-    # axs[i,1].set_xlabel('Image length size [pixels]')
-    # axs[i,1].set_ylabel('Volume fraction percentage error [%]')
-    # axs[i,2].set_ylabel('2-point correlation function')
-    # ir = np.round(d[f'ir_vf'], 2)
-    # im = img[0]*255
-    # si_size, nirs = 160, 5
-    # sicrop = int(ir*nirs)
-    # print(ir, sicrop)
-    # subim=torch.tensor(im[-sicrop:,-sicrop:]).unsqueeze(0).unsqueeze(0).float()
-    # subim = interpolate(subim, size=(si_size,si_size), mode='nearest')[0,0]
-    # subim = np.stack([subim]*3, axis=-1)
+    axs[i,1].set_xlabel('Image length size [pixels]')
+    axs[i,1].set_ylabel('Volume fraction percentage error [%]')
+    axs[i,2].set_ylabel('2-point correlation function')
+    # img = img*255
+    si_size, nirs = small_imsize//2, 5
+    sicrop = int(real_cls*nirs)
+    zoom_mag = si_size/sicrop
+    print(real_cls, sicrop)
+    subim = img[-sicrop:,-sicrop:]
+    subim = zoom(subim, zoom=(zoom_mag,zoom_mag), order=0)
+    subim = np.stack([subim]*3, axis=-1)
 
-    # subim[:5,:,:] = 125
-    # subim[:,:5,:] = 125
-    # # subim[5:20, 5:50, :]
-    # subim[10:15, 10:10+si_size//nirs, :] = 0
-    # subim[10:15, 10:10+si_size//nirs, 1:-1] = 125
+    boundary_len = 5
+    subim[:boundary_len,:,:] = 0.5
+    subim[:,:boundary_len,:] = 0.5
+    # subim[5:20, 5:50, :]
+    subim[10:10+boundary_len, 10:10+si_size//nirs, :] = 0
+    subim[10:10+boundary_len, 10:10+si_size//nirs, 1:-1] = 0.5
 
-    # im = np.stack([im]*3, axis=-1)
-    # im[-si_size:,-si_size:] = subim
+    img = np.stack([img]*3, axis=-1)
+    img[-si_size:,-si_size:] = subim
     axs[i, 0].imshow(img, cmap="gray")
-    # axs[i, 0].set_xticks([])
-    # axs[i, 0].set_yticks([])
+    axs[i, 0].set_xticks([])
+    axs[i, 0].set_yticks([])
     # axs[i, 0].set_ylabel(f'M{n[1:]}')
     # axs[i, 0].set_xlabel(f'Volume fraction '+ r'$\tilde{a}_2$: '+ f'{ir}   Inset mag: x{np.round(si_size/sicrop, 2)}')
 
