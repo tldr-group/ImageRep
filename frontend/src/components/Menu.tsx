@@ -239,7 +239,10 @@ const Result = () => {
     const copyBtn = () => { navigator.clipboard.writeText(copyText) }
 
     const longestSide = Math.max(imageInfo?.width!, imageInfo?.height!)
-    const nMore = Math.pow((Math.ceil(l! / longestSide)), imageInfo?.nDims!) - 1
+    const ii = imageInfo
+    const vol = (ii?.nDims! == 3) ? (ii?.height! * ii?.width! * ii?.width!) : (ii?.height! * ii?.width!)
+    console.log(vol)
+    const nMore = (Math.ceil(Math.pow(l!, imageInfo?.nDims!) / vol)) - 1
 
     const title = "Phase Fraction Estimation of the Material"
 
