@@ -2,7 +2,8 @@ import numpy as np
 from itertools import product, chain
 from scipy.stats import norm  # type: ignore
 from scipy.optimize import minimize  # type: ignore
-import json
+
+from typing import TypedDict
 
 DEFAULT_N_DIV = 301
 
@@ -839,6 +840,14 @@ def dims_from_n(n_samples_needed: int, equal_shape: bool, cls: float, dims: int)
 
 
 # %% ======================== PUT IT ALL TOGETHER ========================
+class ModelResult(TypedDict):
+    integral_range: float
+    std_model: float
+    percent_err: float
+    abs_err: float
+    l: float
+    pf_1d: list
+    cum_sum_sum: list
 
 
 def make_error_prediction(
@@ -847,7 +856,7 @@ def make_error_prediction(
     target_error: float = 0.05,
     equal_shape: bool = True,
     model_error: bool = True,
-) -> dict:
+) -> ModelResult:
     """Given $binary_img, compute the $target_error % phase fraction bounds around the
     measured phase fraction in $binary_img. Also find the length needed to reduce the
     % error bounds to a given $target_error. All these intervals are found to $confidence
@@ -917,20 +926,13 @@ def make_error_prediction(
     l_for_err_targ = dims_from_n(n_for_err_targ, equal_shape, integral_range, n_dims)
     percentage_err_for_img = abs_err_for_img / phase_fraction
 
-    # if n_dims == 3:
-    # integral_range = integral_range[0]
-    # l_for_err_targ = l_for_err_targ[0]
-    # percentage_err_for_img = percentage_err_for_img[0]
-    # abs_err_for_img = abs_err_for_img[0]
-
-    result = {
+    result: ModelResult = {
         "integral_range": integral_range,
-        "z": z,
         "std_model": std_model,
-        "percent_err": percentage_err_for_img,
-        "abs_err": abs_err_for_img,
+        "percent_err": float(percentage_err_for_img),
+        "abs_err": float(abs_err_for_img),
         "l": l_for_err_targ,
         "pf_1d": list(pf_1d),
         "cum_sum_sum": list(cum_sum_sum),
     }
-    return result  # percentage_err_for_img, l_for_err_targ, integral_range
+    return result
