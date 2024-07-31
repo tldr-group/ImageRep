@@ -159,9 +159,7 @@ def two_point_correlation(
         axis_idx = np.array(axis) * desired_length
         # axis_idx looks like (100, 100)
         # slice to input: mapping of orthant axis to location in result i.e [0:100, 0:100]
-        slice_to_input = tuple(
-            map(slice, axis_idx, axis_idx + desired_length + 1)
-        )  # TODO: check with A, this used to be + 1
+        slice_to_input = tuple(map(slice, axis_idx, axis_idx + desired_length + 1))
         result[slice_to_input] = orthants[axis]
     return result
 
@@ -362,7 +360,7 @@ def fit_statisical_cls_from_errors(
 
 def stat_analysis_error_classic(
     binary_img: np.ndarray, image_phase_fraction: float
-) -> float:  # TODO see if to delete this or not
+) -> float:
     """Estimate the CLS of $binary_img using the statistical method: taking
     different non-overlapping patches of the image in powers of 2
     (i.e 1/2 patches, 1/4 patches, 1/8 patches), measuring the difference
@@ -548,8 +546,7 @@ def find_end_dist_tpc(
     phase_fraction: float, tpc: np.ndarray, dist_arr: np.ndarray
 ) -> float:
     """Defines search range for endpoint, calls main fn"""
-    # Assumption is image is at least 200 in every dimensoom
-    # TODO: signpost in paper?
+    # Assumption is image is at least 200 in every dimenson
     max_img_dim = np.max(dist_arr)  # len(dist_arr)  # np.max(dist_arr)
     if max_img_dim < 200:
         print(f"Max img dim of {max_img_dim} < 200px, using small method")
@@ -593,7 +590,6 @@ def calc_pred_cls(
     :rtype: float
     """
     # second term is integral of tpc - pf_squared
-    # TODO: check
     pred_cls = (
         coeff / (image_pf - mean_pf_squared) * np.sum(tpc[bool_array] - mean_pf_squared)
     )
@@ -762,9 +758,6 @@ def get_prediction_interval(
     # need a bit of normalization for symmetric bounds (it's very close to 1 already)
     sum_dist_norm /= np.trapz(sum_dist_norm, pf_x_1d)
     # Find the alpha confidence bounds
-    # TODO: return cum_sum_sum_dist_norm and pf_x_1_d array over HTTP
-    # and write js function that does lines 762-764
-    # will need to send the array somehow
     cum_sum_sum_dist_norm = np.cumsum(sum_dist_norm * np.diff(pf_x_1d)[0])
     half_conf_level = (1 + conf_level) / 2
     conf_level_beginning = np.where(cum_sum_sum_dist_norm > 1 - half_conf_level)[0][0]
@@ -810,7 +803,7 @@ def find_n_for_err_targ(
         image_pf, std_bernoulli, pred_std_error_std, conf_level, n_divisions
     )
     err_for_img = image_pf - pred_interval[0]
-    # was np.abs( ...). TODO: check which is better
+    # TODO: check whether **2 or np.abs is better - originally was np.abs
     return np.abs(err_target - err_for_img)  # ** 2
 
 
@@ -896,7 +889,7 @@ def make_error_prediction(
     # bern = bernouilli
     std_bern = (
         (1 / n[0]) * (phase_fraction * (1 - phase_fraction))
-    ) ** 0.5  # TODO: this is the std of phi relative to Phi with
+    ) ** 0.5  # this is the std of phi relative to Phi with
     std_model = get_std_model(n_dims, n_elems)
     abs_err_target = target_error * phase_fraction
     z, pf_1d, cum_sum_sum = 0, [0], [0]
