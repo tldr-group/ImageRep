@@ -115,8 +115,12 @@ const ConfidenceSelect = () => {
         setErrVF(Number(e.target!.value))
     }
 
-    const [h, w, d] = [imageInfo?.height, imageInfo?.width, imageInfo?.depth];
+    const [h, w, d] = [imageInfo?.height!, imageInfo?.width!, imageInfo?.depth!];
     const dimString = (imageInfo?.nDims == 3) ? `${h}x${w}x${d}` : `${h}x${w}`;
+    const n = (imageInfo?.nDims == 3) ? h * w * d : h * w
+    const fitTimeConstant = 48500
+    const t = Math.sqrt(n / fitTimeConstant)
+
 
     return (
         <>
@@ -136,7 +140,7 @@ const ConfidenceSelect = () => {
                     </tr>
                     <tr>
                         <td>Estimated Time:</td>
-                        <td>5s</td>
+                        <td>{t.toFixed(1)}s</td>
                     </tr>
                 </tbody>
             </Table>
@@ -321,7 +325,6 @@ const Result = () => {
                     <Accordion.Item eventKey="1" >
                         <Accordion.Header ref={lResultRef}>Required Length for Target</Accordion.Header>
                         {/*Need to manually overwrite the style here because of werid bug*/}
-                        {/* TODO: add visualise button here! */}
                         <Accordion.Body style={{ visibility: "visible" }}>
                             For a {errVF.toFixed(2)}% uncertainty in phase fraction, you <b>need to measure a total image size of about {sizeText} (i.e. {nMore} more images)</b> at the same resolution.
                             <div style={{ display: 'flex', justifyContent: 'flex-end', }}>
