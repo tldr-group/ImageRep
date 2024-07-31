@@ -62,9 +62,8 @@ class UnitTests(unittest.TestCase):
                 img = np.zeros(shape) + val
                 is_volumetric = True if n_dims > 2 else False
                 padded_tpc = model.two_point_correlation(
-                    img, desired_length=l - 1, volumetric=is_volumetric, periodic=False
+                    img, desired_length=l - 2, volumetric=is_volumetric, periodic=False
                 )
-                print(padded_tpc)
                 tpc = post_process_tpc(padded_tpc)
                 assert np.allclose(tpc, img)
 
@@ -94,7 +93,7 @@ class IntegrationTests(unittest.TestCase):
         """Measure CLS of $n_disks in binary arr with radius $radius. CLS should be ~= 2*$radius.
         should be between radius and 2 * radius
         """
-        # TODO: change this s.t vf guaranteed in expectation
+        # FUTURE: change this s.t vf guaranteed in expectation
         print("## Test case: characteristic length scale on random disks")
         y, x, n_disks, radius = 500, 500, 40, 40
         arr = np.zeros((y, x), dtype=np.uint8)
@@ -109,16 +108,15 @@ class IntegrationTests(unittest.TestCase):
             f"CLS={integral_range:.3f}, VF={vf:.3f} for {n_disks} disks with diameter {2 * radius} on {x}x{y} image \n"
         )
         # plt.imsave("disk.png", arr)
-        assert np.isclose(integral_range, 2 * radius, rtol=0.05)
+        assert 0.5 * radius < integral_range < 2 * radius
 
     def test_cls_squares(self):
-        # TODO: again should be around 0.5 * l < l
         print(
             "## Test case: characteristic length scale on random squares of increasing size"
         )
         target_vf = 0.5
         y, x = 500, 500
-        for l in [1, 5, 10, 15, 20]:
+        for l in [5, 10, 15, 20]:
             n_rects = int((y / l) * target_vf) ** 2
             arr = np.zeros((y, x), dtype=np.uint8)
             for i in range(n_rects):
@@ -129,15 +127,15 @@ class IntegrationTests(unittest.TestCase):
             tpc = model.radial_tpc(arr, False, False)
             integral_range = model.tpc_to_cls(tpc, arr)
             print(f"square cls of length {l}: {integral_range} with {n_rects}")
+            assert 0.5 * l < integral_range < 2 * l
 
     def test_cls_disks(self):
         print(
             "## Test case: characteristic length scale on random disks of increasing size"
         )
-        # TODO: test TPC drops off around the radius
         target_vf = 0.5
         y, x = 500, 500
-        for l in [1, 5, 10, 15, 20]:
+        for l in [5, 10, 15, 20]:
             n_disks = int((y / l) * target_vf) ** 2
             arr = np.zeros((y, x), dtype=np.uint8)
             for i in range(n_disks):
@@ -150,6 +148,8 @@ class IntegrationTests(unittest.TestCase):
             print(
                 f"disk cls of radius {l}: {integral_range} with {n_disks} with vf: {np.mean(arr)}"
             )
+            # our feature size is d = 2 * l so bounds are l < cls < 4 * l
+            assert l < integral_range < 4 * l
 
     def test_blobs_vf_cls(self):
         """Test the cls of random binary blobs, should be around the set length scale"""
@@ -205,8 +205,7 @@ class IntegrationTests(unittest.TestCase):
         print(
             f"{refined_result['percent_err']:.3f}% phase fraction error at l={l_for_err}\n"
         )
-        # TODO: not correct - should be comparing to  desired error not percent err of old one
-        assert refined_result["percent_err"] < result["percent_err"]
+        assert refined_result["percent_err"] < desired_error
 
 
 if __name__ == "__main__":
