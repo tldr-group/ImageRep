@@ -74,6 +74,7 @@ const yAxisStyle: DrawStyle = { fillColour: LIGHT_GREY, lineColour: LIGHT_GREY, 
 const curveStyle: DrawStyle = { fillColour: 'red', lineColour: 'red', lineWidth: 4, toFill: false, lineCap: null, lineDash: null }
 const shadeStyle: DrawStyle = { fillColour: TRANS_RED, lineColour: TRANS_RED, lineWidth: 3, toFill: true, lineCap: null, lineDash: null }
 
+const FONT = 'sans-serif'
 
 type confUpdate = "slider" | "select"
 
@@ -168,7 +169,7 @@ const NormalSlider = () => {
     const drawLabels = () => {
         const canv = canvasRef.current!;
         const ctx = canv.getContext('2d')!;
-        ctx.font = "28px Noto Sans"; // was 24
+        ctx.font = `28px ${FONT}`; // was 24
         ctx.fillStyle = headerHex;
         ctx.fillText("Likelihood of the", 10, 40);
         ctx.fillText("material's p.f.", 24, 70);
@@ -182,7 +183,7 @@ const NormalSlider = () => {
     const drawText = (dataVals: Array<number>, xPositions: Array<number>, yOffset: number = TEXT_OFFSET, fontSize: number = 32) => {
         const canv = canvasRef.current!;
         const ctx = canv.getContext('2d')!;
-        ctx.font = `${fontSize}px sans-serif`; // was 24
+        ctx.font = `${fontSize}px ${FONT}`; // was 24
         ctx.fillStyle = DARK_GREY;
         for (let i = 0; i < dataVals.length; i++) {
             const val = dataVals[i].toFixed(3)
