@@ -236,7 +236,7 @@ const Result = () => {
     const absErr = analysisInfo?.absError!
     const roundTo = getDPofSigFig(absErrFromPFB);
 
-    const beforeBoldText = `The phase fraction in the segmented image is ${phaseFrac.toFixed(3)}. Assuming perfect segmentation, the model proposed by Dahari et al. suggests that `
+    const beforeBoldText = `The phase fraction in the segmented image is ${phaseFrac.toFixed(3)}. Assuming perfect segmentation, the 'ImageRep' model proposed by Dahari et al. suggests that `
     const boldText = `we can be ${selectedConf.toFixed(1)}% confident that the material's phase fraction is within ${perErrFromPFB?.toFixed(1)}% of this value (i.e. ${phaseFrac.toFixed(roundTo)}±${(absErrFromPFB).toFixed(roundTo)})`
     const copyText = beforeBoldText + boldText
 
