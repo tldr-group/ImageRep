@@ -20,7 +20,8 @@ from scipy.ndimage import zoom
 # l=3
 c = [(0, 0, 0), (0.5, 0.5, 0.5)]
 # plotting = [f'microstructure{f}' for f in [235, 209,205,177]]
-plotting_ims = [f"microstructure{f}" for f in [235, 228, 205, 177]]
+plotting_nums = [235, 228, 205, 177]
+plotting_ims = [f"microstructure{f}" for f in plotting_nums]
 
 # plotting = [k for k in data.keys()]
 l = len(plotting_ims)
@@ -28,7 +29,7 @@ fig, axs = plt.subplots(l, 3)
 fig.set_size_inches(12, l * 3.5)
 preds = [[], []]
 irs = [[], []]
-colors = {"cls": "tab:orange", "stds": "tab:green"}
+colors = {"pred": "tab:orange", "true": "tab:green"}
 
 all_data, micros, netG, v_names, run_v_names = microlib_statistics.json_preprocessing()
 lens_for_fit = list(
@@ -44,10 +45,10 @@ for i, p in enumerate(plotting_ims):
         continue
     imsize = 1600
     lf = imsize // 32 + 2  # the size of G's input
-    many_images = util.generate_image(netG, lf=lf, threed=False, reps=10)
+    many_images = util.generate_image(netG, lf=lf, threed=False, reps=150)
     many_images = many_images.detach().cpu().numpy()
     pf = many_images.mean()
-    small_imsize = 400
+    small_imsize = 512
     img = many_images[0][:small_imsize, :small_imsize]
 
     csets = [["black", "black"], ["gray", "gray"]]
@@ -63,31 +64,16 @@ for i, p in enumerate(plotting_ims):
     clss = (np.array(lens_for_fit) ** 2 * vars / pf / (1 - pf)) ** 0.5
     print(clss)
 
-    axs_twin = axs[i, 1].twinx()
-    stds_scatter = axs_twin.scatter(
-        lens_for_fit, stds, s=8, color=colors["stds"], label=f"Standard deviations"
+    # axs_twin = axs[i, 1].twinx()
+    axs[i, 1].scatter(
+        lens_for_fit, stds, color='black', s=8,  label=f"Standard deviations"
     )
-    twin_fit = axs_twin.plot(
-        lens_for_fit, std_fit, color=colors["stds"], label=f"Standard deviations fit"
+    axs[i, 1].plot(
+        lens_for_fit, std_fit, color=colors["true"], label=f"Best fit using the characteristic\nlength scale: {np.round(real_cls, 2)}"
     )
-    axs_twin.tick_params(axis="y", labelcolor=colors["stds"])
-    axs_twin.set_ylim(0, 0.025)
-    cls_scatter = axs[i, 1].scatter(
-        lens_for_fit,
-        clss,
-        s=8,
-        color=colors["cls"],
-        label=f"Characteristic length scales",
-    )
-    cls_fit = axs[i, 1].hlines(
-        real_cls,
-        lens_for_fit[0],
-        lens_for_fit[-1],
-        color=colors["cls"],
-        label=f"Characteristic length scales fit",
-    )
-    axs[i, 1].tick_params(axis="y", labelcolor=colors["cls"])
-    axs[i, 1].set_ylim(0, 28)
+    # axs[i, 1].tick_params(axis="y", labelcolor=colors["stds"])
+    axs[i, 1].set_ylim(0, 0.025)
+    axs[i, 1].legend(loc='upper right')
 
     center = 40
     dims = len(img.shape)
@@ -95,11 +81,14 @@ for i, p in enumerate(plotting_ims):
     tpc = core.radial_tpc(img, volumetric=False)
     center_im = small_imsize // 2
     tpc_im = tpc[center_im-center:center_im+center, center_im-center:center_im+center]
+    img_pf = img.mean()
     cls = core.tpc_to_cls(tpc, img)
 
     contour = axs[i, 2].contourf(tpc_im, cmap="plasma", levels=200)
-    circle_real = plt.Circle((center, center), real_cls, fill=False, color=colors["stds"])
-    circle_pred = plt.Circle((center, center), cls, fill=False, color=colors["cls"])
+    for c in contour.collections:
+        c.set_edgecolor("face")
+    circle_real = plt.Circle((center, center), real_cls, fill=False, color=colors["true"], label=f"True Char. l. s. radius: {np.round(real_cls, 2)}")
+    circle_pred = plt.Circle((center, center), cls, fill=False, color=colors["pred"], label=f"Predicted Char. l. s. radius: {np.round(cls, 2)}")
     axs[i, 2].add_artist(circle_real)
     axs[i, 2].add_artist(circle_pred)
     x_ticks = axs[i, 2].get_xticks()[1:-1]
@@ -107,18 +96,29 @@ for i, p in enumerate(plotting_ims):
     axs[i, 2].set_yticks(x_ticks, np.int64(np.array(x_ticks) - center))
     divider = make_axes_locatable(axs[i, 2])
     cax = divider.append_axes("right", size="5%", pad=0.05)
-    fig.colorbar(contour, cax=cax, orientation="vertical")
+    cbar = fig.colorbar(contour, cax=cax, orientation="vertical")
+    # cbar_ticks = cbar.ax.get_yticks()
+    cbar_ticks = np.linspace(img_pf, img_pf**2, 6)
+    cbar.ax.set_yticks(cbar_ticks, [r'$\Phi(\omega)$']+list(np.round(cbar_ticks[1:-1],2))+[r'$\Phi(\omega)^2$'])
+    cbar.set_label(f'Two-point correlation function')
+    fakexy = [0, 0]
+    circle_pred = plt.Line2D(fakexy, fakexy, linestyle='none', marker='o', fillstyle='none', color=colors["pred"], alpha=1.00)
+    circle_real = plt.Line2D(fakexy, fakexy, linestyle='none', marker='o', fillstyle='none', color=colors["true"], alpha=1.00)
+    axs[i, 2].legend([circle_real, circle_pred], [f"True Char. l. s.: {np.round(real_cls, 2)}", f"Predicted Char. l. s. from \nimage on the left column: {np.round(cls, 2)}"], loc='upper right')
+    axs[i, 2].set_xlabel('Two-point correlation distance')
+    axs[i, 2].set_ylabel('Two-point correlation distance')
 
-    if i == 0:
-        plots = [stds_scatter, twin_fit[0], cls_scatter, cls_fit]
-        label_plots = [plot.get_label() for plot in plots]
-        axs[i, 1].legend(plots, label_plots)
-
-    axs[i,1].set_xlabel('Image length size [pixels]')
-    axs[i,1].set_ylabel('Volume fraction percentage error [%]')
-    axs[i,2].set_ylabel('2-point correlation function')
+    axs[i,1].set_xlabel('Image size')
+    xticks_middle = axs[i,1].get_xticks()[1:-1]
+    axs[i,1].set_xticks(xticks_middle, [f'{int(xtick)}$^2$' for xtick in xticks_middle])
+    axs[i,1].set_ylabel(r'Phase fraction standard deviation')
+    # axs[i,2].set_ylabel('TPC distance')
+    # axs[i,2].set_xlabel('TPC distance')
     # img = img*255
-    si_size, nirs = small_imsize//2, 5
+    imshow_size = 512
+    img = img[:imshow_size, :imshow_size]
+    # 
+    si_size, nirs = imshow_size//2, 5
     sicrop = int(real_cls*nirs)
     zoom_mag = si_size/sicrop
     print(real_cls, sicrop)
@@ -135,13 +135,13 @@ for i, p in enumerate(plotting_ims):
 
     img = np.stack([img]*3, axis=-1)
     img[-si_size:,-si_size:] = subim
-    axs[i, 0].imshow(img, cmap="gray")
+    # img = np.stack([zoom(img[:,:,i], zoom=4, order=0) for i in range(np.shape(img)[-1])], axis=-1)
+    axs[i, 0].imshow(img, cmap="gray", interpolation='nearest')
     axs[i, 0].set_xticks([])
     axs[i, 0].set_yticks([])
-    # axs[i, 0].set_ylabel(f'M{n[1:]}')
-    # axs[i, 0].set_xlabel(f'Volume fraction '+ r'$\tilde{a}_2$: '+ f'{ir}   Inset mag: x{np.round(si_size/sicrop, 2)}')
+    axs[i, 0].set_ylabel(f'Microstructure {plotting_nums[i]}')
+    axs[i, 0].set_xlabel(f'    $\Phi(\omega)$: '+ '%.2f' % img_pf + f'          Inset mag: x{np.round(si_size/sicrop, 2)}')
 
-    i += 1
 
 
 plt.tight_layout()
