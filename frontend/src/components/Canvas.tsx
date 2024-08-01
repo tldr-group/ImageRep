@@ -51,6 +51,8 @@ const PreviewCanvas = () => {
         if (image === null) { return; } // null check - useful for the resize listeners
         const canvas = canvasRef.current!;
         const ctx = canvas.getContext("2d");
+        if (ctx == null) { return }
+        ctx.imageSmoothingEnabled = false;
         const [ih, iw, ch, cw] = [image.naturalHeight, image.naturalWidth, canvas.height, canvas.width];
         const faceData = get3DFacePoints(ih, iw, imageInfo?.depth!, DEFAULT_ANGLE_RAD, 0.3);
         const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, faceData.dox, faceData.doy, ADDITIONAL_SF);
