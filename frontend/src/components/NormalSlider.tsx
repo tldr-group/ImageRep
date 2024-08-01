@@ -74,6 +74,9 @@ const yAxisStyle: DrawStyle = { fillColour: LIGHT_GREY, lineColour: LIGHT_GREY, 
 const curveStyle: DrawStyle = { fillColour: 'red', lineColour: 'red', lineWidth: 4, toFill: false, lineCap: null, lineDash: null }
 const shadeStyle: DrawStyle = { fillColour: TRANS_RED, lineColour: TRANS_RED, lineWidth: 3, toFill: true, lineCap: null, lineDash: null }
 
+
+type confUpdate = "slider" | "select"
+
 const NormalSlider = () => {
     const {
         imageInfo: [imageInfo,],
@@ -86,6 +89,8 @@ const NormalSlider = () => {
     } = useContext(AppContext)!
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const sliderRef = useRef<HTMLInputElement>(null);
+    const selectRef = useRef<HTMLInputElement>(null);
     const [params, setParams] = useState<NormalParams>({
         mu: tmpMu,
         sigma: tmpSigma,
@@ -223,8 +228,27 @@ const NormalSlider = () => {
         drawLabels();
     }
 
-    const setConf = (e: any) => {
-        setSelectedConf(Number(e.target!.value));
+
+
+    const setConf = (e: any, updateFrom: confUpdate) => {
+        const val = e.target!.value
+        const isNumber = !isNaN(parseFloat(val)) && isFinite(val);
+        const floatVal = parseFloat(val)
+        const select = selectRef.current!
+        const inBounds = (floatVal > 79) && (floatVal < 99.999)
+        if (isNumber && inBounds) {
+            select.style.color = 'black'
+            setSelectedConf(Number(e.target!.value));
+            if (updateFrom == 'slider') {
+                select.value = String(floatVal);
+            } else {
+                const slider = sliderRef.current!
+                slider.value = String(floatVal);
+            }
+        } else {
+            select.style.color = 'red'
+            return
+        }
     };
 
     useEffect(() => {
@@ -259,8 +283,8 @@ const NormalSlider = () => {
             <InputGroup style={{ width: '70%', marginLeft: '15%' }}> {/*style={{ width: '70%', marginLeft: '15%' }}*/}
                 <InputGroup.Text>Confidence in p.f. bounds (%):</InputGroup.Text>
 
-                <Form.Control type="number" min={0} max={100} value={selectedConf} step={0.5} onChange={(e) => setConf(e)} width={1} size="sm"></Form.Control>
-                <Form.Range min={80} max={99.999} value={selectedConf} step={0.1} onChange={(e) => setConf(e)} />
+                <Form.Control ref={selectRef} type="number" min={0} max={100} step={0.5} defaultValue={selectedConf} onChange={(e) => setConf(e, 'select')} width={1} size="sm"></Form.Control>
+                <Form.Range ref={sliderRef} min={80} max={99.999} value={selectedConf} step={0.1} onChange={(e) => setConf(e, 'slider')} />
             </InputGroup>
         </div>)
 }

@@ -218,7 +218,8 @@ const Result = () => {
     const getDPofSigFig = (decimal: number) => {
         const rounded = parseFloat(decimal.toPrecision(1));
         const loc = Math.ceil(Math.abs(Math.log10(rounded)));
-        return loc
+        const capped = Math.min(loc, 5)
+        return capped
     }
 
     const c = colours[selectedPhase];
