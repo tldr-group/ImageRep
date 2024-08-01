@@ -2,7 +2,7 @@
 
 ![Tests](https://github.com/tldr-group/Representativity/actions/workflows/tests.yml/badge.svg)
 
-[Try it out!](https://representative9984.z33.web.core.windows.net/)
+[Try it out!](https://www.imagerep.io/)
 
 You take a micrograph of a material. You segment it, and measure the phase fractions. How sure are you that the phase fraction of the whole material is close to your measurements?  
 Here we define 'representativity' as [1]
@@ -12,15 +12,9 @@ We introduce the 'ImageRep' model for performing fast phase-fraction representat
 
 If you use this model in your research, [please cite us](CITATION.cff).
 
-## TODO:
-- Website name (imagerep.com) (isitrepresentative.com) (howrepresentativeismysample.com)
-- fix 3D
-- update readme/example notebook (add static figure @ top of readme)
-- licence: todo
-
 ## Usage:
 
-This model can be used as python package - see [`example.ipynb`](example.ipynb) or via the [website](https://representative9984.z33.web.core.windows.net/).
+This model can be used as python package - see [`example.ipynb`](example.ipynb) or via the [website (imagerep.io)](https://www.imagerep.io/).
 
 <p align="center">
     <img src="https://sambasegment.blob.core.windows.net/resources/repr_repo_v2.gif">
