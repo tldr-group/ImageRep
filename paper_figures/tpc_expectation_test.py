@@ -104,7 +104,7 @@ if __name__ == "__main__":
     circle_size = 20
     pf = 0.5
     args = (imsize, circle_size, pf)
-    run_tests = 10000
+    run_tests = 1000
 
     fig, axs = plt.subplot_mosaic(
         [
@@ -120,22 +120,25 @@ if __name__ == "__main__":
     plt.figtext(
         0.31,
         0.9,
-        f"4 random {imsize}$^2$ images with $E[\Phi]$ = {pf} and circle diameter = {circle_size*2}",
+        # f"4 random {imsize}$^2$ images with $E[\Phi]$ = {pf} and circle diameter = {circle_size*2}",
+        f"(a)",
         ha="center",
         va="center",
         fontsize=12,
     )
 
-    plt.suptitle(
-        f"Visual presentation of the proof of Theorem 2 in the simple case of random circles."
-    )
+    # plt.suptitle(
+    #     f"Visual presentation of the proof of Theorem 2 in the simple case of random circles."
+    # )
     n_circle_im = 3
     circle_ims = [make_circles_2D(imsize, circle_size, pf) for _ in range(n_circle_im)]
+    circles_pfs = []
     for i in range(n_circle_im):
-        axs[f"circle{i}"].imshow(circle_ims[i], cmap="gray")
+        axs[f"circle{i}"].imshow(circle_ims[i], cmap="gray", interpolation='nearest')
         circle_pf = np.round(circle_ims[i].mean(), 3)
-        axs[f"circle{i}"].set_ylabel(f"$\Phi(\omega_{i})={circle_pf}$")
-        axs[f"circle{i}"].set_xlabel(f"$\omega_{i}$")
+        circles_pfs.append(circle_pf)
+        axs[f"circle{i}"].set_xlabel(f"$\Phi(\omega_{i})={circle_pf}$")
+        axs[f"circle{i}"].set_ylabel(f"$\omega_{i}$")
         axs[f"circle{i}"].set_xticks([])
         axs[f"circle{i}"].set_yticks([])
 
@@ -149,22 +152,26 @@ if __name__ == "__main__":
     bins = 30
     axs["pf_hist"].hist(pfs, bins=bins, density=True)
     axs["pf_hist"].set_xlim(0, 1)
+    axs["pf_hist"].set_xlabel("Phase Fraction")
+    axs["pf_hist"].set_ylabel("PDF")
     # add a 'best fit' line
     mu, sigma = norm.fit(pfs)
     print(f"mu = {mu}, sigma = {sigma}")
     y = norm.pdf(np.linspace(0, 1, 100), mu, sigma)
-    axs["pf_hist"].plot(np.linspace(0, 1, 100), y, linewidth=2)
+    axs["pf_hist"].plot(np.linspace(0, 1, 100), y, linewidth=2, label="Phase fraction distribution")
+    for i in range(len(circles_pfs)):
+        axs["pf_hist"].axvline(circles_pfs[i], label=f"$\Phi(\omega_{i})$")
     dist_len = np.array(dist_len)
     mean_tpc = np.mean(tpc_results, axis=0)
     tpc_fig.plot(mean_tpc, label="Mean TPC")
     len_tpc = len(tpc_results[0])
     pf_squared = np.mean(pf_squares)
-    label_pf_squared = f"$E[\Phi^2]$ = {np.round(pf_squared, 4)}"
+    label_pf_squared = f"$E[\Phi^2]$ = {np.round(pf_squared, 3)}"
     tpc_fig.plot([pf_squared] * len_tpc, label=label_pf_squared)
     # print(f'pf squared = {np.round(pf_squared, 7)}')
 
     true_pf_squared = np.mean(pfs) ** 2
-    label_true_pf_squared = f"$E[\Phi]^2$ = {np.round(true_pf_squared, 4)}"
+    label_true_pf_squared = f"$E[\Phi]^2$ = {np.round(true_pf_squared, 3)}"
     tpc_fig.plot([true_pf_squared] * len_tpc, label=label_true_pf_squared)
     # print(f'true pf squared = {np.round(true_pf_squared, 7)}')
 
@@ -239,7 +246,8 @@ if __name__ == "__main__":
     )
 
     tpc_fig.set_title(
-        f"Mean TPC of {run_tests} of these random {imsize}$^2$ circle images"
+        # f"Mean TPC of {run_tests} of these random {imsize}$^2$ circle images"
+        f"(b)"
     )
 
     tpc_fig.set_ylim(true_pf_squared - 0.005, pf + 0.01)
@@ -250,7 +258,7 @@ if __name__ == "__main__":
     tpc_fig.set_ylabel(f"Mean TPC $E[T_r]$", labelpad=-20)
     # tpc_fig.set_yscale('log')
     tpc_fig.set_yticks(
-        [pf**2, np.round(pf_squared, 4), pf], [pf**2, np.round(pf_squared, 4), pf]
+        [pf**2, np.round(pf_squared, 3), pf], [pf**2, np.round(pf_squared, 3), pf]
     )
     tpc_fig.legend()
     plt.savefig(f"tpc_results/circles_tpc_visual_proof.pdf", format="pdf")
