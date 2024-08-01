@@ -177,6 +177,8 @@ const Result = () => {
         showInfo: [, setShowInfo],
     } = useContext(AppContext)!
 
+    const newConfSliderRef = useRef<HTMLInputElement>(null);
+
     // we have two errVFs here because we want the values in the text to reflect the old
     // errVF, the one they sent to the server and the slider to represent the new one
     // which they are setting for recalculate.
@@ -196,7 +198,6 @@ const Result = () => {
             vals[selectedPhase - 1]
         );
 
-    const perErr = analysisInfo?.percentageErr;
 
     const l = analysisInfo?.lForDefaultErr;
     const lStr = l?.toFixed(0);
@@ -206,11 +207,19 @@ const Result = () => {
         setNewErrVF(Number(e.target!.value));
     };
 
-    const setConf = (e: any) => {
-        setSelectedConf(Number(e.target!.value));
-    };
-
     const recalculate = () => {
+        const newSlider = newConfSliderRef.current!
+
+        const val = newSlider.value
+        const isNumber = !isNaN(parseFloat(val));
+        const floatVal = parseFloat(val)
+        const inBounds = (floatVal > 1) && (floatVal < 99.999)
+
+        if (isNumber && inBounds) {
+            setSelectedConf(floatVal)
+        } else {
+            setSelectedConf(95)
+        }
         setErrVF(newErrVF);
         setMenuState('processing');
     }
@@ -234,7 +243,6 @@ const Result = () => {
     const absErrFromPFB = (pfB![1] - pfB![0]) / 2
     const perErrFromPFB = 100 * (((pfB![1] - pfB![0]) / 2) / phaseFrac)
 
-    const absErr = analysisInfo?.absError!
     const roundTo = getDPofSigFig(absErrFromPFB);
 
     const beforeBoldText = `The phase fraction in the segmented image is ${phaseFrac.toFixed(3)}. Assuming perfect segmentation, the 'ImageRep' model proposed by Dahari et al. suggests that `
@@ -243,7 +251,6 @@ const Result = () => {
 
     const copyBtn = () => { navigator.clipboard.writeText(copyText) }
 
-    const longestSide = Math.max(imageInfo?.width!, imageInfo?.height!)
     const ii = imageInfo
     const vol = (ii?.nDims! == 3) ? (ii?.height! * ii?.width! * ii?.width!) : (ii?.height! * ii?.width!)
     const nMore = (Math.ceil(Math.pow(l!, imageInfo?.nDims!) / vol)) - 1
@@ -284,7 +291,8 @@ const Result = () => {
             </InputGroup >
             <InputGroup>
                 <InputGroup.Text>Confidence in Bounds (%):</InputGroup.Text>
-                <Form.Control type="number" min={0} max={100} value={selectedConf} onChange={(e) => setConf(e)} width={1} size="sm"></Form.Control>
+                {/*TODO: FIX THIS - I.E HEN THIS UPDATES, DON'T UDPATE TEXT*/}
+                <Form.Control ref={newConfSliderRef} type="number" min={0} max={100} defaultValue={selectedConf} width={1} size="sm"></Form.Control>
             </InputGroup>
             <div style={centreStyle}>
                 <Button variant="outline-dark" onClick={(e) => { setShowInfo(true) }}>More Info</Button>
