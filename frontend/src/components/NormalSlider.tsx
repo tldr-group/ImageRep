@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useContext } from "react";
-import AppContext, { rgbaToHex, colours } from "./interfaces";
+import AppContext, { rgbaToHex, colours, DrawStyle } from "./interfaces";
 import { getPhaseFraction } from "./imageLogic";
 
 import InputGroup from "react-bootstrap/InputGroup";
@@ -48,14 +48,7 @@ const [tmpStart, tmpEnd] = [0.2, 0.6];
 const tmpMax = normalDist(tmpMu, tmpMu, tmpSigma);
 
 
-interface DrawStyle {
-    fillColour: string,
-    lineColour: string,
-    lineWidth: number,
-    toFill: boolean,
-    lineCap: CanvasPathDrawingStyles["lineCap"] | null,
-    lineDash: Array<number> | null,
-}
+
 
 interface NormalParams {
     mu: number,

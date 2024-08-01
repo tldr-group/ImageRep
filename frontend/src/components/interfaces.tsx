@@ -110,6 +110,15 @@ export interface AnalysisInfo {
     cumSumSum: Array<number>
 }
 
+export interface DrawStyle {
+    fillColour: string,
+    lineColour: string,
+    lineWidth: number,
+    toFill: boolean,
+    lineCap: CanvasPathDrawingStyles["lineCap"] | null,
+    lineDash: Array<number> | null,
+}
+
 export interface ErrorMessage {
     msg: string;
     stackTrace: string;

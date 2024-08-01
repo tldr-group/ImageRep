@@ -249,7 +249,7 @@ const Result = () => {
     const boldText = `we can be ${selectedConf.toFixed(1)}% confident that the material's phase fraction is within ${perErrFromPFB?.toFixed(1)}% of this value (i.e. ${phaseFrac.toFixed(roundTo)}±${(absErrFromPFB).toFixed(roundTo)})`
     const copyText = beforeBoldText + boldText
     const afterText = "These results are derived from an estimated "
-    const afterBoldText = `Characteristic Length Scale (CLS) of ${analysisInfo?.integralRange!.toFixed(2)} px`
+    const afterBoldText = `Characteristic Length Scale (CLS) of ${analysisInfo?.integralRange!.toFixed(0)}px`
 
     const copyBtn = () => { navigator.clipboard.writeText(copyText) }
 

@@ -2,9 +2,21 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 import AppContext, { Point } from "./interfaces";
 import { colours } from "./interfaces";
 import { replaceGreyscaleWithColours, getImagefromImageData } from "./imageLogic";
+import { DrawStyle } from "./interfaces";
 
 const ADDITIONAL_SF = 1
 const DEFAULT_ANGLE_RAD = 30 * (Math.PI / 180)
+
+const TOP_FACE = "#f0f0f0"
+const RIGHT_FACE = "#ababab64"
+const LIGHT_GREY = "#838383d9"
+const TRANS_RED = "#dc5e5e80"
+const DARK_GREY = "#363636f0"
+
+const rightSide: DrawStyle = { fillColour: RIGHT_FACE, lineColour: RIGHT_FACE, lineWidth: 4, toFill: true, lineCap: null, lineDash: null }
+const rightSideFrame: DrawStyle = { fillColour: LIGHT_GREY, lineColour: LIGHT_GREY, lineWidth: 4, toFill: false, lineCap: 'round', lineDash: [10, 10] }
+const topSide: DrawStyle = { fillColour: TOP_FACE, lineColour: TOP_FACE, lineWidth: 4, toFill: true, lineCap: null, lineDash: null }
+const topSideFrame: DrawStyle = { fillColour: LIGHT_GREY, lineColour: LIGHT_GREY, lineWidth: 4, toFill: false, lineCap: 'round', lineDash: [10, 10] }
 
 const centredStyle = {
     height: '75vh', width: '75vw', // was 60vh/w
@@ -12,13 +24,22 @@ const centredStyle = {
     padding: '10px', display: 'flex', margin: 'auto',
 }
 
-const get3DFacePoints = (ih: number, iw: number, id: number, theta: number, sfz: number) => {
+interface faces {
+    face1: Array<Point>,
+    face2: Array<Point>,
+    face3: Array<Point>,
+    dox: number,
+    doy: number
+}
+
+const get3DFacePoints = (ih: number, iw: number, id: number, theta: number, sfz: number): faces => {
     // get upper and right faces of a cube with front face of preview image and (projected) depth determined by theta and sfz 
     const dox = Math.floor((Math.cos(theta) * id) * sfz);
     const doy = Math.floor((Math.sin(theta) * id) * sfz);
     const f1Points: Array<Point> = [{ x: dox, y: 0 }, { x: iw + dox, y: 0 }, { x: iw, y: doy }, { x: 0, y: doy }];
     const f2Points: Array<Point> = [{ x: iw + dox, y: 0 }, { x: iw, y: doy }, { x: iw, y: ih + doy }, { x: iw + dox, y: ih }];
-    return { face1: f1Points, face2: f2Points, dox: dox, doy: doy };
+    const f3Points: Array<Point> = [{ x: 0, y: doy }, { x: iw, y: doy }, { x: iw, y: ih + doy }, { x: 0, y: ih + doy }];
+    return { face1: f1Points, face2: f2Points, face3: f3Points, dox: dox, doy: doy };
 }
 
 const getAspectCorrectedDims = (ih: number, iw: number, ch: number, cw: number, dox: number, doy: number, otherSF: number = 0.8) => {
@@ -42,9 +63,8 @@ const PreviewCanvas = () => {
 
     const containerRef = useRef<HTMLDivElement>(null);
     const frontDivRef = useRef<HTMLDivElement>(null);
-    const topDivRef = useRef<HTMLDivElement>(null);
-    const sideDivRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const hiddenCanvasRef = useRef<HTMLCanvasElement>(null);
     const [canvDims, setCanvDims] = useState<{ h: number, w: number }>({ w: 300, h: 150 });
 
     const redraw = (image: HTMLImageElement | null) => {
@@ -58,20 +78,36 @@ const PreviewCanvas = () => {
         const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, faceData.dox, faceData.doy, ADDITIONAL_SF);
         ctx?.clearRect(0, 0, canvas.width, canvas.height);
         if (faceData.dox > 0) {
-            drawFaces(ctx!, faceData.face1, faceData.face2, correctDims.sf, correctDims.ox, correctDims.oy)
+            drawFaces(ctx!, faceData, correctDims.sf, correctDims.ox, correctDims.oy)
         }
         ctx?.drawImage(image, correctDims.ox, correctDims.oy, correctDims.w, correctDims.h);
         //ctx?.drawImage(image, 0, 0, correctDims.w, correctDims.h);
     }
 
-    const drawFaces = (ctx: CanvasRenderingContext2D, face1: Array<Point>, face2: Array<Point>, sf: number, ox: number, oy: number) => {
-        drawPoints(ctx, face1, sf, ox, oy, "#f0f0f0"); //"#dbdbdbff" 
-        drawPoints(ctx, face2, sf, ox, oy, "#ababab64");
+    // TODO: do 3D zoom by having second hidden canvas displaying wireframe cube, shrink other cube accoringly.
+    const drawFaces = (ctx: CanvasRenderingContext2D, faces: faces, sf: number, ox: number, oy: number, frame: boolean = false) => {
+        const style1 = (frame) ? topSideFrame : topSide
+        const style2 = (frame) ? rightSideFrame : rightSide
+        drawPoints(ctx, faces.face1, sf, ox, oy, style1); //"#dbdbdbff" 
+        drawPoints(ctx, faces.face2, sf, ox, oy, style2);
+
+        if (frame) { drawPoints(ctx, faces.face3, sf, ox, oy, style1); }
     }
 
-    const drawPoints = (ctx: CanvasRenderingContext2D, points: Array<Point>, sf: number, ox: number, oy: number, fill: string) => {
+    const drawPoints = (ctx: CanvasRenderingContext2D, points: Array<Point>, sf: number, ox: number, oy: number, style: DrawStyle) => {
+        // TODO: genericse to draw dashed lines as well
         const p0 = points[0];
-        ctx.fillStyle = fill;
+        ctx.fillStyle = style.fillColour;
+        ctx.strokeStyle = style.lineColour;
+        if (style.lineCap) { ctx.lineCap = style.lineCap; }
+        if (style.lineDash) {
+            ctx.setLineDash(style.lineDash)
+        } else {
+            ctx.setLineDash([])
+        }
+
+        ctx.lineWidth = style.lineWidth;
+        ctx.fillStyle = style.fillColour;
         ctx.beginPath();
         ctx.moveTo(ox + p0.x * sf, p0.y * sf);
         for (let i = 1; i < points.length; i++) {
@@ -79,7 +115,12 @@ const PreviewCanvas = () => {
             ctx.lineTo(ox + p.x * sf, p.y * sf);
         }
         ctx.closePath();
-        ctx.fill();
+        if (style.toFill) {
+
+            ctx.fill();
+        } else {
+            ctx.stroke();
+        }
     }
 
     const animateDiv = (div: HTMLDivElement, newW: number, newH: number) => {
@@ -103,6 +144,32 @@ const PreviewCanvas = () => {
             iterations: Infinity, // loop infinitely
             direction: "alternate" // forward and reverse
         })
+    }
+
+    const animateCube = (hCanv: HTMLCanvasElement, newW: number, newH: number) => {
+        hCanv.style.visibility = 'visible'
+        hCanv.width = newW
+        hCanv.height = newH
+        const hCanvCtx = hCanv.getContext("2d")
+        const image = previewImg!
+        hCanvCtx?.clearRect(0, 0, newW, newH)
+        const [ih, iw, ch, cw] = [image.naturalHeight, image.naturalWidth, hCanv.height, hCanv.width];
+        const faceData = get3DFacePoints(ih, iw, imageInfo?.depth!, DEFAULT_ANGLE_RAD, 0.3);
+        const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, faceData.dox, faceData.doy, ADDITIONAL_SF);
+        if (faceData.dox > 0) {
+            drawFaces(hCanvCtx!, faceData, correctDims.sf, correctDims.ox, correctDims.oy, true)
+        }
+
+        hCanv.animate([ // visiblity fade
+            { opacity: 0 },
+            { opacity: 1 },
+        ], {
+            fill: "both",
+            duration: 2400,
+            iterations: Infinity, // loop infinitely
+            direction: "alternate" // forward and reverse
+        })
+
     }
 
     // ================ EFFECTS ================
@@ -165,7 +232,6 @@ const PreviewCanvas = () => {
         const [ih, iw, ch, cw] = [image.naturalHeight, image.naturalWidth, canvDims.h, canvDims.w];
         const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, 0, 0, ADDITIONAL_SF);
 
-
         const shortestSideCanv = Math.min(canvDims.h, canvDims.w)
         const longestSideCanv = Math.max(correctDims.h, correctDims.w)
         const newCanvL = shortestSideCanv
@@ -187,18 +253,23 @@ const PreviewCanvas = () => {
             fill: 'forwards', // no reset 
             easing: 'ease-in-out'
         })
+
         canvAnim.onfinish = (e) => {
-            animateDiv(frontDivRef.current!, newCanvL, newCanvL)
+
+            if (imageInfo?.nDims == 2) {
+                animateDiv(frontDivRef.current!, newCanvL, newCanvL)
+            } else {
+                animateCube(hiddenCanvasRef.current!, canvDims.w, canvDims.h)
+            }
         }
 
     }, [menuState])
-
+    // TODO: secret hidden canvas that's only shown if 3D and target l set
     return (
         <div ref={containerRef} style={centredStyle}>
             <div ref={frontDivRef} style={{ position: 'absolute' }}></div>
-            <div ref={topDivRef} style={{ position: 'absolute' }}></div>
-            <div ref={sideDivRef} style={{ position: 'absolute' }}></div>
             <canvas ref={canvasRef} id={"preview"}></canvas>
+            <canvas ref={hiddenCanvasRef} style={{ visibility: 'hidden', position: 'absolute' }} id={"hidden"}></canvas>
         </div>
     );
 }
