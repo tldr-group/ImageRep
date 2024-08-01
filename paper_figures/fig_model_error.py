@@ -148,6 +148,8 @@ for i, dim in enumerate(dims):
     x_ticks = ax2.get_xticks()[1:-1]
     ax2.set_xticks(x_ticks, [f"{int(i)}%" for i in x_ticks])
     ax2.set_yticks([ax2.get_yticks()[0],ax2.get_yticks()[-2]],[round(ax2.get_yticks()[0],2),round(ax2.get_yticks()[-2],2)])
+    # if i == 0:
+    #     ax2.set_ylim(0, ax2.get_yticks()[-1]*1.6)
     ax2.set_ylabel("Probability density")
     ax2.vlines(0, ymin=0, ymax=y.max(), color="black", label="Ideal predictions")
     ax2.vlines(
@@ -194,6 +196,7 @@ for i, dim in enumerate(dims):
     ax3.set_xticks(
         edge_lengths[::2], [r"$%s^%s$" % (i, dim_str) for i in edge_lengths[::2]]
     )
+    
     ax3.set_ylabel(r"Model percentage error std, $\sigma_{mod}$ / %")
     if i == 0:
         ax3.legend(loc="upper right")
