@@ -101,7 +101,7 @@ def json_validation_preprocessing():
     # Large im sizes for stat. analysis:
     # all_data["validation_2D"]["large_im_size"] = [10000, 10000]  # TODO make this bigger
     all_data["validation_2D"]["large_im_size"] = [10000, 10000]  # TODO make this bigger
-    all_data["validation_3D"]["large_im_size"] = [3000, 3000, 3000]
+    all_data["validation_3D"]["large_im_size"] = [600, 600, 600]
 
     # Edge lengths for the experimental statistical analysis:
     all_data["validation_2D"]["edge_lengths_fit"] = list(
@@ -111,7 +111,7 @@ def json_validation_preprocessing():
 
     # Edge lengths for the predicted integral range:
     all_data["validation_2D"]["edge_lengths_pred"] = [600, 800, 1000, 1200, 1400]
-    all_data["validation_3D"]["edge_lengths_pred"] = [300, 350, 400]
+    all_data["validation_3D"]["edge_lengths_pred"] = [200, 250, 300]
 
     return all_data
 
@@ -123,8 +123,16 @@ def get_large_im_stack(generator, large_shape, large_im_repeats, args):
         if generator == fractal_noise:
             porosity = 0.5
             large_im = large_im < porosity
-        large_im = large_im
+        if generator == blobs:
+            if len(large_im.shape) == 2:
+                large_im = large_im[2:-2, 2:-2]
+            else:
+                large_im = large_im[2:-2, 2:-2, 2:-2]
         large_ims.append(large_im)
+        plt.plot([large_im[i,:].mean() for i in range(large_im.shape[0])])
+        plt.ylabel('Phase fraction')
+        plt.xlabel('slice')
+        plt.show()
     return np.stack(large_ims, axis=0)
 
 
@@ -135,7 +143,7 @@ def ps_error_prediction(dim, data, confidence, error_target):
     clss = []
     one_im_clss = []
     large_shape = data[f"validation_{dim}"]["large_im_size"]
-    large_im_repeats = 1
+    large_im_repeats = 10
     in_the_bounds_w_model = []
     in_the_bounds_wo_model = []
     iters = 0
@@ -147,6 +155,10 @@ def ps_error_prediction(dim, data, confidence, error_target):
             large_im_stack = get_large_im_stack(
                 generator, large_shape, large_im_repeats, args
             )
+            if generator == blobs:
+                cur_large_shape = np.array(large_shape) - 4
+            else:
+                cur_large_shape = large_shape
             true_pf = np.mean(large_im_stack)
             edge_lengths_fit = data[f"validation_{dim}"]["edge_lengths_fit"]
             true_cls = util.stat_analysis_error(
@@ -161,14 +173,24 @@ def ps_error_prediction(dim, data, confidence, error_target):
                     true_error = util.bernouli_from_cls(
                         true_cls, true_pf, [edge_length] * int(dim[0])
                     )
+                    first_index = np.random.randint(0, large_im_stack.shape[0])
                     start_idx = [
-                        np.random.randint(0, large_shape[i] - edge_length)
+                        np.random.randint(0, cur_large_shape[i] - edge_length)
                         for i in range(int(dim[0]))
                     ]
                     end_idx = [start_idx[i] + edge_length for i in range(int(dim[0]))]
-                    small_im = large_im_stack[0][
-                        start_idx[0] : end_idx[0], start_idx[1] : end_idx[1]
-                    ]
+                    if dim == "2D":
+                        small_im = large_im_stack[first_index][
+                            start_idx[0] : end_idx[0], start_idx[1] : end_idx[1]
+                        ]
+                    else:
+                        small_im = large_im_stack[first_index][
+                            start_idx[0] : end_idx[0],
+                            start_idx[1] : end_idx[1],
+                            start_idx[2] : end_idx[2],
+                        ]
+                    
+                    print(f'small im shape: {small_im.shape}')
                     # np.save(f'./small_im_{gen_name}_{args}_{edge_length}.npy', small_im)
                     small_im_pf = np.mean(small_im)
                     one_im_stat_analysis_cls = core.stat_analysis_error_classic(
@@ -226,11 +248,11 @@ def ps_error_prediction(dim, data, confidence, error_target):
                         print(f"true error: {true_error[0]:.2f}")
                         print(f"error: {im_err*100:.2f}\n")
                         print(f"Length for error target: {l_for_err_target}")
-                    if (in_the_bounds_wo_model[-1] == 1) and (
-                        in_the_bounds_w_model[-1] == 0
-                    ):
-                        print("The model is not working properly. Exiting...")
-                        sys.exit()
+                    # if (in_the_bounds_wo_model[-1] == 1) and (
+                    #     in_the_bounds_w_model[-1] == 0
+                    # ):
+                    #     print("The model is not working properly. Exiting...")
+                    #     sys.exit()
                     print("\n")
 
             # plt.imshow(im[150:350,150:350])
@@ -246,9 +268,9 @@ def ps_error_prediction(dim, data, confidence, error_target):
 
 
 if __name__ == "__main__":
-    shape = [1000, 1000]
+    # shape = [1000, 1000]
     all_data = json_validation_preprocessing()
-    dim = "2D"
+    dim = "3D"
     # get porespy generators:
     errs, true_clss, clss, one_im_clss = ps_error_prediction(
         dim, all_data, confidence=0.95, error_target=0.05
