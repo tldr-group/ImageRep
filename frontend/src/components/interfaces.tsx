@@ -67,6 +67,7 @@ export interface DragDropProps {
 export interface TopbarProps {
     loadFromFile: (file: File) => void;
     reset: () => void;
+    changePhase: () => void;
 }
 
 export function rgbaToHex(r: number, g: number, b: number, a: number) {

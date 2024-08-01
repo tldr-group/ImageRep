@@ -168,8 +168,19 @@ const App = () => {
         setAnalysisInfo(null);
         setTargetL(null);
         setAccurateFractions(null);
-        setPreviewImg(null);
         setSelectedPhase(0);
+        setErrVF(5);
+        setSelectedConf(95);
+        setErrorState({ msg: "", stackTrace: "" });
+        setShowWarning("");
+    }
+
+    const changePhase = () => {
+        setMenuState('phase');
+        setAnalysisInfo(null);
+        setTargetL(null);
+        const newPhase = (selectedPhase) % imageInfo?.nPhases!
+        setSelectedPhase(newPhase + 1)
         setErrVF(5);
         setSelectedConf(95);
         setErrorState({ msg: "", stackTrace: "" });
@@ -184,7 +195,7 @@ const App = () => {
 
     return (
         <div className={`w-full h-full`}>
-            <Topbar loadFromFile={appLoadFile} reset={reset}></Topbar>
+            <Topbar loadFromFile={appLoadFile} reset={reset} changePhase={changePhase}></Topbar>
             <div className={`flex`} style={{ margin: '1.5%' }} > {/*Canvas div on left, sidebar on right*/}
                 {!previewImg && <DragDrop loadFromFile={appLoadFile} />}
                 {previewImg && <PreviewCanvas />}

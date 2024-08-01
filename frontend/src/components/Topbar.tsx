@@ -5,7 +5,7 @@ import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
 import { TopbarProps } from "./interfaces";
 
-const Topbar = ({ loadFromFile, reset }: TopbarProps) => {
+const Topbar = ({ loadFromFile, reset, changePhase }: TopbarProps) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const addData = () => {
@@ -31,6 +31,7 @@ const Topbar = ({ loadFromFile, reset }: TopbarProps) => {
 
                 <Nav>
                     <Nav.Link onClick={addData}>Add Data</Nav.Link>
+                    <Nav.Link onClick={changePhase} style={{ color: "#f2cd29" }}>Change Phase</Nav.Link>
                     <input
                         type='file'
                         id='file_load'
