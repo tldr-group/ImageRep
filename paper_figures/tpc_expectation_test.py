@@ -104,7 +104,7 @@ if __name__ == "__main__":
     circle_size = 20
     pf = 0.5
     args = (imsize, circle_size, pf)
-    run_tests = 1000
+    run_tests = 10000
 
     fig, axs = plt.subplot_mosaic(
         [
@@ -132,6 +132,8 @@ if __name__ == "__main__":
     # )
     n_circle_im = 3
     circle_ims = [make_circles_2D(imsize, circle_size, pf) for _ in range(n_circle_im)]
+    one_im_tpc = make_tpc(circle_ims[0])
+    one_im_tpc_by_radius = tpc_by_radius(one_im_tpc)[2]
     circles_pfs = []
     for i in range(n_circle_im):
         axs[f"circle{i}"].imshow(circle_ims[i], cmap="gray", interpolation='nearest')
@@ -158,12 +160,17 @@ if __name__ == "__main__":
     mu, sigma = norm.fit(pfs)
     print(f"mu = {mu}, sigma = {sigma}")
     y = norm.pdf(np.linspace(0, 1, 100), mu, sigma)
-    axs["pf_hist"].plot(np.linspace(0, 1, 100), y, linewidth=2, label="Phase fraction distribution")
+    axs["pf_hist"].plot(np.linspace(0, 1, 100), y, linewidth=2, label="Phase fraction\ndistribution")
     for i in range(len(circles_pfs)):
-        axs["pf_hist"].axvline(circles_pfs[i], label=f"$\Phi(\omega_{i})$")
+        if i == 0:
+            axs["pf_hist"].axvline(circles_pfs[i], label=", ".join([f"$\Phi(\omega_{j})$" for j in range(len(circles_pfs))]), ls='--', color="tab:pink")
+        else:
+            axs["pf_hist"].axvline(circles_pfs[i], ls='--', color="tab:pink")
+    axs["pf_hist"].legend(loc='upper left')
     dist_len = np.array(dist_len)
     mean_tpc = np.mean(tpc_results, axis=0)
-    tpc_fig.plot(mean_tpc, label="Mean TPC")
+    tpc_fig.plot(one_im_tpc_by_radius, ls='--', color='tab:pink', label="TPC of $\omega_0$")
+    tpc_fig.plot(mean_tpc, label="Mean TPC $E[T_r]$")
     len_tpc = len(tpc_results[0])
     pf_squared = np.mean(pf_squares)
     label_pf_squared = f"$E[\Phi^2]$ = {np.round(pf_squared, 3)}"
@@ -210,7 +217,7 @@ if __name__ == "__main__":
         label=f"Area B",
     )
     text_jump = 0.017
-    tpc_fig.text(3, pf / 2, "$A_1$", fontsize=12)
+    tpc_fig.text(3, pf-(pf-pf**2) * (5/7) , "$A_1$", fontsize=12)
     tpc_fig.text(16.8, (pf_squared + true_pf_squared) / 2, "$A_2$", fontsize=12)
     tpc_fig.text(40, (pf_squared + true_pf_squared) / 2 - 0.0005, "B", fontsize=12)
     # tpc_fig.text(10, 0.079, '$\Phi$ calculates phase fraction.', fontsize=12)
@@ -255,10 +262,10 @@ if __name__ == "__main__":
     x_ticks_labels = list(np.arange(0, len_tpc - 5, 5)) + [len_tpc - 1]
     tpc_fig.set_xticks(x_ticks_labels, dist_ticks)
     tpc_fig.set_xlabel("TPC distance r")
-    tpc_fig.set_ylabel(f"Mean TPC $E[T_r]$", labelpad=-20)
+    tpc_fig.set_ylabel(f"TPC function", labelpad=-20)
     # tpc_fig.set_yscale('log')
     tpc_fig.set_yticks(
         [pf**2, np.round(pf_squared, 3), pf], [pf**2, np.round(pf_squared, 3), pf]
     )
-    tpc_fig.legend()
+    tpc_fig.legend(loc='upper right')
     plt.savefig(f"tpc_results/circles_tpc_visual_proof.pdf", format="pdf")
