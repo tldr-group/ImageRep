@@ -104,7 +104,9 @@ for i, p in enumerate(plotting_ims):
     fakexy = [0, 0]
     circle_pred = plt.Line2D(fakexy, fakexy, linestyle='none', marker='o', fillstyle='none', color=colors["pred"], alpha=1.00)
     circle_real = plt.Line2D(fakexy, fakexy, linestyle='none', marker='o', fillstyle='none', color=colors["true"], alpha=1.00)
-    axs[i, 2].legend([circle_real, circle_pred], [f"True Char. l. s. radius: {np.round(real_cls, 2)}", f"Predicted Char. l. s. radius: {np.round(cls, 2)}"], loc='upper right')
+    axs[i, 2].legend([circle_real, circle_pred], [f"True Char. l. s.: {np.round(real_cls, 2)}", f"Predicted Char. l. s. from \nimage on the left column: {np.round(cls, 2)}"], loc='upper right')
+    axs[i, 2].set_xlabel('Two-point correlation distance')
+    axs[i, 2].set_ylabel('Two-point correlation distance')
 
     axs[i,1].set_xlabel('Image size')
     xticks_middle = axs[i,1].get_xticks()[1:-1]
@@ -140,7 +142,6 @@ for i, p in enumerate(plotting_ims):
     axs[i, 0].set_ylabel(f'Microstructure {plotting_nums[i]}')
     axs[i, 0].set_xlabel(f'    $\Phi(\omega)$: '+ '%.2f' % img_pf + f'          Inset mag: x{np.round(si_size/sicrop, 2)}')
 
-    i += 1
 
 
 plt.tight_layout()
