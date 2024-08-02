@@ -293,7 +293,6 @@ const Result = () => {
             </InputGroup >
             <InputGroup>
                 <InputGroup.Text>Confidence in Bounds (%):</InputGroup.Text>
-                {/*TODO: FIX THIS - I.E HEN THIS UPDATES, DON'T UDPATE TEXT*/}
                 <Form.Control ref={newConfSliderRef} type="number" min={0} max={100} defaultValue={selectedConf} width={1} size="sm"></Form.Control>
             </InputGroup>
             <div style={centreStyle}>

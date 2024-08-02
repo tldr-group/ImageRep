@@ -32,13 +32,13 @@ interface faces {
     doy: number
 }
 
-const get3DFacePoints = (ih: number, iw: number, id: number, theta: number, sfz: number): faces => {
+const get3DFacePoints = (ih: number, iw: number, id: number, theta: number, sfz: number, eps: number = 0): faces => {
     // get upper and right faces of a cube with front face of preview image and (projected) depth determined by theta and sfz 
     const dox = Math.floor((Math.cos(theta) * id) * sfz);
     const doy = Math.floor((Math.sin(theta) * id) * sfz);
-    const f1Points: Array<Point> = [{ x: dox, y: 0 }, { x: iw + dox, y: 0 }, { x: iw, y: doy }, { x: 0, y: doy }];
-    const f2Points: Array<Point> = [{ x: iw + dox, y: 0 }, { x: iw, y: doy }, { x: iw, y: ih + doy }, { x: iw + dox, y: ih }];
-    const f3Points: Array<Point> = [{ x: 0, y: doy }, { x: iw, y: doy }, { x: iw, y: ih + doy }, { x: 0, y: ih + doy }];
+    const f1Points: Array<Point> = [{ x: dox, y: eps }, { x: iw + dox, y: eps }, { x: iw, y: doy + eps }, { x: 0, y: doy + eps }];
+    const f2Points: Array<Point> = [{ x: iw + dox, y: eps }, { x: iw, y: doy + eps }, { x: iw, y: ih + doy - eps }, { x: iw + dox, y: ih - eps }];
+    const f3Points: Array<Point> = [{ x: 0, y: doy + eps }, { x: iw, y: doy + eps }, { x: iw, y: ih + doy - eps }, { x: 0, y: ih + doy - eps }];
     return { face1: f1Points, face2: f2Points, face3: f3Points, dox: dox, doy: doy };
 }
 
@@ -81,10 +81,8 @@ const PreviewCanvas = () => {
             drawFaces(ctx!, faceData, correctDims.sf, correctDims.ox, correctDims.oy)
         }
         ctx?.drawImage(image, correctDims.ox, correctDims.oy, correctDims.w, correctDims.h);
-        //ctx?.drawImage(image, 0, 0, correctDims.w, correctDims.h);
     }
 
-    // TODO: do 3D zoom by having second hidden canvas displaying wireframe cube, shrink other cube accoringly.
     const drawFaces = (ctx: CanvasRenderingContext2D, faces: faces, sf: number, ox: number, oy: number, frame: boolean = false) => {
         const style1 = (frame) ? topSideFrame : topSide
         const style2 = (frame) ? rightSideFrame : rightSide
@@ -95,7 +93,6 @@ const PreviewCanvas = () => {
     }
 
     const drawPoints = (ctx: CanvasRenderingContext2D, points: Array<Point>, sf: number, ox: number, oy: number, style: DrawStyle) => {
-        // TODO: genericse to draw dashed lines as well
         const p0 = points[0];
         ctx.fillStyle = style.fillColour;
         ctx.strokeStyle = style.lineColour;
@@ -154,7 +151,7 @@ const PreviewCanvas = () => {
         const image = previewImg!
         hCanvCtx?.clearRect(0, 0, newW, newH)
         const [ih, iw, ch, cw] = [image.naturalHeight, image.naturalWidth, hCanv.height, hCanv.width];
-        const faceData = get3DFacePoints(ih, iw, imageInfo?.depth!, DEFAULT_ANGLE_RAD, 0.3);
+        const faceData = get3DFacePoints(ih, iw, imageInfo?.depth!, DEFAULT_ANGLE_RAD, 0.3, 1);
         const correctDims = getAspectCorrectedDims(ih, iw, ch, cw, faceData.dox, faceData.doy, ADDITIONAL_SF);
         if (faceData.dox > 0) {
             drawFaces(hCanvCtx!, faceData, correctDims.sf, correctDims.ox, correctDims.oy, true)
@@ -264,7 +261,6 @@ const PreviewCanvas = () => {
         }
 
     }, [menuState])
-    // TODO: secret hidden canvas that's only shown if 3D and target l set
     return (
         <div ref={containerRef} style={centredStyle}>
             <div ref={frontDivRef} style={{ position: 'absolute' }}></div>

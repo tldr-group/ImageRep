@@ -187,7 +187,7 @@ const App = () => {
         setShowWarning("");
     }
 
-    useEffect(() => { // TODO: fetch from API instead
+    useEffect(() => {
         if (menuState === 'processing') {
             requestRepr();
         }
