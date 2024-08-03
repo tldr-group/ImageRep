@@ -120,9 +120,7 @@ def get_large_im_stack(generator, large_shape, large_im_repeats, args):
     large_ims = []
     for _ in range(large_im_repeats):
         large_im = generator(shape=large_shape, **args)
-        if generator == fractal_noise:
-            porosity = 0.5
-            large_im = large_im < porosity
+        
         if generator == blobs:
             if len(large_im.shape) == 2:
                 large_im = large_im[2:-2, 2:-2]
@@ -133,7 +131,11 @@ def get_large_im_stack(generator, large_shape, large_im_repeats, args):
         plt.ylabel('Phase fraction')
         plt.xlabel('slice')
         plt.show()
-    return np.stack(large_ims, axis=0)
+    res = np.stack(large_ims, axis=0)
+    if generator == fractal_noise:
+        porosity = 0.5
+        res = res < porosity
+    return res
 
 
 def ps_error_prediction(dim, data, confidence, error_target):
