@@ -108,7 +108,7 @@ def json_validation_preprocessing():
 
     # Edge lengths for the predicted integral range:
     all_data["validation_2D"]["edge_lengths_pred"] = [600, 800, 1000, 1200, 1400]
-    all_data["validation_3D"]["edge_lengths_pred"] = [300, 350, 400]
+    all_data["validation_3D"]["edge_lengths_pred"] = [280, 310, 340, 370, 400]
 
     return all_data
 
