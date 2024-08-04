@@ -5,6 +5,7 @@ import json
 import porespy as ps
 from itertools import product
 import random
+from matplotlib.gridspec import GridSpec
 
 def get_in_bounds_results(dims):
     # Load the data
@@ -28,8 +29,9 @@ def get_in_bounds_results(dims):
                 dim_results["one_im"].append(run_data["in_bounds_one_im"])
                 dim_results["model_with_gmm"].append(run_data["model_in_bounds"])
                 dim_results["model_wo_gmm"].append(run_data["model_wo_gmm_in_bounds"])
+        n_trials = len(dim_results["one_im"])
         for res in dim_results.keys():
-            dim_results[res] = np.array(dim_results[res]).mean()
+            dim_results[res] = (n_trials, np.array(dim_results[res]).sum())
         in_bound_results[dim] = dim_results
     return in_bound_results
 
@@ -37,8 +39,7 @@ def get_in_bounds_results(dims):
 if __name__ == '__main__':
 
     dims = ["2D", "3D"]
-    in_bounds_res = get_in_bounds_results(dims=dims)
-
+    
     num_generators = 50
     num_images = 5
     generators_chosen = np.random.choice(num_generators, num_images, replace=False)
@@ -55,8 +56,6 @@ if __name__ == '__main__':
                 args = validation.factors_to_params(args, im_shape=large_img_size)
                 image = validation.get_large_im_stack(generator, large_img_size, 1, args)
                 image = image[0]
-                # image = np.repeat(image[..., np.newaxis], 4, axis=2)
-                # image[...,2] = alpha
                 image = image[:img_size[0], :img_size[1]]
                 images.append(image)
             rand_iter += 1
@@ -78,29 +77,57 @@ if __name__ == '__main__':
                 ] += images[layer]
     stacked = 1 - stacked
 
-    fig, ax = plt.subplots(2, 1, figsize=(10, 5))
+    fig = plt.figure(figsize=(10, 5))
+    gs = GridSpec(2, 1, height_ratios=[1, 2])
 
-    ax[0].imshow(stacked, vmin=0, vmax=1, cmap='gray', interpolation='nearest')
-    ax[0].set_title('(a)')
-    ax[0].axis('off') 
+    ax_im = fig.add_subplot(gs[0])
+    ax_im.imshow(stacked, vmin=0, vmax=1, cmap='gray', interpolation='nearest')
+    ax_im.set_title('(a)')
+    ax_im.axis('off') 
 
-    ax[1].axis('off')
+    pos1 = ax_im.get_position() # get the original position
+    pos2 = [pos1.x0 - 0.15, pos1.y0-0.1, pos1.width+0.1, pos1.height+0.1] 
+    ax_im.set_position(pos2) 
+    # make the table:
+    # first make the data:
+    in_bounds_res = get_in_bounds_results(dims=dims)
+    res_2d = in_bounds_res["2D"]
+    order = ["one_im", "model_wo_gmm", "model_with_gmm"]
+
+    def make_data(dim_res):
+        data = []
+        for key in order:
+            num_trials, num_in_bounds = dim_res[key]
+            row = [
+                f"{num_trials}", 
+                f"{num_in_bounds}/{num_trials} = {num_in_bounds/num_trials*100:.2f}%", 
+                "95%", 
+                f"{np.abs(0.95-num_in_bounds/num_trials)*100:.2f}%"
+                ]
+            data.append(row)
+        return data
+    
+    data_2d = make_data(res_2d)
+    res_3d = in_bounds_res["3D"]
+    data_3d = make_data(res_3d)
+    table_data = data_2d + data_3d
+    ax_table = fig.add_subplot(gs[1])
+    plt.figtext(0.415, 0.485, '(b)', ha='center', va='bottom', fontsize=12)
+    ax_table.axis('off')
     colWidths = np.array([0.14, 0.4, 0.14, 0.14])
     colWidths /= colWidths.sum()
-    column_labels = ["Number of trials", "True phase fraction in the predicted bounds", "Goal", "Accuracy"]
+    column_labels = ["Number of trials", "True phase fraction in the predicted bounds", "Goal", "Absolute Error"]
     row_labels1 = ["Classical subdivision method (2D)", "ImageRep without GMM step (2D)", "ImageRep (2D)"]
     row_labels2 = ["Classical subdivision method (3D)", "ImageRep without GMM step (3D)", "ImageRep (3D)"]
     row_labels = row_labels1 + row_labels2
-    table_data = np.random.randint(1, 10, size=(6, 4))
-    table1 = ax[1].table(cellText=table_data, colLabels=column_labels, rowLabels=row_labels, loc='center', colWidths=colWidths)
+    table1 = ax_table.table(cellText=table_data, colLabels=column_labels, rowLabels=row_labels, loc='center', colWidths=colWidths)
     column_labels = ["Number of trials", "True phase fraction in the predicted bounds", "Goal", "Accuracy"]
     for key, cell in table1.get_celld().items():
         cell.set_text_props(ha='center', va='center')
-
-    # row_labels = ["Classical subdivision method (
-
-    # Adjust layout to make room for the table
-    # plt.subplots_adjust(left=0.2, top=0.8, bottom=0.1)
-
-    plt.show()
+    imagerep_2d_cell = table1[(3, 3)]  # Cell in the bottom-right corner (last row, last column)
+    imagerep_2d_cell.set_facecolor('lightgreen')
+    imagerep_3d_cell = table1[(6, 3)]  # Cell in the bottom-right corner (last row, last column)
+    imagerep_3d_cell.set_facecolor('lightgreen')
+    
+    plt.savefig("paper_figures/model_accuracy.pdf", format="pdf", bbox_inches='tight')
 
