@@ -116,12 +116,11 @@ if __name__ == '__main__':
     ax_table.axis('off')
     colWidths = np.array([0.14, 0.4, 0.14, 0.14])
     colWidths /= colWidths.sum()
-    column_labels = ["Number of trials", "True phase fraction in the predicted bounds", "Goal", "Absolute Error"]
+    column_labels = ["Number of trials", "True phase fraction in the predicted bounds", "Confidence goal", "Absolute error"]
     row_labels1 = ["Classical subdivision method (2D)", "ImageRep without GMM step (2D)", "ImageRep (2D)"]
     row_labels2 = ["Classical subdivision method (3D)", "ImageRep without GMM step (3D)", "ImageRep (3D)"]
     row_labels = row_labels1 + row_labels2
     table1 = ax_table.table(cellText=table_data, colLabels=column_labels, rowLabels=row_labels, loc='center', colWidths=colWidths)
-    column_labels = ["Number of trials", "True phase fraction in the predicted bounds", "Goal", "Accuracy"]
     for key, cell in table1.get_celld().items():
         cell.set_text_props(ha='center', va='center')
     imagerep_2d_cell = table1[(3, 3)]  # Cell in the bottom-right corner (last row, last column)
