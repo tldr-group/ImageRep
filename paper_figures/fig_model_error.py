@@ -83,13 +83,13 @@ for i, dim in enumerate(dims):
     dim_str = dim[0]
     x_labels = [
         f"True CLS $a_{int(dim[0])}$",
-        f"True Phase Fraction std $\sigma_{int(dim[0])}$",
+        f"True Phase Fraction std, $\sigma_{int(dim[0])}$",
     ]
     cls_math = r"\tilde{a}_{2}" if dim == "2D" else r"\tilde{a}_{3}"
     std_math = r"\tilde{\sigma}_{2}" if dim == "2D" else r"\tilde{\sigma}_{3}"
     y_labels = [
         "Predicted CLS $%s$" % cls_math,
-        "Predicted Phase Fraction std $%s$" % std_math,
+        "Predicted Phase Fraction std, $%s$" % std_math,
     ]
     # title_suffix = r'Image size $%s^%s$' %(edge_length[i], dim_str)
     # titles = [f'{dim} CLS comparison, '+title_suffix, f'{dim} std comparison, '+title_suffix]
@@ -142,9 +142,15 @@ for i, dim in enumerate(dims):
     p = stats.norm.pdf(x, mu, std)
 
     ax2.set_xlabel(
-        r"Prediction Percentage Error ($\frac{\sigma_{%s}-\tilde{\sigma_{%s}}}{\tilde{\sigma_{%s}}}\cdot100$)"
+        r"Prediction Percentage Error, $\frac{\sigma_{%s}-\tilde{\sigma_{%s}}}{\tilde{\sigma_{%s}}}$"
         % (dim_str, dim_str, dim_str)
     )
+    x_ticks = ax2.get_xticks()[1:-1]
+    ax2.set_xticks(x_ticks, [f"{int(i)}%" for i in x_ticks])
+    ax2.set_yticks([ax2.get_yticks()[0],ax2.get_yticks()[-2]],[round(ax2.get_yticks()[0],2),round(ax2.get_yticks()[-2],2)])
+    # if i == 0:
+    #     ax2.set_ylim(0, ax2.get_yticks()[-1]*1.6)
+    ax2.set_ylabel("Probability density")
     ax2.vlines(0, ymin=0, ymax=y.max(), color="black", label="Ideal predictions")
     ax2.vlines(
         mean_percentage_error,
@@ -190,7 +196,8 @@ for i, dim in enumerate(dims):
     ax3.set_xticks(
         edge_lengths[::2], [r"$%s^%s$" % (i, dim_str) for i in edge_lengths[::2]]
     )
-    ax3.set_ylabel(r"Model percentage error std $\sigma_{mod}$ [%]")
+    
+    ax3.set_ylabel(r"Model percentage error std, $\sigma_{mod}$ / %")
     if i == 0:
         ax3.legend(loc="upper right")
 

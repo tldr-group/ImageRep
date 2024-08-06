@@ -548,7 +548,9 @@ def find_end_dist_tpc(
     """Defines search range for endpoint, calls main fn"""
     # Assumption is image is at least 200 in every dimenson
     max_img_dim = np.max(dist_arr)  # len(dist_arr)  # np.max(dist_arr)
-    if max_img_dim < 200:
+    # 200/2 * sqrt(N) where N is the number of dimensions for max dim 200 px:
+    threshold_for_small_method = int(200/2*np.sqrt(len(tpc.shape)))
+    if max_img_dim < threshold_for_small_method:
         print(f"Max img dim of {max_img_dim} < 200px, using small method")
         # this gives more unstable results but works for smaller images
         distances = np.linspace(0, int(max_img_dim), 100)

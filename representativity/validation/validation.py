@@ -33,10 +33,10 @@ def get_ps_generators():
     ps_generators = {
         blobs: {
             "blobiness_factor_l": [50, 100, 150, 200, 250],
-            "porosity": list(np.arange(0.1, 0.6, 0.1)),
+            "porosity": list(np.arange(0.1, 0.5, 0.1)),
         },
         fractal_noise: {
-            "frequency": list(np.arange(0.015, 0.05, 0.01)),
+            "frequency": list(np.arange(0.015, 0.06, 0.01)),
             "octaves": [2, 7, 12],
             "uniform": [True],
             "mode": ["simplex", "value"],
@@ -74,13 +74,14 @@ def json_validation_preprocessing():
     """
 
     # Load the statistics file
-    if os.path.exists("validation.json"):
-        with open("validation.json", "r") as file:
+    json_validation_path = "representativity/validation/validation.json"
+    if os.path.exists(json_validation_path):
+        with open(json_validation_path, "r") as file:
             all_data = json.load(file)
     else:  # Create the file if it does not exist
-        with open("validation.json", "w") as file:
+        with open(json_validation_path, "w") as file:
             json.dump(dict(), file)
-        with open("validation.json", "r") as file:
+        with open(json_validation_path, "r") as file:
             all_data = json.load(file)
 
     gen_names = get_ps_gen_names()
@@ -94,14 +95,10 @@ def json_validation_preprocessing():
         for gen_name in gen_names:
             if gen_name not in all_data[f"validation_{mode}"]:
                 all_data[f"validation_{mode}"][gen_name] = {}
-            # for v_name in v_names:
-            #     if v_name not in all_data[f'validation_{mode}'][gen_name]:
-            #         all_data[f'validation_{mode}'][gen_name][v_name] = {}
 
     # Large im sizes for stat. analysis:
-    # all_data["validation_2D"]["large_im_size"] = [10000, 10000]  # TODO make this bigger
     all_data["validation_2D"]["large_im_size"] = [10000, 10000]  # TODO make this bigger
-    all_data["validation_3D"]["large_im_size"] = [3000, 3000, 3000]
+    all_data["validation_3D"]["large_im_size"] = [600, 600, 600]
 
     # Edge lengths for the experimental statistical analysis:
     all_data["validation_2D"]["edge_lengths_fit"] = list(
@@ -111,21 +108,36 @@ def json_validation_preprocessing():
 
     # Edge lengths for the predicted integral range:
     all_data["validation_2D"]["edge_lengths_pred"] = [600, 800, 1000, 1200, 1400]
-    all_data["validation_3D"]["edge_lengths_pred"] = [300, 350, 400]
+    all_data["validation_3D"]["edge_lengths_pred"] = [280, 310, 340, 370, 400]
 
     return all_data
 
+
+def in_the_bounds(pf, error, true_pf):
+    bounds = [(1 - error) * pf, (1 + error) * pf]
+    res = int(true_pf >= bounds[0] and true_pf <= bounds[1])
+    return bounds, res
 
 def get_large_im_stack(generator, large_shape, large_im_repeats, args):
     large_ims = []
     for _ in range(large_im_repeats):
         large_im = generator(shape=large_shape, **args)
-        if generator == fractal_noise:
-            porosity = 0.5
-            large_im = large_im < porosity
-        large_im = large_im
+        
+        if generator == blobs:
+            if len(large_im.shape) == 2:
+                large_im = large_im[2:-2, 2:-2]
+            else:
+                large_im = large_im[2:-2, 2:-2, 2:-2]
         large_ims.append(large_im)
-    return np.stack(large_ims, axis=0)
+        plt.plot([large_im[i,:].mean() for i in range(large_im.shape[0])])
+        plt.ylabel('Phase fraction')
+        plt.xlabel('slice')
+        plt.show()
+    res = np.stack(large_ims, axis=0)
+    if generator == fractal_noise:
+        porosity = 0.5
+        res = res < porosity
+    return res
 
 
 def ps_error_prediction(dim, data, confidence, error_target):
@@ -135,7 +147,8 @@ def ps_error_prediction(dim, data, confidence, error_target):
     clss = []
     one_im_clss = []
     large_shape = data[f"validation_{dim}"]["large_im_size"]
-    large_im_repeats = 1
+    large_im_repeats = 3 if dim=="2D" else 10
+    in_the_bounds_one_im = []
     in_the_bounds_w_model = []
     in_the_bounds_wo_model = []
     iters = 0
@@ -147,6 +160,10 @@ def ps_error_prediction(dim, data, confidence, error_target):
             large_im_stack = get_large_im_stack(
                 generator, large_shape, large_im_repeats, args
             )
+            if generator == blobs:
+                cur_large_shape = np.array(large_shape) - 4
+            else:
+                cur_large_shape = large_shape
             true_pf = np.mean(large_im_stack)
             edge_lengths_fit = data[f"validation_{dim}"]["edge_lengths_fit"]
             true_cls = util.stat_analysis_error(
@@ -155,26 +172,53 @@ def ps_error_prediction(dim, data, confidence, error_target):
             print(f"Generator {gen_name} with {args}:")
             print(f"True cls: {true_cls}")
             data[f"validation_{dim}"][gen_name]["true_cls"] = true_cls
+            data[f"validation_{dim}"][gen_name]["true_pf"] = true_pf
             edge_lengths_pred = data[f"validation_{dim}"]["edge_lengths_pred"]
             for edge_length in edge_lengths_pred:
-                for _ in range(20):
+                edge_lengths_repeats = 40 if dim == "2D" else 4
+                for _ in range(edge_lengths_repeats):
+                    run_dict = {"edge_length": edge_length}
                     true_error = util.bernouli_from_cls(
                         true_cls, true_pf, [edge_length] * int(dim[0])
                     )
+                    first_index = np.random.randint(0, large_im_stack.shape[0])
                     start_idx = [
-                        np.random.randint(0, large_shape[i] - edge_length)
+                        np.random.randint(0, cur_large_shape[i] - edge_length)
                         for i in range(int(dim[0]))
                     ]
                     end_idx = [start_idx[i] + edge_length for i in range(int(dim[0]))]
-                    small_im = large_im_stack[0][
-                        start_idx[0] : end_idx[0], start_idx[1] : end_idx[1]
-                    ]
+                    if dim == "2D":
+                        small_im = large_im_stack[first_index][
+                            start_idx[0] : end_idx[0], start_idx[1] : end_idx[1]
+                        ]
+                    else:
+                        small_im = large_im_stack[first_index][
+                            start_idx[0] : end_idx[0],
+                            start_idx[1] : end_idx[1],
+                            start_idx[2] : end_idx[2],
+                        ]
+                    
+                    print(f'small im shape: {small_im.shape}')
                     # np.save(f'./small_im_{gen_name}_{args}_{edge_length}.npy', small_im)
                     small_im_pf = np.mean(small_im)
+                    run_dict["pf"] = small_im_pf
                     one_im_stat_analysis_cls = core.stat_analysis_error_classic(
                         small_im, np.mean(small_im)
                     )
+                    one_im_sa_error = util.bernouli_from_cls(
+                        one_im_stat_analysis_cls, small_im_pf, [edge_length] * int(dim[0])
+                    )
+                    print(f"one im error: {one_im_sa_error[0]:.2f}")
+                    one_im_sa_error /= 100
+                    bounds, in_bounds = in_the_bounds(small_im_pf, one_im_sa_error, true_pf)
+                    run_dict["in_bounds_one_im"] = in_bounds
+                    run_dict["error_one_im"] = one_im_sa_error[0]
+                    in_the_bounds_one_im.append(in_bounds)
+                    print(f'current right percentage one im: {np.mean(in_the_bounds_one_im)}')
+                    run_dict["one_im_sa_cls"] = one_im_stat_analysis_cls
                     print(f"One image stat analysis cls: {one_im_stat_analysis_cls}")
+                    
+                    print(f"one im bounds: {bounds}")
                     one_im_clss.append(one_im_stat_analysis_cls)
                     iters += 1
                     for i in range(2):
@@ -195,43 +239,40 @@ def ps_error_prediction(dim, data, confidence, error_target):
                         )
                         true_clss.append(true_cls)
                         clss.append(cls)
-                        bounds = [
-                            (1 - im_err) * small_im_pf,
-                            (1 + im_err) * small_im_pf,
-                        ]
+                        bounds, in_bounds = in_the_bounds(small_im_pf, im_err, true_pf)
+                        if with_model:
+                            in_the_bounds_w_model.append(in_bounds)
+                            run_dict["model_in_bounds"] = in_bounds
+                        else:
+                            in_the_bounds_wo_model.append(in_bounds)
+                            run_dict["model_wo_gmm_in_bounds"] = in_bounds
                         print(f"Bounds: {bounds}")
                         print(f"True PF: {true_pf}")
-                        if true_pf >= bounds[0] and true_pf <= bounds[1]:
-                            if with_model:
-                                in_the_bounds_w_model.append(1)
-                            else:
-                                in_the_bounds_wo_model.append(1)
-                        else:
-                            if with_model:
-                                in_the_bounds_w_model.append(0)
-                            else:
-                                in_the_bounds_wo_model.append(0)
                         if with_model:
                             print("With model:")
                             print(
                                 f"current right percentage: {np.mean(in_the_bounds_w_model)}"
                             )
+                            run_dict["pred_cls"] = cls
+                            run_dict["error_w_gmm"] = im_err
+                            
                         else:
                             print("Without model:")
                             print(
                                 f"current right percentage: {np.mean(in_the_bounds_wo_model)}"
                             )
+                            run_dict["error_wo_gmm"] = im_err
                         print(f"edge_length {edge_length}:")
                         print(f"cls: {cls}")
+                        
                         print(f"true error: {true_error[0]:.2f}")
                         print(f"error: {im_err*100:.2f}\n")
                         print(f"Length for error target: {l_for_err_target}")
-                    if (in_the_bounds_wo_model[-1] == 1) and (
-                        in_the_bounds_w_model[-1] == 0
-                    ):
-                        print("The model is not working properly. Exiting...")
-                        sys.exit()
+                    
+                    data[f"validation_{dim}"][gen_name][f"run_{iters}"] = run_dict
                     print("\n")
+            with open("representativity/validation/validation.json", "w") as file:
+                json.dump(data, file)
 
             # plt.imshow(im[150:350,150:350])
             # plt.title(f'{generator.__name__} with {args}')
@@ -246,9 +287,9 @@ def ps_error_prediction(dim, data, confidence, error_target):
 
 
 if __name__ == "__main__":
-    shape = [1000, 1000]
+    # shape = [1000, 1000]
     all_data = json_validation_preprocessing()
-    dim = "2D"
+    dim = "3D"
     # get porespy generators:
     errs, true_clss, clss, one_im_clss = ps_error_prediction(
         dim, all_data, confidence=0.95, error_target=0.05
