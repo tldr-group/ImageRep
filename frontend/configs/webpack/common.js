@@ -2,6 +2,7 @@
 const { resolve } = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const FriendlyErrorsWebpackPlugin = require("friendly-errors-webpack-plugin");
+const CopyPlugin = require("copy-webpack-plugin");
 const webpack = require("webpack");
 
 module.exports = {
@@ -52,6 +53,14 @@ module.exports = {
     ],
   },
   plugins: [
+    new CopyPlugin({
+      patterns: [
+        {
+          from: "src/assets",
+          to: "assets",
+        }
+      ]
+    }),
     new HtmlWebpackPlugin({
       template: "./src/assets/index.html",
       favicon: "./src/assets/favicon.png"

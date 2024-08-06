@@ -2,9 +2,11 @@ import numpy as np
 from itertools import product, chain
 from scipy.stats import norm  # type: ignore
 from scipy.optimize import minimize  # type: ignore
-import json
+
+from typing import TypedDict
 
 DEFAULT_N_DIV = 301
+VERBOSE = False
 
 # %% ======================== TWO-POINT CORRELATION METHODS ========================
 
@@ -157,9 +159,7 @@ def two_point_correlation(
         axis_idx = np.array(axis) * desired_length
         # axis_idx looks like (100, 100)
         # slice to input: mapping of orthant axis to location in result i.e [0:100, 0:100]
-        slice_to_input = tuple(
-            map(slice, axis_idx, axis_idx + desired_length + 1)
-        )  # TODO: check with A, this used to be + 1
+        slice_to_input = tuple(map(slice, axis_idx, axis_idx + desired_length + 1))
         result[slice_to_input] = orthants[axis]
     return result
 
@@ -360,7 +360,7 @@ def fit_statisical_cls_from_errors(
 
 def stat_analysis_error_classic(
     binary_img: np.ndarray, image_phase_fraction: float
-) -> float:  # TODO see if to delete this or not
+) -> float:
     """Estimate the CLS of $binary_img using the statistical method: taking
     different non-overlapping patches of the image in powers of 2
     (i.e 1/2 patches, 1/4 patches, 1/8 patches), measuring the difference
@@ -499,7 +499,8 @@ def calc_coeff_for_cls_prediction(
 
     coeff_product = coeff_1 * coeff_2
     while coeff_product > 1:
-        print(f"coeff product = {coeff_product}")
+        if VERBOSE:
+            print(f"coeff product = {coeff_product}")
         coeff_product /= 1.1
     # output is effectively (but not exactly) C_r0
     return coeff_1 / (1 - coeff_product)
@@ -545,8 +546,7 @@ def find_end_dist_tpc(
     phase_fraction: float, tpc: np.ndarray, dist_arr: np.ndarray
 ) -> float:
     """Defines search range for endpoint, calls main fn"""
-    # Assumption is image is at least 200 in every dimensoom
-    # TODO: signpost in paper?
+    # Assumption is image is at least 200 in every dimenson
     max_img_dim = np.max(dist_arr)  # len(dist_arr)  # np.max(dist_arr)
     # 200/2 * sqrt(N) where N is the number of dimensions for max dim 200 px:
     threshold_for_small_method = int(200/2*np.sqrt(len(tpc.shape)))
@@ -592,7 +592,6 @@ def calc_pred_cls(
     :rtype: float
     """
     # second term is integral of tpc - pf_squared
-    # TODO: check
     pred_cls = (
         coeff / (image_pf - mean_pf_squared) * np.sum(tpc[bool_array] - mean_pf_squared)
     )
@@ -661,7 +660,8 @@ def tpc_to_cls(tpc: np.ndarray, binary_image: np.ndarray) -> float:
     pred_is_off, sign = pred_cls_is_off(pred_cls, binary_image, image_phase_fraction)
     while pred_is_off:
         how_off = "negative" if sign > 0 else "positive"
-        print(f"pred cls = {pred_cls} is too {how_off}, CHANGING TPC VALUES")
+        if VERBOSE:
+            print(f"pred cls = {pred_cls} is too {how_off}, CHANGING TPC VALUES")
         tpc, pred_cls = change_pred_cls(
             coeff,
             tpc,
@@ -760,9 +760,6 @@ def get_prediction_interval(
     # need a bit of normalization for symmetric bounds (it's very close to 1 already)
     sum_dist_norm /= np.trapz(sum_dist_norm, pf_x_1d)
     # Find the alpha confidence bounds
-    # TODO: return cum_sum_sum_dist_norm and pf_x_1_d array over HTTP
-    # and write js function that does lines 762-764
-    # will need to send the array somehow
     cum_sum_sum_dist_norm = np.cumsum(sum_dist_norm * np.diff(pf_x_1d)[0])
     half_conf_level = (1 + conf_level) / 2
     conf_level_beginning = np.where(cum_sum_sum_dist_norm > 1 - half_conf_level)[0][0]
@@ -808,7 +805,7 @@ def find_n_for_err_targ(
         image_pf, std_bernoulli, pred_std_error_std, conf_level, n_divisions
     )
     err_for_img = image_pf - pred_interval[0]
-    # was np.abs( ...). TODO: check which is better
+    # TODO: check whether **2 or np.abs is better - originally was np.abs
     return np.abs(err_target - err_for_img)  # ** 2
 
 
@@ -841,6 +838,15 @@ def dims_from_n(n_samples_needed: int, equal_shape: bool, cls: float, dims: int)
 
 
 # %% ======================== PUT IT ALL TOGETHER ========================
+class ModelResult(TypedDict):
+    phase_fraction: float
+    integral_range: float
+    std_model: float
+    percent_err: float
+    abs_err: float
+    l: float
+    pf_1d: list
+    cum_sum_sum: list
 
 
 def make_error_prediction(
@@ -849,14 +855,14 @@ def make_error_prediction(
     target_error: float = 0.05,
     equal_shape: bool = True,
     model_error: bool = True,
-) -> dict:
+) -> ModelResult:
     """Given $binary_img, compute the $target_error % phase fraction bounds around the
     measured phase fraction in $binary_img. Also find the length needed to reduce the
     % error bounds to a given $target_error. All these intervals are found to $confidence
     confidence, i.e the 'true' phase fraction will be found in measured pf +/- error% confidence%
     of the time.
 
-    :param binary_img: 2/3D binary arr for the microstructur
+    :param binary_img: 2/3D binary arr for the microstructure
     :type binary_img: np.ndarray
     :param confidence: confidence level of returned pf interval, defaults to 0.95
     :type confidence: float, optional
@@ -885,7 +891,7 @@ def make_error_prediction(
     # bern = bernouilli
     std_bern = (
         (1 / n[0]) * (phase_fraction * (1 - phase_fraction))
-    ) ** 0.5  # TODO: this is the std of phi relative to Phi with
+    ) ** 0.5  # this is the std of phi relative to Phi with
     std_model = get_std_model(n_dims, n_elems)
     abs_err_target = target_error * phase_fraction
     z, pf_1d, cum_sum_sum = 0, [0], [0]
@@ -913,26 +919,79 @@ def make_error_prediction(
         n_for_err_targ = (
             phase_fraction * (1 - phase_fraction) * (z / abs_err_target) ** 2
         )
-    print(f"N for err targ: {n_for_err_targ}")
     # w model error n for err targ << w/out
     # => weird length scales
     l_for_err_targ = dims_from_n(n_for_err_targ, equal_shape, integral_range, n_dims)
     percentage_err_for_img = abs_err_for_img / phase_fraction
 
-    # if n_dims == 3:
-    # integral_range = integral_range[0]
-    # l_for_err_targ = l_for_err_targ[0]
-    # percentage_err_for_img = percentage_err_for_img[0]
-    # abs_err_for_img = abs_err_for_img[0]
-
-    result = {
+    result: ModelResult = {
+        "phase_fraction": phase_fraction,
         "integral_range": integral_range,
-        "z": z,
         "std_model": std_model,
-        "percent_err": percentage_err_for_img,
-        "abs_err": abs_err_for_img,
+        "percent_err": float(percentage_err_for_img),
+        "abs_err": float(abs_err_for_img),
         "l": l_for_err_targ,
         "pf_1d": list(pf_1d),
         "cum_sum_sum": list(cum_sum_sum),
     }
-    return result  # percentage_err_for_img, l_for_err_targ, integral_range
+    return result
+
+
+def get_l_for_target_from_result(
+    binary_img: np.ndarray, result: ModelResult, confidence: float, target_error: float
+) -> float:
+    """Given the $result have already been computed, reuse them to calculate the length needed to meet
+    the target $confidence and $target_error. NB: this is the 'with model error approach'.
+
+    :param binary_img: 2/3D binary arr for the microstructure
+    :type binary_img: np.ndarray
+    :param result: results from previous model call
+    :param confidence: confidence level of returned pf interval
+    :type result: ModelResult
+    :type confidence: float
+    :param target_error: user-specified desired phase fraction uncertainty
+    :type target_error: float, optional
+    :return: _description_
+    :rtype: float
+    """
+    phase_fraction = result["phase_fraction"]
+    integral_range = result["integral_range"]
+    abs_err_target = target_error * phase_fraction
+
+    n_dims = len(binary_img.shape)
+    n = n_samples_from_dims(
+        [np.array(binary_img.shape, dtype=np.int32)], integral_range
+    )
+    args = (
+        phase_fraction,
+        result["std_model"],
+        abs_err_target,
+        confidence,
+    )
+    n_for_err_targ = minimize(
+        find_n_for_err_targ, n, args=args, method="nelder-mead", bounds=[(10, 10e8)]
+    )
+    n_for_err_targ = n_for_err_targ.x[0]
+    l_for_err_targ = dims_from_n(n_for_err_targ, True, integral_range, n_dims)
+    return l_for_err_targ
+
+
+def get_bounds_for_targets_from_result(
+    result: ModelResult, confidence: float
+) -> tuple[float, float]:
+    """Given the $result have already been computed, reuse them to calculate the uncertainty bounds
+    for a given user $confidence
+
+    :param result: _description_
+    :type result: ModelResult
+    :param confidence: _description_
+    :type confidence: float
+    :return: _description_
+    :rtype: tuple[float, float]
+    """
+    cum_sum_sum_dist_norm = np.array(result["cum_sum_sum"])
+    pf_1d = np.array(result["pf_1d"])
+    half_conf_level = (1 + confidence) / 2
+    conf_level_beginning = np.where(cum_sum_sum_dist_norm > 1 - half_conf_level)[0][0]
+    conf_level_end = np.where(cum_sum_sum_dist_norm > half_conf_level)[0][0]
+    return (pf_1d[conf_level_beginning], pf_1d[conf_level_end])

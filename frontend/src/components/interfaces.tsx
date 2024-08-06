@@ -67,6 +67,7 @@ export interface DragDropProps {
 export interface TopbarProps {
     loadFromFile: (file: File) => void;
     reset: () => void;
+    changePhase: () => void;
 }
 
 export function rgbaToHex(r: number, g: number, b: number, a: number) {
@@ -107,6 +108,15 @@ export interface AnalysisInfo {
     vf: number,
     pf: Array<number>,
     cumSumSum: Array<number>
+}
+
+export interface DrawStyle {
+    fillColour: string,
+    lineColour: string,
+    lineWidth: number,
+    toFill: boolean,
+    lineCap: CanvasPathDrawingStyles["lineCap"] | null,
+    lineDash: Array<number> | null,
 }
 
 export interface ErrorMessage {

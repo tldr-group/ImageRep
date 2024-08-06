@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState, useContext } from "react";
-import AppContext, { rgbaToHex, colours } from "./interfaces";
+import AppContext, { rgbaToHex, colours, DrawStyle } from "./interfaces";
 import { getPhaseFraction } from "./imageLogic";
 
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
-import { head } from "underscore";
 
 const CANVAS_WIDTH = 428 * 2;
 const CANVAS_HEIGHT = 240 * 1.5;
@@ -47,17 +46,9 @@ const tmpMu = 0.4;
 const tmpSigma = 0.08;
 const [tmpStart, tmpEnd] = [0.2, 0.6];
 const tmpMax = normalDist(tmpMu, tmpMu, tmpSigma);
-const [tmpLB, tmpUB] = [tmpMu - 0.05, tmpMu + 0.05]
 
 
-interface DrawStyle {
-    fillColour: string,
-    lineColour: string,
-    lineWidth: number,
-    toFill: boolean,
-    lineCap: CanvasPathDrawingStyles["lineCap"] | null,
-    lineDash: Array<number> | null,
-}
+
 
 interface NormalParams {
     mu: number,
@@ -76,6 +67,10 @@ const yAxisStyle: DrawStyle = { fillColour: LIGHT_GREY, lineColour: LIGHT_GREY, 
 const curveStyle: DrawStyle = { fillColour: 'red', lineColour: 'red', lineWidth: 4, toFill: false, lineCap: null, lineDash: null }
 const shadeStyle: DrawStyle = { fillColour: TRANS_RED, lineColour: TRANS_RED, lineWidth: 3, toFill: true, lineCap: null, lineDash: null }
 
+const FONT = 'sans-serif'
+
+type confUpdate = "slider" | "select"
+
 const NormalSlider = () => {
     const {
         imageInfo: [imageInfo,],
@@ -88,6 +83,8 @@ const NormalSlider = () => {
     } = useContext(AppContext)!
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const sliderRef = useRef<HTMLInputElement>(null);
+    const selectRef = useRef<HTMLInputElement>(null);
     const [params, setParams] = useState<NormalParams>({
         mu: tmpMu,
         sigma: tmpSigma,
@@ -165,7 +162,7 @@ const NormalSlider = () => {
     const drawLabels = () => {
         const canv = canvasRef.current!;
         const ctx = canv.getContext('2d')!;
-        ctx.font = "28px Noto Sans"; // was 24
+        ctx.font = `28px ${FONT}`; // was 24
         ctx.fillStyle = headerHex;
         ctx.fillText("Likelihood of the", 10, 40);
         ctx.fillText("material's p.f.", 24, 70);
@@ -179,7 +176,7 @@ const NormalSlider = () => {
     const drawText = (dataVals: Array<number>, xPositions: Array<number>, yOffset: number = TEXT_OFFSET, fontSize: number = 32) => {
         const canv = canvasRef.current!;
         const ctx = canv.getContext('2d')!;
-        ctx.font = `${fontSize}px Noto Sans`; // was 24
+        ctx.font = `${fontSize}px ${FONT}`; // was 24
         ctx.fillStyle = DARK_GREY;
         for (let i = 0; i < dataVals.length; i++) {
             const val = dataVals[i].toFixed(3)
@@ -194,6 +191,10 @@ const NormalSlider = () => {
         for (let x of [i0, i1]) {
             drawPoints([x, x], [H_GAUSS - l, H_GAUSS + l], xAxisStyle)
         }
+        const tl = 12
+        const mx = CANVAS_WIDTH / 2
+        drawPoints([mx - tl, mx + tl], [2, 2], xAxisStyle)
+        drawText([params.max_y], [70 + CANVAS_WIDTH / 2], (-0.94 * H_GAUSS), 24)
 
     }
 
@@ -221,8 +222,27 @@ const NormalSlider = () => {
         drawLabels();
     }
 
-    const setConf = (e: any) => {
-        setSelectedConf(Number(e.target!.value));
+
+
+    const setConf = (e: any, updateFrom: confUpdate) => {
+        const val = e.target!.value
+        const isNumber = !isNaN(parseFloat(val)) && isFinite(val);
+        const floatVal = parseFloat(val)
+        const select = selectRef.current!
+        const inBounds = (floatVal > 79) && (floatVal < 99.999)
+        if (isNumber && inBounds) {
+            select.style.color = 'black'
+            setSelectedConf(Number(e.target!.value));
+            if (updateFrom == 'slider') {
+                select.value = String(floatVal);
+            } else {
+                const slider = sliderRef.current!
+                slider.value = String(floatVal);
+            }
+        } else {
+            select.style.color = 'red'
+            return
+        }
     };
 
     useEffect(() => {
@@ -235,7 +255,7 @@ const NormalSlider = () => {
         const [lbData, ubData] = [result[0], result[1]]
         const sigma = (ubData - lbData) / 4 // sigma should be fixed as ub and lb changes - this should be reflected in results as well
 
-        const newMaxY = normalDist(phaseFrac, phaseFrac, analysisInfo?.stdModel!)
+        const newMaxY = normalDist(phaseFrac, phaseFrac, sigma)
         const newStartPf = phaseFrac - 4 * sigma
         const newEndPf = phaseFrac + 4 * sigma
         const newParams: NormalParams = { mu: phaseFrac, sigma: sigma, start_pf: newStartPf, end_pf: newEndPf, max_y: newMaxY }
@@ -257,8 +277,8 @@ const NormalSlider = () => {
             <InputGroup style={{ width: '70%', marginLeft: '15%' }}> {/*style={{ width: '70%', marginLeft: '15%' }}*/}
                 <InputGroup.Text>Confidence in p.f. bounds (%):</InputGroup.Text>
 
-                <Form.Control type="number" min={0} max={100} value={selectedConf} step={0.5} onChange={(e) => setConf(e)} width={1} size="sm"></Form.Control>
-                <Form.Range min={80} max={99.999} value={selectedConf} step={0.1} onChange={(e) => setConf(e)} />
+                <Form.Control ref={selectRef} type="number" min={0} max={100} step={0.5} defaultValue={selectedConf} onChange={(e) => setConf(e, 'select')} width={1} size="sm"></Form.Control>
+                <Form.Range ref={sliderRef} min={80} max={99.999} value={selectedConf} step={0.1} onChange={(e) => setConf(e, 'slider')} />
             </InputGroup>
         </div>)
 }

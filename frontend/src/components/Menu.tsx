@@ -115,8 +115,12 @@ const ConfidenceSelect = () => {
         setErrVF(Number(e.target!.value))
     }
 
-    const [h, w, d] = [imageInfo?.height, imageInfo?.width, imageInfo?.depth];
+    const [h, w, d] = [imageInfo?.height!, imageInfo?.width!, imageInfo?.depth!];
     const dimString = (imageInfo?.nDims == 3) ? `${h}x${w}x${d}` : `${h}x${w}`;
+    const n = (imageInfo?.nDims == 3) ? h * w * d : h * w
+    const fitTimeConstant = 48500
+    const t = Math.sqrt(n / fitTimeConstant)
+
 
     return (
         <>
@@ -136,7 +140,7 @@ const ConfidenceSelect = () => {
                     </tr>
                     <tr>
                         <td>Estimated Time:</td>
-                        <td>5s</td>
+                        <td>{t.toFixed(1)}s</td>
                     </tr>
                 </tbody>
             </Table>
@@ -173,6 +177,8 @@ const Result = () => {
         showInfo: [, setShowInfo],
     } = useContext(AppContext)!
 
+    const newConfSliderRef = useRef<HTMLInputElement>(null);
+
     // we have two errVFs here because we want the values in the text to reflect the old
     // errVF, the one they sent to the server and the slider to represent the new one
     // which they are setting for recalculate.
@@ -192,7 +198,6 @@ const Result = () => {
             vals[selectedPhase - 1]
         );
 
-    const perErr = analysisInfo?.percentageErr;
 
     const l = analysisInfo?.lForDefaultErr;
     const lStr = l?.toFixed(0);
@@ -202,11 +207,19 @@ const Result = () => {
         setNewErrVF(Number(e.target!.value));
     };
 
-    const setConf = (e: any) => {
-        setSelectedConf(Number(e.target!.value));
-    };
-
     const recalculate = () => {
+        const newSlider = newConfSliderRef.current!
+
+        const val = newSlider.value
+        const isNumber = !isNaN(parseFloat(val));
+        const floatVal = parseFloat(val)
+        const inBounds = (floatVal > 1) && (floatVal < 99.999)
+
+        if (isNumber && inBounds) {
+            setSelectedConf(floatVal)
+        } else {
+            setSelectedConf(95)
+        }
         setErrVF(newErrVF);
         setMenuState('processing');
     }
@@ -214,7 +227,8 @@ const Result = () => {
     const getDPofSigFig = (decimal: number) => {
         const rounded = parseFloat(decimal.toPrecision(1));
         const loc = Math.ceil(Math.abs(Math.log10(rounded)));
-        return loc
+        const capped = Math.min(loc, 5)
+        return capped
     }
 
     const c = colours[selectedPhase];
@@ -229,17 +243,19 @@ const Result = () => {
     const absErrFromPFB = (pfB![1] - pfB![0]) / 2
     const perErrFromPFB = 100 * (((pfB![1] - pfB![0]) / 2) / phaseFrac)
 
-    const absErr = analysisInfo?.absError!
     const roundTo = getDPofSigFig(absErrFromPFB);
 
-    const beforeBoldText = `The phase fraction in the segmented image is ${phaseFrac.toFixed(3)}. Assuming perfect segmentation, the model proposed by Dahari et al. suggests that `
+    const beforeBoldText = `The phase fraction in the segmented image is ${phaseFrac.toFixed(3)}. Assuming perfect segmentation, the 'ImageRep' model proposed by Dahari et al. suggests that `
     const boldText = `we can be ${selectedConf.toFixed(1)}% confident that the material's phase fraction is within ${perErrFromPFB?.toFixed(1)}% of this value (i.e. ${phaseFrac.toFixed(roundTo)}±${(absErrFromPFB).toFixed(roundTo)})`
     const copyText = beforeBoldText + boldText
+    const afterText = "These results are derived from an estimated "
+    const afterBoldText = `Characteristic Length Scale (CLS) of ${analysisInfo?.integralRange!.toFixed(0)}px`
 
     const copyBtn = () => { navigator.clipboard.writeText(copyText) }
 
-    const longestSide = Math.max(imageInfo?.width!, imageInfo?.height!)
-    const nMore = Math.pow((Math.ceil(l! / longestSide)), imageInfo?.nDims!) - 1
+    const ii = imageInfo
+    const vol = (ii?.nDims! == 3) ? (ii?.height! * ii?.width! * ii?.width!) : (ii?.height! * ii?.width!)
+    const nMore = (Math.ceil(Math.pow(l!, imageInfo?.nDims!) / vol)) - 1
 
     const title = "Phase Fraction Estimation of the Material"
 
@@ -277,7 +293,7 @@ const Result = () => {
             </InputGroup >
             <InputGroup>
                 <InputGroup.Text>Confidence in Bounds (%):</InputGroup.Text>
-                <Form.Control type="number" min={0} max={100} value={selectedConf} onChange={(e) => setConf(e)} width={1} size="sm"></Form.Control>
+                <Form.Control ref={newConfSliderRef} type="number" min={0} max={100} defaultValue={selectedConf} width={1} size="sm"></Form.Control>
             </InputGroup>
             <div style={centreStyle}>
                 <Button variant="outline-dark" onClick={(e) => { setShowInfo(true) }}>More Info</Button>
@@ -309,17 +325,17 @@ const Result = () => {
                                 <NormalSlider ></NormalSlider>
                             </div>
                             {beforeBoldText}<b>{boldText}</b>
-                            <InputGroup style={{ justifyContent: 'center', marginTop: '1em' }}>
+                            <InputGroup style={{ justifyContent: 'center', marginTop: '1em', marginBottom: '1em' }}>
                                 <InputGroup.Text id="btnGroupAddon">Copy:</InputGroup.Text>
                                 <Button variant="outline-secondary" onClick={copyBtn}>text</Button>
                                 <Button variant="outline-secondary">citation</Button>
                             </InputGroup>
+                            {afterText}<b>{afterBoldText}</b>
                         </Accordion.Body>
                     </Accordion.Item>
                     <Accordion.Item eventKey="1" >
                         <Accordion.Header ref={lResultRef}>Required Length for Target</Accordion.Header>
                         {/*Need to manually overwrite the style here because of werid bug*/}
-                        {/* TODO: add visualise button here! */}
                         <Accordion.Body style={{ visibility: "visible" }}>
                             For a {errVF.toFixed(2)}% uncertainty in phase fraction, you <b>need to measure a total image size of about {sizeText} (i.e. {nMore} more images)</b> at the same resolution.
                             <div style={{ display: 'flex', justifyContent: 'flex-end', }}>
@@ -412,7 +428,3 @@ export const Menu = () => {
         </>
     )
 }
-
-
-
-

@@ -71,12 +71,15 @@ export const CLSModal = () => {
         }
     }
 
+    const txt = (showWarning == "over") ? 'Success!' : "Warning!"
+    const bg = (showWarning == "over") ? '#6ac40a' : '#fcba03'
+
     return (
         <>
             <ToastContainer className="p-5" position="bottom-start">
                 <Toast onClose={(e) => hide()}>
-                    <Toast.Header className="roundedme-2" closeButton={true} style={{ backgroundColor: '#fcba03', color: '#ffffff' }}>
-                        <strong className="me-auto" style={{ fontSize: '1.5em' }}>Warning!</strong>
+                    <Toast.Header className="roundedme-2" closeButton={true} style={{ backgroundColor: bg, color: '#ffffff' }}>
+                        <strong className="me-auto" style={{ fontSize: '1.5em' }}>{txt}</strong>
                     </Toast.Header>
                     <Toast.Body>
                         {getText(showWarning)}

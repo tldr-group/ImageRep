@@ -13,8 +13,8 @@ import { loadFromTIFF, loadFromImage } from "./components/imageLogic";
 import "./assets/scss/App.scss";
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-//const PATH = "http://127.0.0.1:5000";
-const PATH = "https://samba-segment.azurewebsites.net";
+const PATH = "http://127.0.0.1:5000";
+//const PATH = "https://samba-segment.azurewebsites.net";
 //const PATH = "http://localhost:7071/api";
 //const PATH = "https://representative.azurewebsites.net/api"
 const PF_ENDPOINT = PATH + "/phasefraction"
@@ -168,13 +168,26 @@ const App = () => {
         setAnalysisInfo(null);
         setTargetL(null);
         setAccurateFractions(null);
-        setPreviewImg(null);
         setSelectedPhase(0);
         setErrVF(5);
         setSelectedConf(95);
+        setErrorState({ msg: "", stackTrace: "" });
+        setShowWarning("");
     }
 
-    useEffect(() => { // TODO: fetch from API instead
+    const changePhase = () => {
+        setMenuState('phase');
+        setAnalysisInfo(null);
+        setTargetL(null);
+        const newPhase = (selectedPhase) % imageInfo?.nPhases!
+        setSelectedPhase(newPhase + 1)
+        setErrVF(5);
+        setSelectedConf(95);
+        setErrorState({ msg: "", stackTrace: "" });
+        setShowWarning("");
+    }
+
+    useEffect(() => {
         if (menuState === 'processing') {
             requestRepr();
         }
@@ -182,7 +195,7 @@ const App = () => {
 
     return (
         <div className={`w-full h-full`}>
-            <Topbar loadFromFile={appLoadFile} reset={reset}></Topbar>
+            <Topbar loadFromFile={appLoadFile} reset={reset} changePhase={changePhase}></Topbar>
             <div className={`flex`} style={{ margin: '1.5%' }} > {/*Canvas div on left, sidebar on right*/}
                 {!previewImg && <DragDrop loadFromFile={appLoadFile} />}
                 {previewImg && <PreviewCanvas />}
