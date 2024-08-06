@@ -3,107 +3,154 @@ import matplotlib.pyplot as plt
 import tifffile
 import json
 import numpy as np
-import kneed
+
+# import kneed
 from scipy.optimize import curve_fit
 from scipy import stats
 import torch
-import util
-from torch.nn.functional import interpolate
+from representativity import core, util
+from representativity.correction_fitting import microlib_statistics
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy.ndimage import zoom 
 
-with open("data_gen2.json", "r") as fp:
-    data = json.load(fp)["generated_data"]
+# with open("data_gen2.json", "r") as fp:
+#     data = json.load(fp)["generated_data"]
 
-l=len(list(data.keys()))
+# l=len(list(data.keys()))
 # l=3
-c=[(0,0,0), (0.5,0.5,0.5)]
+c = [(0, 0, 0), (0.5, 0.5, 0.5)]
 # plotting = [f'microstructure{f}' for f in [235, 209,205,177]]
-plotting = [f'microstructure{f}' for f in [235, 228, 205,177]]
+plotting_nums = [235, 228, 205, 177]
+plotting_ims = [f"microstructure{f}" for f in plotting_nums]
 
 # plotting = [k for k in data.keys()]
-l = len(plotting)
+l = len(plotting_ims)
 fig, axs = plt.subplots(l, 3)
-fig.set_size_inches(12, l*4)
-preds = [[],[]]
-irs = [[],[]]
-sas =[]
-i=0
-for n in list(data.keys()):
-    if n not in plotting:
+fig.set_size_inches(12, l * 3.5)
+preds = [[], []]
+irs = [[], []]
+colors = {"pred": "tab:orange", "true": "tab:green"}
+
+all_data, micros, netG, v_names, run_v_names = microlib_statistics.json_preprocessing()
+lens_for_fit = list(
+    range(500, 1000, 20)
+)  # lengths of images for fitting L_characteristic
+plotting_ims = [micro for micro in micros if micro.split("/")[-1] in plotting_ims]
+# run the statistical analysis on the microlib dataset
+for i, p in enumerate(plotting_ims):
+
+    try:
+        netG.load_state_dict(torch.load(p + "_Gen.pt"))
+    except:  # if the image is greayscale it's excepting because there's only 1 channel
         continue
-    img = tifffile.imread(f'/home/amir/microlibDataset/{n}/{n}.tif')
-    d = data[n]
-    d1 = data[n]
-    
-    csets = [['black', 'black'], ['gray', 'gray']]
-    for j, met in enumerate(['vf', 'sa']):
-        cs = csets[j]
-        img_dims = [np.array([int(im_len)]*2) for im_len in d['ls']]
-        ns = util.ns_from_dims(img_dims, d[f'ir_{met}'])
-        berns_vf = util.bernouli(d[f'{met}'], ns)
-        axs[i, 1].scatter(d['ls'], d[f'err_exp_{met}'], c=cs[0], s=8, marker = 'x', label = f'{met} errors from sampling')
-        axs[i, 1].plot(d['ls'], berns_vf, c=cs[0], label = f'{met} errors from fitted IR')
-        # axs[i, 1].plot(d[f'ls'], d[f'err_model_{met}'], c=cs[0], label = f'{met} errors from bernouli') 
-        y = d[f'tpc_{met}'][0]  # TODO write that in sa tpc, only the first direction is shown, or do something else, maybe normalise the tpc? We can do sum, because that's how we calculate the ir!
-        x = d[f'tpc_{met}_dist']
-        y = np.array(y)
-        
-        # TODO erase this afterwards:
-        if met=='vf':
-            ir = np.round(d[f'ir_vf'], 1)
-            axs[i, 2].plot(x, y, c=cs[1], label=f'Volume fraction 2PC')
-            axs[i, 2].axhline(d['vf']**2, linestyle='dashed', label='$p^2$')
-            axs[i, 2].plot([0,ir],[d['vf']**2-0.02, d['vf']**2-0.02], c='green', linewidth=3, label=r'$\tilde{a}_2$')
-            ticks = [0, int(ir), 20, 40, 60, 80, 100]
-            ticklabels = map(str, ticks)
-            axs[i, 2].set_xticks(ticks)
-            axs[i, 2].set_xticklabels(ticklabels)
-            axs[i,2].fill_between(x, d['vf']**2, y, alpha=0.5, label=f'Integrated part')
-            axs[i,2].legend()
-            
-            
-        # axs[i, 2].scatter(x[knee], y_data[knee]/y.max(), c =cs[1], marker = 'x', label=f'{met} ir from tpc', s=100)
-        ir = d[f'ir_{met}']
-        pred_ir = util.tpc_to_ir(d[f'tpc_{met}_dist'], d[f'tpc_{met}']) 
-        pred_ir = pred_ir * 1.61
-        # axs[i, 2].scatter(x[round(pred_ir)], y[round(pred_ir)], c =cs[1], marker = 'x', label=f'{met} predicted tpc IR', s=100)
-        # axs[i, 2].scatter(x[round(ir)], y[round(ir)], facecolors='none', edgecolors = cs[1], label=f'{met} fitted IR', s=100)
+    imsize = 1600
+    lf = imsize // 32 + 2  # the size of G's input
+    many_images = util.generate_image(netG, lf=lf, threed=False, reps=150)
+    many_images = many_images.detach().cpu().numpy()
+    pf = many_images.mean()
+    small_imsize = 400
+    img = many_images[0][:small_imsize, :small_imsize]
 
-        irs[j].append(ir)
-        if i ==0:
-            axs[i,1].legend()
-            axs[i,2].legend()
-        axs[i,1].set_xlabel('Image length size [pixels]')
-        axs[i,1].set_ylabel('Volume fraction percentage error [%]')
-        axs[i,2].set_ylabel('2-point correlation function')
-    ir = np.round(d[f'ir_vf'], 2)
-    sas.append(d['sa'])
-    im = img[0]*255
-    si_size, nirs = 160, 5
-    sicrop = int(ir*nirs)
-    print(ir, sicrop)
-    subim=torch.tensor(im[-sicrop:,-sicrop:]).unsqueeze(0).unsqueeze(0).float()
-    subim = interpolate(subim, size=(si_size,si_size), mode='nearest')[0,0]
+    csets = [["black", "black"], ["gray", "gray"]]
+    conf = 0.95
+    errs = util.real_image_stats(many_images, lens_for_fit, pf, conf=conf)
+    sizes_for_fit = [[lf, lf] for lf in lens_for_fit]
+    real_cls = core.fit_statisical_cls_from_errors(errs, sizes_for_fit, pf)  # type: ignore
+    stds = errs / stats.norm.interval(conf)[1] * pf / 100
+    std_fit = (real_cls**2 / (np.array(lens_for_fit) ** 2) * pf * (1 - pf)) ** 0.5
+    # print(stds)
+    vars = stds**2
+    # from variations to L_characteristic using image size and phase fraction
+    clss = (np.array(lens_for_fit) ** 2 * vars / pf / (1 - pf)) ** 0.5
+    print(clss)
+
+    # axs_twin = axs[i, 1].twinx()
+    axs[i, 1].scatter(
+        lens_for_fit, stds, color='black', s=8,  label=f"Standard deviations"
+    )
+    axs[i, 1].plot(
+        lens_for_fit, std_fit, color=colors["true"], label=f"Best fit using the characteristic\nlength scale: {np.round(real_cls, 2)}"
+    )
+    # axs[i, 1].tick_params(axis="y", labelcolor=colors["stds"])
+    axs[i, 1].set_ylim(0, 0.025)
+    axs[i, 1].legend(loc='upper right')
+
+    center = 40
+    dims = len(img.shape)
+    # print(f'starting tpc radial')
+    tpc = core.radial_tpc(img, volumetric=False)
+    center_im = small_imsize // 2
+    tpc_im = tpc[center_im-center:center_im+center, center_im-center:center_im+center]
+
+    img_pf = img.mean()
+    cls = core.tpc_to_cls(tpc, img)
+
+    contour = axs[i, 2].contourf(tpc_im, cmap="plasma", levels=200)
+    for c in contour.collections:
+        c.set_edgecolor("face")
+    circle_real = plt.Circle((center, center), real_cls, fill=False, color=colors["true"], label=f"True Char. l. s. radius: {np.round(real_cls, 2)}")
+    circle_pred = plt.Circle((center, center), cls, fill=False, color=colors["pred"], label=f"Predicted Char. l. s. radius: {np.round(cls, 2)}")
+
+    axs[i, 2].add_artist(circle_real)
+    axs[i, 2].add_artist(circle_pred)
+    x_ticks = axs[i, 2].get_xticks()[1:-1]
+    axs[i, 2].set_xticks(x_ticks, np.int64(np.array(x_ticks) - center))
+    axs[i, 2].set_yticks(x_ticks, np.int64(np.array(x_ticks) - center))
+    divider = make_axes_locatable(axs[i, 2])
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+
+    cbar = fig.colorbar(contour, cax=cax, orientation="vertical")
+    # cbar_ticks = cbar.ax.get_yticks()
+    cbar_ticks = np.linspace(img_pf, img_pf**2, 6)
+    cbar.ax.set_yticks(cbar_ticks, [r'$\Phi(\omega)$']+list(np.round(cbar_ticks[1:-1],2))+[r'$\Phi(\omega)^2$'])
+    cbar.set_label(f'Two-point correlation function')
+    fakexy = [0, 0]
+    circle_pred = plt.Line2D(fakexy, fakexy, linestyle='none', marker='o', fillstyle='none', color=colors["pred"], alpha=1.00)
+    circle_real = plt.Line2D(fakexy, fakexy, linestyle='none', marker='o', fillstyle='none', color=colors["true"], alpha=1.00)
+    axs[i, 2].legend([circle_real, circle_pred], [f"True Char. l. s.: {np.round(real_cls, 2)}", f"Predicted Char. l. s. from \nimage on the left column: {np.round(cls, 2)}"], loc='upper right')
+    axs[i, 2].set_xlabel('Two-point correlation distance')
+    axs[i, 2].set_ylabel('Two-point correlation distance')
+
+    axs[i,1].set_xlabel('Image size')
+    xticks_middle = axs[i,1].get_xticks()[1:-1]
+    axs[i,1].set_xticks(xticks_middle, [f'{int(xtick)}$^2$' for xtick in xticks_middle])
+    axs[i,1].set_ylabel(r'Phase fraction standard deviation')
+    # axs[i,2].set_ylabel('TPC distance')
+    # axs[i,2].set_xlabel('TPC distance')
+    # img = img*255
+    imshow_size = 512
+    img = img[:imshow_size, :imshow_size]
+    # 
+    si_size, nirs = imshow_size//2, 5
+
+    sicrop = int(real_cls*nirs)
+    zoom_mag = si_size/sicrop
+    print(real_cls, sicrop)
+    subim = img[-sicrop:,-sicrop:]
+    subim = zoom(subim, zoom=(zoom_mag,zoom_mag), order=0)
     subim = np.stack([subim]*3, axis=-1)
-    
-    subim[:5,:,:] = 125
-    subim[:,:5,:] = 125
-    # subim[5:20, 5:50, :]
-    subim[10:15, 10:10+si_size//nirs, :] = 0
-    subim[10:15, 10:10+si_size//nirs, 1:-1] = 125
 
-    im = np.stack([im]*3, axis=-1)
-    im[-si_size:,-si_size:] = subim
-    axs[i, 0].imshow(im)
+    boundary_len = 5
+    subim[:boundary_len,:,:] = 0.5
+    subim[:,:boundary_len,:] = 0.5
+    # subim[5:20, 5:50, :]
+    subim[10:10+boundary_len, 10:10+si_size//nirs, :] = 0
+    subim[10:10+boundary_len, 10:10+si_size//nirs, 1:-1] = 0.5
+
+    img = np.stack([img]*3, axis=-1)
+    img[-si_size:,-si_size:] = subim
+
+    # img = np.stack([zoom(img[:,:,i], zoom=4, order=0) for i in range(np.shape(img)[-1])], axis=-1)
+    axs[i, 0].imshow(img, cmap="gray", interpolation='nearest')
     axs[i, 0].set_xticks([])
     axs[i, 0].set_yticks([])
-    axs[i, 0].set_ylabel(f'M{n[1:]}')
-    axs[i, 0].set_xlabel(f'Volume fraction '+ r'$\tilde{a}_2$: '+ f'{ir}   Inset mag: x{np.round(si_size/sicrop, 2)}')
+    axs[i, 0].set_ylabel(f'Microstructure {plotting_nums[i]}')
+    axs[i, 0].set_xlabel(f'    $\Phi(\omega)$: '+ '%.2f' % img_pf + f'          Inset mag: x{np.round(si_size/sicrop, 2)}')
 
-    i+=1
 
 
 plt.tight_layout()
-plt.savefig('fig2.pdf', format='pdf')         
+plt.savefig("fig2.pdf", format="pdf")
 
 # fig, axs = plt.subplots(1,2)
 # fig.set_size_inches(10,5)
@@ -133,8 +180,3 @@ plt.savefig('fig2.pdf', format='pdf')
 #     # res = 100*(np.mean((y-targ)**2/targ))**0.5
 
 #     print(res,res2)
-
-
-
-
-

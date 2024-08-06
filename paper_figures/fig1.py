@@ -4,7 +4,7 @@ import tifffile
 import json
 import numpy as np
 import torch
-import util
+from representativity import util
 from torch.nn.functional import interpolate
 
 def sample_error(img, ls, vf=0.5):
@@ -25,14 +25,46 @@ def sample_error(img, ls, vf=0.5):
 errs = []
 berns = []
 
+def generate_microlib_data():
+    mode = '2D'
+    # Dataset path and list of subfolders
+    # with open("micro_names.json", "r") as fp:  # TODO change this later
+        # micro_names = json.load(fp)
+    plotting = [f'microstructure{f}' for f in [228, 235, 205, 177]]
+    projects = [f'/home/amir/microlibDataset/{p}/{p}' for p in plotting]
+    # Load generator network
+    netG = util.load_generator(projects[0])
+    # Edge lengths to test
+    edge_lengths = torch.arange(300, 800, 20)
+    # Corresponding dims
+    img_dims = [np.array((l, l)) for l in edge_lengths]
+    imgs = []
+    data = {}
+
+    num_projects = len(projects)
+    projects = projects[:num_projects]
+    reps = 1000 if mode=='2D' else 400
+    for j, proj in enumerate(projects):
+        # Make an image of micro
+        netG.load_state_dict(torch.load(proj + "_Gen.pt"))
+        img = util.generate_image(netG,lf=l,reps=reps, threed=mode=='3D')
+        print(img.size())
+        if img.any():
+            microstructure_name = proj.split("/")[-1]
+            vf = torch.mean(img).cpu().item()
+            img = [img]
+            print(f'starting tpc')
+            img_dims = [np.array((l,)*(len(img.shape)-1)) for l in edge_lengths]
+            err_exp = util.real_image_stats(img, edge_lengths, vf)
+    return data
 
 
-with open("data_gen.json", "r") as fp:
-    data = json.load(fp)['generated_data'] 
+# with open("data_gen.json", "r") as fp:
+#     data = json.load(fp)['generated_data'] 
 
 n = 'microstructure205'
 img3 = tifffile.imread(f'/home/amir/microlibDataset/{n}/{n}.tif')
-d = data[n]
+d = generate_microlib_data()
 
 
 ls = torch.arange(300,800, 20)
