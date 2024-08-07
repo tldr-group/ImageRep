@@ -71,7 +71,7 @@ export const CLSModal = () => {
         }
     }
 
-    const txt = (showWarning == "over") ? 'Success!' : "Warning!"
+    const txt = (showWarning == "over") ? 'Good news!' : "Warning!"
     const bg = (showWarning == "over") ? '#6ac40a' : '#fcba03'
 
     return (
