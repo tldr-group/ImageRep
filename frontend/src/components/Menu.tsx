@@ -191,12 +191,24 @@ const Result = () => {
     const lResultRef = useRef<HTMLHeadingElement>(null);
 
     const vals = imageInfo?.phaseVals!
-    const phaseFrac = (accurateFractions != null) ?
-        accurateFractions[vals[selectedPhase - 1]]
-        : getPhaseFraction(
-            imageInfo?.previewData.data!,
-            vals[selectedPhase - 1]
-        );
+
+    const getPhaseFracs = () => {
+        const accurateAvailable = accurateFractions != null
+        const coarseAvailable = (imageInfo != null) && (imageInfo.previewData.data != null)
+
+        if (accurateAvailable) {
+            return accurateFractions[vals[selectedPhase - 1]]
+        } else if (coarseAvailable) {
+            return getPhaseFraction(
+                imageInfo?.previewData.data!,
+                vals[selectedPhase - 1]
+            );
+        } else {
+            return 0
+        }
+    }
+
+    const phaseFrac = getPhaseFracs();
 
 
     const l = analysisInfo?.lForDefaultErr;
