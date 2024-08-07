@@ -38,7 +38,7 @@ export const getPhaseFraction = (arr: Uint8ClampedArray, val: number, nChannels:
     console.log('ahhhh')
     const uniqueVals = arr.filter((_, i, __) => { return i % nChannels == 0 })
     const matching = uniqueVals.filter((v) => v == val);
-    return (100 * matching.length) / (arr.length / nChannels);
+    return (matching.length) / (arr.length / nChannels);
 }
 
 export const loadFromTIFF = (tiffBuffer: ArrayBuffer): ImageLoadInfo => {

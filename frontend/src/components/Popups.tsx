@@ -71,12 +71,15 @@ export const CLSModal = () => {
         }
     }
 
+    const txt = (showWarning == "over") ? 'Good news!' : "Warning!"
+    const bg = (showWarning == "over") ? '#6ac40a' : '#fcba03'
+
     return (
         <>
             <ToastContainer className="p-5" position="bottom-start">
                 <Toast onClose={(e) => hide()}>
-                    <Toast.Header className="roundedme-2" closeButton={true} style={{ backgroundColor: '#fcba03', color: '#ffffff' }}>
-                        <strong className="me-auto" style={{ fontSize: '1.5em' }}>Warning!</strong>
+                    <Toast.Header className="roundedme-2" closeButton={true} style={{ backgroundColor: bg, color: '#ffffff' }}>
+                        <strong className="me-auto" style={{ fontSize: '1.5em' }}>{txt}</strong>
                     </Toast.Header>
                     <Toast.Body>
                         {getText(showWarning)}
@@ -92,12 +95,14 @@ export const MoreInfo = () => {
         imageInfo: [imageInfo,],
         analysisInfo: [analysisInfo,],
         showInfo: [showInfo, setShowInfo],
-        menuState: [, setMenuState]
+        menuState: [menuState, setMenuState]
     } = useContext(AppContext)!;
 
     const handleClose = () => {
         setShowInfo(false);
-        setMenuState('conf_result');
+        if (menuState == "conf_result_full") {
+            setMenuState('conf_result');
+        }
     };
 
     return (
