@@ -269,6 +269,8 @@ const Result = () => {
     const vol = (ii?.nDims! == 3) ? (ii?.height! * ii?.width! * ii?.width!) : (ii?.height! * ii?.width!)
     const nMore = (Math.ceil(Math.pow(l!, imageInfo?.nDims!) / vol)) - 1
 
+    const modalTitle = `Results for "${imageInfo?.file?.name}"`
+
     const title = "Phase Fraction Estimation of the Material"
 
     const smallResults = (
@@ -325,7 +327,7 @@ const Result = () => {
     const largeResults = (<>
         <Modal show={showFull} onHide={handleClose} size="lg">
             <Modal.Header style={{ backgroundColor: '#212529', color: '#ffffff' }} closeVariant="white" closeButton>
-                <Modal.Title>Results!</Modal.Title>
+                <Modal.Title>{modalTitle}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <Accordion defaultActiveKey={['0', '1']} flush alwaysOpen>

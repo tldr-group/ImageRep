@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
+import AppContext from "./interfaces";
 
 import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
@@ -6,6 +7,10 @@ import Navbar from 'react-bootstrap/Navbar';
 import { TopbarProps } from "./interfaces";
 
 const Topbar = ({ loadFromFile, reset, changePhase }: TopbarProps) => {
+
+    const {
+        showInfo: [showInfo, setShowInfo],
+    } = useContext(AppContext)!;
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const addData = () => {
@@ -30,6 +35,7 @@ const Topbar = ({ loadFromFile, reset, changePhase }: TopbarProps) => {
                 <Navbar.Brand style={{ marginTop: "3px", fontSize: "1.75em" }}>ImageRep</Navbar.Brand>
 
                 <Nav>
+                    <Nav.Link onClick={e => setShowInfo(true)}>Model Info</Nav.Link>
                     <Nav.Link onClick={addData}>Add Data</Nav.Link>
                     <Nav.Link onClick={changePhase} style={{ color: "#f2cd29" }}>Change Phase</Nav.Link>
                     <input
