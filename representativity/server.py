@@ -114,6 +114,12 @@ def preprocess_arr(arr: np.ndarray) -> np.ndarray:
     if len(arr.shape) == 3 and arr.shape[0] == 1:
         # weird (1, H, W) tiffs
         arr = arr[0, :, :]
+    if len(arr.shape) == 3 and arr.shape[-1] == 3:
+        # weird (H, W, 3) tiffs
+        arr = np.transpose(arr, (-1, 0, 1))
+    if len(arr.shape) == 3 and arr.shape[0] == 3:
+        # any (3, H, W) tiffs -> (H, W)
+        arr = arr[0, :, :]
     return arr
 
 

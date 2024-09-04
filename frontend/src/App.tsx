@@ -8,7 +8,7 @@ import NormalSlider from "./components/NormalSlider";
 import { Menu } from "./components/Menu";
 import { ErrorMessage, CLSModal, MoreInfo } from "./components/Popups"
 
-import { loadFromTIFF, loadFromImage } from "./components/imageLogic";
+import { loadFromTIFF, loadFromImage, getPhaseFraction } from "./components/imageLogic";
 
 import "./assets/scss/App.scss";
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -147,7 +147,13 @@ const App = () => {
             })
 
             const vals = imageInfo?.phaseVals!
-            const phaseFrac = accurateFractions![vals[selectedPhase - 1]]
+            const phaseFrac = (accurateFractions != null) ?
+                accurateFractions[vals[selectedPhase - 1]]
+                : getPhaseFraction(
+                    imageInfo?.previewData.data!,
+                    vals[selectedPhase - 1]
+                );
+
             setPfB([phaseFrac - absErr, phaseFrac + absErr])
 
             if (obj["cls"] > IR_LIMIT_PX) { setShowWarning("cls") }
@@ -168,13 +174,26 @@ const App = () => {
         setAnalysisInfo(null);
         setTargetL(null);
         setAccurateFractions(null);
-        setPreviewImg(null);
         setSelectedPhase(0);
         setErrVF(5);
         setSelectedConf(95);
+        setErrorState({ msg: "", stackTrace: "" });
+        setShowWarning("");
     }
 
-    useEffect(() => { // TODO: fetch from API instead
+    const changePhase = () => {
+        setMenuState('phase');
+        setAnalysisInfo(null);
+        setTargetL(null);
+        const newPhase = (selectedPhase) % imageInfo?.nPhases!
+        setSelectedPhase(newPhase + 1)
+        setErrVF(5);
+        setSelectedConf(95);
+        setErrorState({ msg: "", stackTrace: "" });
+        setShowWarning("");
+    }
+
+    useEffect(() => {
         if (menuState === 'processing') {
             requestRepr();
         }
@@ -182,7 +201,7 @@ const App = () => {
 
     return (
         <div className={`w-full h-full`}>
-            <Topbar loadFromFile={appLoadFile} reset={reset}></Topbar>
+            <Topbar loadFromFile={appLoadFile} reset={reset} changePhase={changePhase}></Topbar>
             <div className={`flex`} style={{ margin: '1.5%' }} > {/*Canvas div on left, sidebar on right*/}
                 {!previewImg && <DragDrop loadFromFile={appLoadFile} />}
                 {previewImg && <PreviewCanvas />}

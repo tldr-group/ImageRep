@@ -48,7 +48,7 @@ for i, p in enumerate(plotting_ims):
     many_images = util.generate_image(netG, lf=lf, threed=False, reps=150)
     many_images = many_images.detach().cpu().numpy()
     pf = many_images.mean()
-    small_imsize = 512
+    small_imsize = 400
     img = many_images[0][:small_imsize, :small_imsize]
 
     csets = [["black", "black"], ["gray", "gray"]]
@@ -81,6 +81,7 @@ for i, p in enumerate(plotting_ims):
     tpc = core.radial_tpc(img, volumetric=False)
     center_im = small_imsize // 2
     tpc_im = tpc[center_im-center:center_im+center, center_im-center:center_im+center]
+
     img_pf = img.mean()
     cls = core.tpc_to_cls(tpc, img)
 
@@ -89,6 +90,7 @@ for i, p in enumerate(plotting_ims):
         c.set_edgecolor("face")
     circle_real = plt.Circle((center, center), real_cls, fill=False, color=colors["true"], label=f"True Char. l. s. radius: {np.round(real_cls, 2)}")
     circle_pred = plt.Circle((center, center), cls, fill=False, color=colors["pred"], label=f"Predicted Char. l. s. radius: {np.round(cls, 2)}")
+
     axs[i, 2].add_artist(circle_real)
     axs[i, 2].add_artist(circle_pred)
     x_ticks = axs[i, 2].get_xticks()[1:-1]
@@ -96,6 +98,7 @@ for i, p in enumerate(plotting_ims):
     axs[i, 2].set_yticks(x_ticks, np.int64(np.array(x_ticks) - center))
     divider = make_axes_locatable(axs[i, 2])
     cax = divider.append_axes("right", size="5%", pad=0.05)
+
     cbar = fig.colorbar(contour, cax=cax, orientation="vertical")
     # cbar_ticks = cbar.ax.get_yticks()
     cbar_ticks = np.linspace(img_pf, img_pf**2, 6)
@@ -119,6 +122,7 @@ for i, p in enumerate(plotting_ims):
     img = img[:imshow_size, :imshow_size]
     # 
     si_size, nirs = imshow_size//2, 5
+
     sicrop = int(real_cls*nirs)
     zoom_mag = si_size/sicrop
     print(real_cls, sicrop)
@@ -135,6 +139,7 @@ for i, p in enumerate(plotting_ims):
 
     img = np.stack([img]*3, axis=-1)
     img[-si_size:,-si_size:] = subim
+
     # img = np.stack([zoom(img[:,:,i], zoom=4, order=0) for i in range(np.shape(img)[-1])], axis=-1)
     axs[i, 0].imshow(img, cmap="gray", interpolation='nearest')
     axs[i, 0].set_xticks([])
