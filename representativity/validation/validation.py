@@ -177,7 +177,7 @@ def ps_error_prediction(dim, data, confidence, error_target):
             for edge_length in edge_lengths_pred:
                 edge_lengths_repeats = 40 if dim == "2D" else 4
                 for _ in range(edge_lengths_repeats):
-                    run_dict = {"edge_length": edge_length}
+                    
                     true_error = util.bernouli_from_cls(
                         true_cls, true_pf, [edge_length] * int(dim[0])
                     )
@@ -198,92 +198,96 @@ def ps_error_prediction(dim, data, confidence, error_target):
                             start_idx[2] : end_idx[2],
                         ]
                     
-                    print(f'small im shape: {small_im.shape}')
-                    # np.save(f'./small_im_{gen_name}_{args}_{edge_length}.npy', small_im)
-                    small_im_pf = np.mean(small_im)
-                    run_dict["pf"] = small_im_pf
-                    one_im_stat_analysis_cls = core.stat_analysis_error_classic(
-                        small_im, np.mean(small_im)
-                    )
-                    one_im_sa_error = util.bernouli_from_cls(
-                        one_im_stat_analysis_cls, small_im_pf, [edge_length] * int(dim[0])
-                    )
-                    print(f"one im error: {one_im_sa_error[0]:.2f}")
-                    one_im_sa_error /= 100
-                    bounds, in_bounds = in_the_bounds(small_im_pf, one_im_sa_error, true_pf)
-                    run_dict["in_bounds_one_im"] = in_bounds
-                    run_dict["error_one_im"] = one_im_sa_error[0]
-                    in_the_bounds_one_im.append(in_bounds)
-                    print(f'current right percentage one im: {np.mean(in_the_bounds_one_im)}')
-                    run_dict["one_im_sa_cls"] = one_im_stat_analysis_cls
-                    print(f"One image stat analysis cls: {one_im_stat_analysis_cls}")
-                    
-                    print(f"one im bounds: {bounds}")
-                    one_im_clss.append(one_im_stat_analysis_cls)
-                    iters += 1
-                    for i in range(2):
-                        print(f"Iterations: {iters}")
+                    args = [
+                        small_im, true_pf, edge_length, confidence, error_target, 
+                        true_cls, true_error, in_the_bounds_one_im, 
+                        in_the_bounds_w_model, in_the_bounds_wo_model, iters
+                    ]
 
-                        with_model = i == 0
-
-                        out = core.make_error_prediction(
-                            small_im,
-                            confidence=confidence,
-                            target_error=error_target,
-                            model_error=with_model,
-                        )
-                        im_err, l_for_err_target, cls = (
-                            out["percent_err"],
-                            out["l"],
-                            out["integral_range"],
-                        )
-                        true_clss.append(true_cls)
-                        clss.append(cls)
-                        bounds, in_bounds = in_the_bounds(small_im_pf, im_err, true_pf)
-                        if with_model:
-                            in_the_bounds_w_model.append(in_bounds)
-                            run_dict["model_in_bounds"] = in_bounds
-                        else:
-                            in_the_bounds_wo_model.append(in_bounds)
-                            run_dict["model_wo_gmm_in_bounds"] = in_bounds
-                        print(f"Bounds: {bounds}")
-                        print(f"True PF: {true_pf}")
-                        if with_model:
-                            print("With model:")
-                            print(
-                                f"current right percentage: {np.mean(in_the_bounds_w_model)}"
-                            )
-                            run_dict["pred_cls"] = cls
-                            run_dict["error_w_gmm"] = im_err
-                            
-                        else:
-                            print("Without model:")
-                            print(
-                                f"current right percentage: {np.mean(in_the_bounds_wo_model)}"
-                            )
-                            run_dict["error_wo_gmm"] = im_err
-                        print(f"edge_length {edge_length}:")
-                        print(f"cls: {cls}")
-                        
-                        print(f"true error: {true_error[0]:.2f}")
-                        print(f"error: {im_err*100:.2f}\n")
-                        print(f"Length for error target: {l_for_err_target}")
+                    run_dict = small_im_stats(*args)
                     
                     data[f"validation_{dim}"][gen_name][f"run_{iters}"] = run_dict
                     print("\n")
             with open("representativity/validation/validation.json", "w") as file:
                 json.dump(data, file)
 
-            # plt.imshow(im[150:350,150:350])
-            # plt.title(f'{generator.__name__} with {args}')
-            # print(f'Error: {100*im_err:.2f} %')
-            # print(f'Length for error target: {l_for_err_target}')
-            # print(f'CLS: {cls}')
-            # clss.append(cls)
-            # errs.append(im_err)
-            # plt.show()
-            # plt.close()
     return errs, true_clss, clss, one_im_clss
+
+def small_im_stats(small_im, true_pf, edge_length, confidence, error_target, 
+                   true_cls, true_error, in_the_bounds_one_im, in_the_bounds_w_model,
+                   in_the_bounds_wo_model, iters):
+    run_dict = {"edge_length": edge_length}
+    print(f'small im shape: {small_im.shape}')
+    # np.save(f'./small_im_{gen_name}_{args}_{edge_length}.npy', small_im)
+    small_im_pf = np.mean(small_im)
+    run_dict["pf"] = small_im_pf
+    one_im_stat_analysis_cls = core.stat_analysis_error_classic(
+        small_im, np.mean(small_im)
+    )
+    one_im_sa_error = util.bernouli_from_cls(
+        one_im_stat_analysis_cls, small_im_pf, [edge_length] * int(dim[0])
+    )
+    print(f"one im error: {one_im_sa_error[0]:.2f}")
+    one_im_sa_error /= 100
+    bounds, in_bounds = in_the_bounds(small_im_pf, one_im_sa_error, true_pf)
+    run_dict["in_bounds_one_im"] = in_bounds
+    run_dict["error_one_im"] = one_im_sa_error[0]
+    in_the_bounds_one_im.append(in_bounds)
+    print(f'current right percentage one im: {np.mean(in_the_bounds_one_im)}')
+    run_dict["one_im_sa_cls"] = one_im_stat_analysis_cls
+    print(f"One image stat analysis cls: {one_im_stat_analysis_cls}")
+    
+    print(f"one im bounds: {bounds}")
+    one_im_clss.append(one_im_stat_analysis_cls)
+    iters += 1
+    for i in range(2):
+        print(f"Iterations: {iters}")
+
+        with_model = i == 0
+
+        out = core.make_error_prediction(
+            small_im,
+            confidence=confidence,
+            target_error=error_target,
+            model_error=with_model,
+        )
+        im_err, l_for_err_target, cls = (
+            out["percent_err"],
+            out["l"],
+            out["integral_range"],
+        )
+        true_clss.append(true_cls)
+        clss.append(cls)
+        bounds, in_bounds = in_the_bounds(small_im_pf, im_err, true_pf)
+        if with_model:
+            in_the_bounds_w_model.append(in_bounds)
+            run_dict["model_in_bounds"] = in_bounds
+        else:
+            in_the_bounds_wo_model.append(in_bounds)
+            run_dict["model_wo_gmm_in_bounds"] = in_bounds
+        print(f"Bounds: {bounds}")
+        print(f"True PF: {true_pf}")
+        if with_model:
+            print("With model:")
+            print(
+                f"current right percentage: {np.mean(in_the_bounds_w_model)}"
+            )
+            run_dict["pred_cls"] = cls
+            run_dict["error_w_gmm"] = im_err
+            
+        else:
+            print("Without model:")
+            print(
+                f"current right percentage: {np.mean(in_the_bounds_wo_model)}"
+            )
+            run_dict["error_wo_gmm"] = im_err
+        print(f"edge_length {edge_length}:")
+        print(f"cls: {cls}")
+        
+        print(f"true error: {true_error[0]:.2f}")
+        print(f"error: {im_err*100:.2f}\n")
+        print(f"Length for error target: {l_for_err_target}")
+    return run_dict
 
 
 if __name__ == "__main__":

@@ -70,11 +70,19 @@ if __name__ == '__main__':
 
     stacked = np.zeros(new_shape)
 
+    # for layer in range(layers):
+    #     cur_im = images[layer]
+    #     cur_im[:, :2] = True
+    #     cur_im[:, -2:] = True
+    #     cur_im[:2, :] = True
+    #     cur_im[-2:, :] = True
+        
+
     for layer in range(layers):
         cur_im = images[layer]
         stacked[layer*y_offset:layer*y_offset + cur_im.shape[0],
                 layer*x_offset:layer*x_offset + cur_im.shape[1] 
-                ] += images[layer]
+                ] += cur_im
     stacked = 1 - stacked
 
     fig = plt.figure(figsize=(10, 5))
@@ -116,9 +124,9 @@ if __name__ == '__main__':
     ax_table.axis('off')
     colWidths = np.array([0.14, 0.4, 0.14, 0.14])
     colWidths /= colWidths.sum()
-    column_labels = ["Number of trials", "True phase fraction in the predicted bounds", "Confidence goal", "Absolute error"]
-    row_labels1 = ["Classical subdivision method (2D)", "ImageRep without GMM step (2D)", "ImageRep (2D)"]
-    row_labels2 = ["Classical subdivision method (3D)", "ImageRep without GMM step (3D)", "ImageRep (3D)"]
+    column_labels = ["Number of trials", "Material's true phase fraction is in the predicted bounds", "Confidence goal", "Absolute error"]
+    row_labels1 = ["Classical subdivision method (2D)", "ImageRep only std prediction (2D)", "ImageRep (2D)"]
+    row_labels2 = ["Classical subdivision method (3D)", "ImageRep only std prediction (3D)", "ImageRep (3D)"]
     row_labels = row_labels1 + row_labels2
     table1 = ax_table.table(cellText=table_data, colLabels=column_labels, rowLabels=row_labels, loc='center', colWidths=colWidths)
     for key, cell in table1.get_celld().items():

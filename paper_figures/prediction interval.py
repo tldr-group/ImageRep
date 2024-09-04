@@ -3,6 +3,8 @@ from scipy.stats import norm
 import matplotlib.pyplot as plt
 import time
 from representativity import core
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
 
 from os import getcwd, path
 
@@ -12,11 +14,11 @@ DATA_PATH = f"{CWD}/paper_figures/"
 
 def plot_likelihood_of_phi(image_pf, pred_std, std_dist_std):
     fig, ax = plt.subplots(2, 3)
-    fig.set_size_inches(14, 9)
+    fig.set_size_inches(15, 9)
 
-    plt.subplots_adjust(wspace=0.4, hspace=0.4)
+    plt.subplots_adjust(wspace=0.5, hspace=0.4)
     im = np.load(f"{DATA_PATH}im_for_prediction_interval_fig.npy")
-    ax[0, 0].imshow(im[:200, :200], cmap="gray")
+    ax[0, 0].imshow(im[:400, :400], cmap="gray", interpolation="nearest")
     ax[0, 0].set_xticks([])
     ax[0, 0].set_yticks([])
     ax[0, 0].set_title("(a)")
@@ -43,7 +45,8 @@ def plot_likelihood_of_phi(image_pf, pred_std, std_dist_std):
     )
     ax[0, 1].set_title("(b)")
     ax[0, 1].set_xlabel("Standard deviation")
-    ax[0, 1].set_yticks([0, 1000])
+    ax[0, 1].set_yticks([0, 80])
+    ax[0, 1].set_ylabel("Probability density")
     ax[0, 1].legend()
     integral_std_dist = np.trapz(std_dist, x_std_dist)
     print(integral_std_dist)
@@ -73,7 +76,8 @@ def plot_likelihood_of_phi(image_pf, pred_std, std_dist_std):
     )
     ax[0, 2].set_title("(c)")
     ax[0, 2].set_xlabel("Phase fraction")
-    ax[0, 2].set_yticks([0, 300])
+    ax[0, 2].set_yticks([0, 20])
+    ax[0, 2].set_ylabel("Probability density")
     ax[0, 2].legend()
 
     c1 = ax[1, 0].contourf(
@@ -120,7 +124,17 @@ def plot_likelihood_of_phi(image_pf, pred_std, std_dist_std):
     ax[1, 1].legend()
     pf_dist_integral_col = np.trapz(pf_dist, x_std_dist, axis=0)
     pf_dist_integral = np.trapz(pf_dist_integral_col, pf_x_1d)
-
+    
+    axins = inset_axes(ax[1,1],
+                    width="5%",  
+                    height="100%",
+                    loc='right',
+                    borderpad=-2
+                   )
+    cbar = fig.colorbar(c2, cax=axins, orientation="vertical")
+    cbar_ticks = [0, 2000]
+    cbar.set_label(f'Probability density', labelpad=-17)
+    cbar.ax.set_yticks(cbar_ticks)
     # fig.colorbar(contour, ax=[ax[1,0],ax[1,1]],orientation='vertical')
     # ax = plt.axes(projection='3d')
     # ax.plot_surface(pf_mesh, std_mesh, pf_dist, cmap='viridis',\
@@ -195,18 +209,37 @@ def plot_likelihood_of_phi(image_pf, pred_std, std_dist_std):
     )
     ax[1, 2].set_xlabel("Phase fraction")
     ax[1, 2].set_title("(f)")
-    ax[1, 2].set_yticks([0, 300])
+    ax[1, 2].set_yticks([0, 20])
+    ax[1, 2].set_ylabel("Probability density")
     ax[1, 2].legend()
+    # ax[1,2].yaxis.set_label_position("right")
+    # ax[1,2].yaxis.tick_right()
     print(np.trapz(sum_dist_norm, pf_x_1d))
     print(np.trapz(mid_std_dist, pf_x_1d))
+    
     plt.savefig("prediction_interval.pdf", format="pdf")
 
 
 if __name__ == "__main__":
-    image_pf = 0.1013
-    pred_std = 0.00121
-    std_dist_std = pred_std * 0.27
+    
+    im = np.load(f"{DATA_PATH}im_for_prediction_interval_fig.npy")
+    image_pf = im.mean()
+    out = core.make_error_prediction(
+                            im,
+                            confidence=0.95,
+                            model_error=False,
+                        )
+    im_len = im.shape[0]
+    cls, std_model = out["integral_range"], out["std_model"]
+    pred_std = (cls**2/im_len**2*image_pf*(1-image_pf))**0.5
+    std_dist_std = pred_std * std_model
     time_bf = time.time()
     plot_likelihood_of_phi(image_pf, pred_std, std_dist_std)
     print(f"time taken = {time.time()-time_bf}")
     print(core.get_prediction_interval(image_pf, pred_std, std_dist_std)[0])
+
+    print(f'image phase fraction: {image_pf}')
+    print(f'predicted std: {pred_std}')
+    print(f'std model: {std_model}')
+    print(f'std dist std: {std_dist_std}')
+    
