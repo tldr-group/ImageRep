@@ -4,12 +4,14 @@ import matplotlib.pyplot as plt
 import json
 import porespy as ps
 from itertools import product
+import tifffile
 import random
 from matplotlib.gridspec import GridSpec
+import matplotlib.patches as patches
 
-def get_in_bounds_results(dims):
+def get_in_bounds_results(dims, porespy_bool=True):
     # Load the data
-    validation_data_dir = 'representativity/validation/validation.json'
+    validation_data_dir = 'representativity/validation/validation_w_real.json'
     with open(validation_data_dir, "r") as file:
         validation_data = json.load(file)
     # Get the in-bounds results
@@ -19,8 +21,12 @@ def get_in_bounds_results(dims):
             "one_im": [], "model_with_gmm": [], "model_wo_gmm": []}
         for gen_name in validation_data[f"validation_{dim}"].keys():
             # if there are more generators, they need to be added here:
-            if not gen_name.startswith("blob") and not gen_name.startswith("frac"):
-                continue
+            if porespy_bool:
+                if not gen_name.startswith("blob") and not gen_name.startswith("frac"):
+                    continue
+            else:
+                if not gen_name.startswith("anode"):
+                    continue
             gen_data = validation_data[f"validation_{dim}"][gen_name]
             for run in gen_data.keys():
                 if not run.startswith("run"):
@@ -40,65 +46,66 @@ if __name__ == '__main__':
 
     dims = ["2D", "3D"]
     
-    num_generators = 50
-    num_images = 5
-    generators_chosen = np.random.choice(num_generators, num_images, replace=False)
-    images = []
-    large_img_size = np.array([1000, 1000])
-    img_size = np.array([200, 200])
-    alpha = 1
-    ps_generators = validation.get_ps_generators()
-    rand_iter = 0
-    for generator, params in ps_generators.items():
-        for value_comb in product(*params.values()):
-            if rand_iter in generators_chosen:
-                args = {key: value for key, value in zip(params.keys(), value_comb)}
-                args = validation.factors_to_params(args, im_shape=large_img_size)
-                image = validation.get_large_im_stack(generator, large_img_size, 1, args)
-                image = image[0]
-                image = image[:img_size[0], :img_size[1]]
-                images.append(image)
-            rand_iter += 1
-    random.shuffle(images)
-    
-    layers = num_images  # How many images should be stacked.
-    x_offset, y_offset = img_size[0]-25, 30  # Number of pixels to offset each image.
-
-    new_shape = ((layers - 1)*y_offset + images[0].shape[0],
-                (layers - 1)*x_offset + images[0].shape[1]
-                )  # the last number, i.e. 4, refers to the 4 different channels, being RGB + alpha
-
-    stacked = np.zeros(new_shape)
-
-    # for layer in range(layers):
-    #     cur_im = images[layer]
-    #     cur_im[:, :2] = True
-    #     cur_im[:, -2:] = True
-    #     cur_im[:2, :] = True
-    #     cur_im[-2:, :] = True
-        
-
-    for layer in range(layers):
-        cur_im = images[layer]
-        stacked[layer*y_offset:layer*y_offset + cur_im.shape[0],
-                layer*x_offset:layer*x_offset + cur_im.shape[1] 
-                ] += cur_im
-    stacked = 1 - stacked
-
     fig = plt.figure(figsize=(10, 5))
-    gs = GridSpec(2, 1, height_ratios=[1, 2])
+    gs = GridSpec(3, 3, height_ratios=[2, 2, 1])
 
-    ax_im = fig.add_subplot(gs[0])
-    ax_im.imshow(stacked, vmin=0, vmax=1, cmap='gray', interpolation='nearest')
-    ax_im.set_title('(a)')
-    ax_im.axis('off') 
+    # Create the SOFC anode image, with an inset:
+    sofc_dir = 'validation_data/2D'
+    sofc_large_im = tifffile.imread(f"{sofc_dir}/anode_segmented_tiff_z046_inpainted.tif")
+    first_phase = sofc_large_im.min()
+    sofc_large_im[sofc_large_im != first_phase] = 1
+    sofc_large_im = sofc_large_im[:sofc_large_im.shape[0], :sofc_large_im.shape[0]]
+    middle_indices = sofc_large_im.shape
+    small_im_size = middle_indices[0]//6
+    # Subregion of the original image:
+    x1, x2, y1, y2 = middle_indices[0]//2-small_im_size//2, middle_indices[0]//2+small_im_size//2, middle_indices[1]//2-small_im_size//2,middle_indices[1]//2+small_im_size//2  
+    sofc_small_im = sofc_large_im[x1:x2, y1:y2]
+    ax_sofc_im = fig.add_subplot(gs[0, 0])
+    ax_sofc_im.imshow(sofc_large_im, cmap='gray', interpolation='nearest')
 
-    pos1 = ax_im.get_position() # get the original position
-    pos2 = [pos1.x0 - 0.15, pos1.y0-0.1, pos1.width+0.1, pos1.height+0.1] 
-    ax_im.set_position(pos2) 
+    # Create the inset:
+    ax_inset = ax_sofc_im.inset_axes([1.2, 0, 1, 1], xlim=(x1, x2), ylim=(y1, y2))
+    ax_inset.imshow(sofc_small_im, cmap='gray', interpolation='nearest', extent=[x1, x2, y1, y2])
+    ax_sofc_im.indicate_inset_zoom(ax_inset, alpha=1, edgecolor="black")
+    ax_sofc_im.set_xticks([])
+    ax_sofc_im.set_yticks([])
+    ax_inset.set_xticks([])
+    ax_inset.set_yticks([])
+
+    # Add some patches of the same size as the inset:
+    patch_size = middle_indices[0]//6
+    num_patches = 5
+    # Randomly place the patches, just not overlapping the center:
+    patch_positions = []
+    for i in range(num_patches):
+        x1 = random.randint(0, middle_indices[0]-patch_size)
+        x2 = x1 + patch_size
+        y1 = random.randint(0, middle_indices[1]-patch_size)
+        y2 = y1 + patch_size
+        patch_positions.append((x1, x2, y1, y2))
+    for i, (x1, x2, y1, y2) in enumerate(patch_positions):
+        ax_sofc_im.add_patch(patches.Rectangle((x1, y1), patch_size, patch_size, edgecolor='black', facecolor='none'))
+    
+
+
+    pos3 = ax_sofc_im.get_position() # get the original position
+    pos4 = [pos3.x0 - 0.2, pos3.y0+0.1, pos3.width+0.1, pos3.height+0.1] 
+    ax_sofc_im.set_position(pos4)
+
+
+    # No, create the plot showing that the real phase fraction lies within
+    # the predicted bounds roughly 95% of the time:
+    ax_bars = fig.add_subplot(gs[0, 1:])
+    ax_bars.set_title("(a)")
+
+    # obtain the data:
+    in_bounds_res = get_in_bounds_results(dims=dims, porespy_bool=False)
+    res_2d = in_bounds_res["2D"]
+
+ 
     # make the table:
     # first make the data:
-    in_bounds_res = get_in_bounds_results(dims=dims)
+    in_bounds_res = get_in_bounds_results(dims=dims, porespy_bool=True)
     res_2d = in_bounds_res["2D"]
     order = ["one_im", "model_wo_gmm", "model_with_gmm"]
 
@@ -119,7 +126,7 @@ if __name__ == '__main__':
     res_3d = in_bounds_res["3D"]
     data_3d = make_data(res_3d)
     table_data = data_2d + data_3d
-    ax_table = fig.add_subplot(gs[1])
+    ax_table = fig.add_subplot(gs[1, :])
     plt.figtext(0.415, 0.485, '(b)', ha='center', va='bottom', fontsize=12)
     ax_table.axis('off')
     colWidths = np.array([0.14, 0.4, 0.14, 0.14])
@@ -131,10 +138,48 @@ if __name__ == '__main__':
     table1 = ax_table.table(cellText=table_data, colLabels=column_labels, rowLabels=row_labels, loc='center', colWidths=colWidths)
     for key, cell in table1.get_celld().items():
         cell.set_text_props(ha='center', va='center')
+    ax_table.text(-0.23, .77, 'PoreSpy materials', ha='left', va='top', transform=ax_table.transAxes)
     imagerep_2d_cell = table1[(3, 3)]  # Cell in the bottom-right corner (last row, last column)
     imagerep_2d_cell.set_facecolor('lightgreen')
     imagerep_3d_cell = table1[(6, 3)]  # Cell in the bottom-right corner (last row, last column)
     imagerep_3d_cell.set_facecolor('lightgreen')
     
+    # Second table for SOFC anode:
+    in_bounds_res = get_in_bounds_results(dims=dims, porespy_bool=False)
+    res_2d = in_bounds_res["2D"]
+    order = ["one_im", "model_wo_gmm", "model_with_gmm"]
+
+    def make_data(dim_res):
+        data = []
+        for key in order:
+            num_trials, num_in_bounds = dim_res[key]
+            row = [
+                f"{num_trials}", 
+                f"{num_in_bounds}/{num_trials} = {num_in_bounds/num_trials*100:.2f}%", 
+                "95%", 
+                f"{np.abs(0.95-num_in_bounds/num_trials)*100:.2f}%"
+                ]
+            data.append(row)
+        return data
+    
+    data_2d = make_data(res_2d)
+    table_data = data_2d 
+    ax_table = fig.add_subplot(gs[2, :])
+    plt.figtext(0.415, 0.485, '(b)', ha='center', va='bottom', fontsize=12)
+    ax_table.axis('off')
+    colWidths = np.array([0.14, 0.4, 0.14, 0.14])
+    colWidths /= colWidths.sum()
+    column_labels = ["Number of trials", "Material's true phase fraction is in the predicted bounds", "Confidence goal", "Absolute error"]
+    row_labels1 = ["Classical subdivision method (2D)", "ImageRep only std prediction (2D)", "ImageRep (2D)"]
+    row_labels = row_labels1 
+    table1 = ax_table.table(cellText=table_data, colLabels=column_labels, rowLabels=row_labels, loc='center', colWidths=colWidths)
+    for key, cell in table1.get_celld().items():
+        cell.set_text_props(ha='center', va='center')
+    ax_table.text(-0.23, .77, 'SOFC Anode', ha='left', va='top', transform=ax_table.transAxes)
+    imagerep_2d_cell = table1[(3, 3)]  # Cell in the bottom-right corner (last row, last column)
+    imagerep_2d_cell.set_facecolor('lightgreen')
+
+    # plt.tight_layout()
+
     plt.savefig("paper_figures/model_accuracy.pdf", format="pdf", bbox_inches='tight')
 

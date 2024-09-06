@@ -225,6 +225,7 @@ def sofc_anode_error_prediction(data, confidence, error_target):
     iters = 0
     dim = "2D"
     dir = 'validation_data/2D'
+    
     anode_ims = []
     for file in os.listdir(dir):
         if file.startswith('anode'):
@@ -232,6 +233,10 @@ def sofc_anode_error_prediction(data, confidence, error_target):
             anode_ims.append(anode_im)
     # anode_ims = np.stack(anode_ims, axis=0)
     phases = np.unique(anode_ims)
+    # Restart the data:
+    for phase in phases:
+        data[f"validation_{dim}"][f"anode_{phase}"] = {}
+    # Run the analysis:
     for anode_im in anode_ims:
         # add another dimension to the image in the beginning:
         anode_im = np.expand_dims(anode_im, axis=0)
@@ -252,8 +257,6 @@ def sofc_anode_error_prediction(data, confidence, error_target):
                 anode_ims_cur_phase, cur_phase_phase_fraction, edge_lengths_fit
             )
             print(f"True cls: {true_cls}")
-            if f"anode_{phase}" not in data[f"validation_{dim}"]:
-                data[f"validation_{dim}"][f"anode_{phase}"] = {}
             data[f"validation_{dim}"][f"anode_{phase}"]["true_cls"] = true_cls
             data[f"validation_{dim}"][f"anode_{phase}"]["true_pf"] = cur_phase_phase_fraction
             edge_lengths_pred = data[f"validation_{dim}"]["edge_lengths_pred"]
