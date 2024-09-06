@@ -5,6 +5,7 @@ import sys
 import matplotlib.pyplot as plt
 import porespy as ps
 from itertools import product
+import tifffile
 import json
 
 np.random.seed(0)
@@ -74,7 +75,7 @@ def json_validation_preprocessing():
     """
 
     # Load the statistics file
-    json_validation_path = "representativity/validation/validation.json"
+    json_validation_path = "representativity/validation/validation_w_real.json"
     if os.path.exists(json_validation_path):
         with open(json_validation_path, "r") as file:
             all_data = json.load(file)
@@ -201,22 +202,98 @@ def ps_error_prediction(dim, data, confidence, error_target):
                     args = [
                         small_im, true_pf, edge_length, confidence, error_target, 
                         true_cls, true_error, in_the_bounds_one_im, 
-                        in_the_bounds_w_model, in_the_bounds_wo_model, iters
+                        in_the_bounds_w_model, in_the_bounds_wo_model, iters,
+                        one_im_clss, clss, true_clss
                     ]
 
                     run_dict = small_im_stats(*args)
-                    
+                    iters += 1
                     data[f"validation_{dim}"][gen_name][f"run_{iters}"] = run_dict
                     print("\n")
-            with open("representativity/validation/validation.json", "w") as file:
+            with open("representativity/validation/validation_w_real.json", "w") as file:
                 json.dump(data, file)
 
     return errs, true_clss, clss, one_im_clss
 
+def sofc_anode_error_prediction(data, confidence, error_target):
+    true_clss = []
+    clss = []
+    one_im_clss = []
+    in_the_bounds_one_im = []
+    in_the_bounds_w_model = []
+    in_the_bounds_wo_model = []
+    iters = 0
+    dim = "2D"
+    dir = 'validation_data/2D'
+    anode_ims = []
+    for file in os.listdir(dir):
+        if file.startswith('anode'):
+            anode_im = tifffile.imread(f'{dir}/{file}')
+            anode_ims.append(anode_im)
+    # anode_ims = np.stack(anode_ims, axis=0)
+    phases = np.unique(anode_ims)
+    for anode_im in anode_ims:
+        # add another dimension to the image in the beginning:
+        anode_im = np.expand_dims(anode_im, axis=0)
+        for phase in phases:
+            # copy the image and set all other phases to 0 except the current phase to 1
+            anode_ims_cur_phase = np.copy(anode_im)
+            anode_ims_cur_phase[anode_ims_cur_phase != phase] = 3
+            anode_ims_cur_phase[anode_ims_cur_phase == phase] = 1
+            anode_ims_cur_phase[anode_ims_cur_phase == 3] = 0
+            cur_phase_phase_fraction = np.mean(anode_ims_cur_phase)
+            print(f'phase: {phase}')
+            print(f'phase fraction: {cur_phase_phase_fraction}')
+            print(f'phase fraction per slice: {np.mean(anode_ims_cur_phase, axis=(1,2))}')
+            # continue
+            edge_lengths_fit = data[f"validation_{dim}"]["edge_lengths_fit"]
+            # Since there are 4 images, the true cls will be the mean of the images:
+            true_cls = util.stat_analysis_error(
+                anode_ims_cur_phase, cur_phase_phase_fraction, edge_lengths_fit
+            )
+            print(f"True cls: {true_cls}")
+            if f"anode_{phase}" not in data[f"validation_{dim}"]:
+                data[f"validation_{dim}"][f"anode_{phase}"] = {}
+            data[f"validation_{dim}"][f"anode_{phase}"]["true_cls"] = true_cls
+            data[f"validation_{dim}"][f"anode_{phase}"]["true_pf"] = cur_phase_phase_fraction
+            edge_lengths_pred = data[f"validation_{dim}"]["edge_lengths_pred"]
+            edge_lengths_pred = list(np.array(edge_lengths_pred) // 2)
+            edge_lengths_pred = edge_lengths_pred[1:-1]
+            for edge_length in edge_lengths_pred:
+                edge_lengths_repeats = 28
+                for _ in range(edge_lengths_repeats):
+                    true_error = util.bernouli_from_cls(
+                        true_cls, cur_phase_phase_fraction, [edge_length] * int(dim[0])
+                    )
+                    first_index = np.random.randint(0, anode_ims_cur_phase.shape[0])
+                    start_idx = [
+                        np.random.randint(0, anode_ims_cur_phase.shape[i] - edge_length)
+                        for i in range(1, int(dim[0])+1)
+                    ]
+                    end_idx = [start_idx[i] + edge_length for i in range(int(dim[0]))]
+                    
+                    small_im = anode_ims_cur_phase[first_index][
+                        start_idx[0] : end_idx[0], start_idx[1] : end_idx[1]
+                    ]
+                    
+                    args = [
+                        small_im, cur_phase_phase_fraction, edge_length, confidence, error_target, 
+                        true_cls, true_error, in_the_bounds_one_im, 
+                        in_the_bounds_w_model, in_the_bounds_wo_model, iters,
+                        one_im_clss, clss, true_clss
+                    ]
+                    run_dict = small_im_stats(*args)
+                    data[f"validation_{dim}"][f"anode_{phase}"][f"run_{iters}"] = run_dict
+                    iters += 1
+                    print("\n")
+            with open("representativity/validation/validation_w_real.json", "w") as file:
+                json.dump(data, file)
+
+
 def small_im_stats(small_im, true_pf, edge_length, confidence, error_target, 
                    true_cls, true_error, in_the_bounds_one_im, in_the_bounds_w_model,
-                   in_the_bounds_wo_model, iters):
-    run_dict = {"edge_length": edge_length}
+                   in_the_bounds_wo_model, iters, one_im_clss, clss, true_clss):
+    run_dict = {"edge_length": str(edge_length)}
     print(f'small im shape: {small_im.shape}')
     # np.save(f'./small_im_{gen_name}_{args}_{edge_length}.npy', small_im)
     small_im_pf = np.mean(small_im)
@@ -239,7 +316,6 @@ def small_im_stats(small_im, true_pf, edge_length, confidence, error_target,
     
     print(f"one im bounds: {bounds}")
     one_im_clss.append(one_im_stat_analysis_cls)
-    iters += 1
     for i in range(2):
         print(f"Iterations: {iters}")
 
@@ -281,7 +357,7 @@ def small_im_stats(small_im, true_pf, edge_length, confidence, error_target,
                 f"current right percentage: {np.mean(in_the_bounds_wo_model)}"
             )
             run_dict["error_wo_gmm"] = im_err
-        print(f"edge_length {edge_length}:")
+        # print(f"edge_length {edge_length}:")
         print(f"cls: {cls}")
         
         print(f"true error: {true_error[0]:.2f}")
@@ -293,11 +369,14 @@ def small_im_stats(small_im, true_pf, edge_length, confidence, error_target,
 if __name__ == "__main__":
     # shape = [1000, 1000]
     all_data = json_validation_preprocessing()
-    dim = "3D"
+
+    dim = "2D"
+    sofc_anode_error_prediction(all_data, confidence=0.95, error_target=0.05)
+    # dim = "3D"
     # get porespy generators:
-    errs, true_clss, clss, one_im_clss = ps_error_prediction(
-        dim, all_data, confidence=0.95, error_target=0.05
-    )
+    # errs, true_clss, clss, one_im_clss = ps_error_prediction(
+    #     dim, all_data, confidence=0.95, error_target=0.05
+    # )
     # plt.scatter(true_clss, clss, label='CLS')
     # plt.scatter(true_clss, one_im_clss, label='One image stat analysis')
     # max_value = max(max(true_clss), max(clss), max(one_im_clss))
