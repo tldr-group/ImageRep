@@ -46,8 +46,8 @@ if __name__ == '__main__':
 
     dims = ["2D", "3D"]
     
-    fig = plt.figure(figsize=(10, 5))
-    gs = GridSpec(3, 3, height_ratios=[2, 2, 1])
+    fig = plt.figure(figsize=(12, 7))
+    gs = GridSpec(4, 4, height_ratios=[2, 1.5, 2, 1])
 
     # Create the SOFC anode image, with an inset:
     sofc_dir = 'validation_data/2D'
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     # Subregion of the original image:
     x1, x2, y1, y2 = middle_indices[0]//2-small_im_size//2, middle_indices[0]//2+small_im_size//2, middle_indices[1]//2-small_im_size//2,middle_indices[1]//2+small_im_size//2  
     sofc_small_im = sofc_large_im[x1:x2, y1:y2]
-    ax_sofc_im = fig.add_subplot(gs[0, 0])
+    ax_sofc_im = fig.add_subplot(gs[0, :2])
     ax_sofc_im.imshow(sofc_large_im, cmap='gray', interpolation='nearest')
 
     # Create the inset:
@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
     # Add some patches of the same size as the inset:
     patch_size = middle_indices[0]//6
-    num_patches = 5
+    num_patches = 6
     # Randomly place the patches, just not overlapping the center:
     patch_positions = []
     for i in range(num_patches):
@@ -87,15 +87,14 @@ if __name__ == '__main__':
         ax_sofc_im.add_patch(patches.Rectangle((x1, y1), patch_size, patch_size, edgecolor='black', facecolor='none'))
     
 
-
     pos3 = ax_sofc_im.get_position() # get the original position
-    pos4 = [pos3.x0 - 0.2, pos3.y0+0.1, pos3.width+0.1, pos3.height+0.1] 
+    pos4 = [pos3.x0 - 0.31, pos3.y0+0.035, pos3.width+0.1, pos3.height+0.1] 
     ax_sofc_im.set_position(pos4)
 
 
     # No, create the plot showing that the real phase fraction lies within
     # the predicted bounds roughly 95% of the time:
-    ax_bars = fig.add_subplot(gs[0, 1:])
+    ax_bars = fig.add_subplot(gs[1, :])
     ax_bars.set_title("(a)")
 
     # obtain the data:
@@ -126,7 +125,7 @@ if __name__ == '__main__':
     res_3d = in_bounds_res["3D"]
     data_3d = make_data(res_3d)
     table_data = data_2d + data_3d
-    ax_table = fig.add_subplot(gs[1, :])
+    ax_table = fig.add_subplot(gs[2, :])
     plt.figtext(0.415, 0.485, '(b)', ha='center', va='bottom', fontsize=12)
     ax_table.axis('off')
     colWidths = np.array([0.14, 0.4, 0.14, 0.14])
@@ -164,7 +163,7 @@ if __name__ == '__main__':
     
     data_2d = make_data(res_2d)
     table_data = data_2d 
-    ax_table = fig.add_subplot(gs[2, :])
+    ax_table = fig.add_subplot(gs[3, :])
     plt.figtext(0.415, 0.485, '(b)', ha='center', va='bottom', fontsize=12)
     ax_table.axis('off')
     colWidths = np.array([0.14, 0.4, 0.14, 0.14])
@@ -181,5 +180,5 @@ if __name__ == '__main__':
 
     # plt.tight_layout()
 
-    plt.savefig("paper_figures/model_accuracy.pdf", format="pdf", bbox_inches='tight')
+    plt.savefig("paper_figures/model_accuracy.pdf", format="pdf", bbox_inches='tight', dpi=300)
 
