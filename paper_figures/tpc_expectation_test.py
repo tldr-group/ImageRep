@@ -268,4 +268,4 @@ if __name__ == "__main__":
         [pf**2, np.round(pf_squared, 3), pf], [pf**2, np.round(pf_squared, 3), pf]
     )
     tpc_fig.legend(loc='upper right')
-    plt.savefig(f"tpc_results/circles_tpc_visual_proof.pdf", format="pdf")
+    plt.savefig(f"paper_figures/output/circles_tpc_visual_proof.pdf", format="pdf")

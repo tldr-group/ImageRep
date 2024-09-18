@@ -217,7 +217,7 @@ def plot_likelihood_of_phi(image_pf, pred_std, std_dist_std):
     print(np.trapz(sum_dist_norm, pf_x_1d))
     print(np.trapz(mid_std_dist, pf_x_1d))
     
-    plt.savefig("prediction_interval.pdf", format="pdf")
+    plt.savefig("paper_figures/output/prediction_interval.pdf", format="pdf")
 
 
 if __name__ == "__main__":

@@ -209,4 +209,4 @@ if not with_cls:
     [ax.set_title(titles_2nd_row[i]) for i, ax in enumerate(axs[1])]
 
 plt.tight_layout()
-fig.savefig("fig_model_error.pdf", format="pdf")
+fig.savefig("paper_figures/output/fig_model_error.pdf", format="pdf", dpi=300)

@@ -8,6 +8,7 @@ import tifffile
 import random
 from matplotlib.gridspec import GridSpec
 import matplotlib.patches as patches
+from paper_figures.pred_vs_true_cls import create_tpc_plot
 
 def get_in_bounds_results(dims, porespy_bool=True):
     # Load the data
@@ -46,25 +47,30 @@ if __name__ == '__main__':
 
     dims = ["2D", "3D"]
     
-    fig = plt.figure(figsize=(12, 7))
-    gs = GridSpec(4, 4, height_ratios=[2, 1.5, 2, 1])
+    fig = plt.figure(figsize=(12, 9))
+    first_table_ratio = 1
+    gs = GridSpec(4, 4, height_ratios=[
+        first_table_ratio*1.2, first_table_ratio, first_table_ratio, first_table_ratio*4/7])
 
     # Create the SOFC anode image, with an inset:
     sofc_dir = 'validation_data/2D'
     sofc_large_im = tifffile.imread(f"{sofc_dir}/anode_segmented_tiff_z046_inpainted.tif")
-    first_phase = sofc_large_im.min()
-    sofc_large_im[sofc_large_im != first_phase] = 1
+    chosen_phase = np.unique(sofc_large_im).min()
+    sofc_large_im[sofc_large_im != chosen_phase] = 1
     sofc_large_im = sofc_large_im[:sofc_large_im.shape[0], :sofc_large_im.shape[0]]
     middle_indices = sofc_large_im.shape
     small_im_size = middle_indices[0]//6
+    
     # Subregion of the original image:
     x1, x2, y1, y2 = middle_indices[0]//2-small_im_size//2, middle_indices[0]//2+small_im_size//2, middle_indices[1]//2-small_im_size//2,middle_indices[1]//2+small_im_size//2  
+    x1, x2, y1, y2 = x1 + 100, x2 + 100, y1 - 300, y2 - 300
     sofc_small_im = sofc_large_im[x1:x2, y1:y2]
     ax_sofc_im = fig.add_subplot(gs[0, :2])
     ax_sofc_im.imshow(sofc_large_im, cmap='gray', interpolation='nearest')
 
     # Create the inset:
     ax_inset = ax_sofc_im.inset_axes([1.2, 0, 1, 1], xlim=(x1, x2), ylim=(y1, y2))
+    inset_pos = ax_inset.get_position()
     ax_inset.imshow(sofc_small_im, cmap='gray', interpolation='nearest', extent=[x1, x2, y1, y2])
     ax_sofc_im.indicate_inset_zoom(ax_inset, alpha=1, edgecolor="black")
     ax_sofc_im.set_xticks([])
@@ -88,8 +94,23 @@ if __name__ == '__main__':
     
 
     pos3 = ax_sofc_im.get_position() # get the original position
-    pos4 = [pos3.x0 - 0.31, pos3.y0+0.035, pos3.width+0.1, pos3.height+0.1] 
+    pos4 = [pos3.x0 - 0.28, pos3.y0, pos3.width, pos3.height] 
     ax_sofc_im.set_position(pos4)
+
+    tpc_plot = fig.add_subplot(gs[0, 2])
+    pos5 = tpc_plot.get_position() # get the original position
+    arrow_gap = 0.01
+    # Create an arrow between the right of the inset and left of the FFT plot:
+    ptB = (pos4[0]+pos3.width*2.2+arrow_gap, pos4[1] + pos4[3] / 2)
+    ptE = (ptB[0] + 0.05, ptB[1])
+    
+    arrow = patches.FancyArrowPatch(ptB, ptE, transform=fig.transFigure,fc = "g", arrowstyle='simple', alpha = 0.3,
+    mutation_scale = 40.)
+    # 5. Add patch to list of objects to draw onto the figure
+    fig.patches.append(arrow)
+
+    # Create the TPC plot:
+    create_tpc_plot(fig, sofc_small_im, 40, {"pred": "g"}, sofc_small_im.mean(), tpc_plot)
 
 
     # No, create the plot showing that the real phase fraction lies within
@@ -128,7 +149,7 @@ if __name__ == '__main__':
     ax_table = fig.add_subplot(gs[2, :])
     plt.figtext(0.415, 0.485, '(b)', ha='center', va='bottom', fontsize=12)
     ax_table.axis('off')
-    colWidths = np.array([0.14, 0.4, 0.14, 0.14])
+    colWidths = np.array([0.14, 0.31, 0.14, 0.14])
     colWidths /= colWidths.sum()
     column_labels = ["Number of trials", "Material's true phase fraction is in the predicted bounds", "Confidence goal", "Absolute error"]
     row_labels1 = ["Classical subdivision method (2D)", "ImageRep only std prediction (2D)", "ImageRep (2D)"]
@@ -166,7 +187,7 @@ if __name__ == '__main__':
     ax_table = fig.add_subplot(gs[3, :])
     plt.figtext(0.415, 0.485, '(b)', ha='center', va='bottom', fontsize=12)
     ax_table.axis('off')
-    colWidths = np.array([0.14, 0.4, 0.14, 0.14])
+    colWidths = np.array([0.14, 0.31, 0.14, 0.14])
     colWidths /= colWidths.sum()
     column_labels = ["Number of trials", "Material's true phase fraction is in the predicted bounds", "Confidence goal", "Absolute error"]
     row_labels1 = ["Classical subdivision method (2D)", "ImageRep only std prediction (2D)", "ImageRep (2D)"]
@@ -180,5 +201,5 @@ if __name__ == '__main__':
 
     # plt.tight_layout()
 
-    plt.savefig("paper_figures/model_accuracy.pdf", format="pdf", bbox_inches='tight', dpi=300)
+    plt.savefig("paper_figures/output/model_accuracy.pdf", format="pdf", bbox_inches='tight', dpi=300)
 
