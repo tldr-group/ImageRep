@@ -1,62 +1,30 @@
-from representativity.validation import validation
 import numpy as np
 import matplotlib.pyplot as plt
 import json
-import porespy as ps
-from itertools import product
 import tifffile
 import random
 from matplotlib.gridspec import GridSpec
 import matplotlib.patches as patches
 from paper_figures.pred_vs_true_cls import create_tpc_plot
 
-def get_in_bounds_results(dims, porespy_bool=True):
-    # Load the data
-    validation_data_dir = 'representativity/validation/validation_w_real.json'
-    with open(validation_data_dir, "r") as file:
-        validation_data = json.load(file)
-    # Get the in-bounds results
-    in_bound_results = {}
-    for dim in dims:
-        dim_results = {
-            "one_im": [], "model_with_gmm": [], "model_wo_gmm": []}
-        for gen_name in validation_data[f"validation_{dim}"].keys():
-            # if there are more generators, they need to be added here:
-            if porespy_bool:
-                if not gen_name.startswith("blob") and not gen_name.startswith("frac"):
-                    continue
-            else:
-                if not gen_name.startswith("anode"):
-                    continue
-            gen_data = validation_data[f"validation_{dim}"][gen_name]
-            for run in gen_data.keys():
-                if not run.startswith("run"):
-                    continue
-                run_data = gen_data[run]
-                dim_results["one_im"].append(run_data["in_bounds_one_im"])
-                dim_results["model_with_gmm"].append(run_data["model_in_bounds"])
-                dim_results["model_wo_gmm"].append(run_data["model_wo_gmm_in_bounds"])
-        n_trials = len(dim_results["one_im"])
-        for res in dim_results.keys():
-            dim_results[res] = (n_trials, np.array(dim_results[res]).sum())
-        in_bound_results[dim] = dim_results
-    return in_bound_results
+COLOR_INSET = "darkorange"
 
 # Plot the data
 if __name__ == '__main__':
 
     dims = ["2D", "3D"]
     
-    fig = plt.figure(figsize=(12, 9))
-    first_table_ratio = 1
-    gs = GridSpec(4, 4, height_ratios=[
-        first_table_ratio*1.2, first_table_ratio, first_table_ratio, first_table_ratio*4/7])
+    col_width = 20
+    fig = plt.figure(figsize=(col_width, col_width/3))
+    gs = GridSpec(2, 4)
 
     # Create the SOFC anode image, with an inset:
     sofc_dir = 'validation_data/2D'
     sofc_large_im = tifffile.imread(f"{sofc_dir}/anode_segmented_tiff_z046_inpainted.tif")
-    chosen_phase = np.unique(sofc_large_im).min()
-    sofc_large_im[sofc_large_im != chosen_phase] = 1
+    chosen_phase = np.unique(sofc_large_im)[2]
+    sofc_large_im[sofc_large_im != chosen_phase] = 7  # a random number 
+    sofc_large_im[sofc_large_im == chosen_phase] = 0
+    sofc_large_im[sofc_large_im == 7] = 1
     sofc_large_im = sofc_large_im[:sofc_large_im.shape[0], :sofc_large_im.shape[0]]
     middle_indices = sofc_large_im.shape
     small_im_size = middle_indices[0]//6
@@ -65,14 +33,16 @@ if __name__ == '__main__':
     x1, x2, y1, y2 = middle_indices[0]//2-small_im_size//2, middle_indices[0]//2+small_im_size//2, middle_indices[1]//2-small_im_size//2,middle_indices[1]//2+small_im_size//2  
     x1, x2, y1, y2 = x1 + 100, x2 + 100, y1 - 300, y2 - 300
     sofc_small_im = sofc_large_im[x1:x2, y1:y2]
-    ax_sofc_im = fig.add_subplot(gs[0, :2])
+    ax_sofc_im = fig.add_subplot(gs[0, 0])
     ax_sofc_im.imshow(sofc_large_im, cmap='gray', interpolation='nearest')
 
     # Create the inset:
     ax_inset = ax_sofc_im.inset_axes([1.2, 0, 1, 1], xlim=(x1, x2), ylim=(y1, y2))
     inset_pos = ax_inset.get_position()
     ax_inset.imshow(sofc_small_im, cmap='gray', interpolation='nearest', extent=[x1, x2, y1, y2])
-    ax_sofc_im.indicate_inset_zoom(ax_inset, alpha=1, edgecolor="black")
+    for spine in ax_inset.spines.values():
+        spine.set_edgecolor(COLOR_INSET)
+    ax_sofc_im.indicate_inset_zoom(ax_inset, alpha=1, edgecolor=COLOR_INSET)
     ax_sofc_im.set_xticks([])
     ax_sofc_im.set_yticks([])
     ax_inset.set_xticks([])
@@ -90,114 +60,44 @@ if __name__ == '__main__':
         y2 = y1 + patch_size
         patch_positions.append((x1, x2, y1, y2))
     for i, (x1, x2, y1, y2) in enumerate(patch_positions):
-        ax_sofc_im.add_patch(patches.Rectangle((x1, y1), patch_size, patch_size, edgecolor='black', facecolor='none'))
+        ax_sofc_im.add_patch(patches.Rectangle((x1, y1), patch_size, patch_size, edgecolor=COLOR_INSET, facecolor='none'))
     
 
     pos3 = ax_sofc_im.get_position() # get the original position
-    pos4 = [pos3.x0 - 0.28, pos3.y0, pos3.width, pos3.height] 
-    ax_sofc_im.set_position(pos4)
+    pos4 = [pos3.x0, pos3.y0, pos3.width, pos3.height] 
+
+    # pos4 = [pos3.x0 - 0.28, pos3.y0, pos3.width, pos3.height] 
+    # ax_sofc_im.set_position(pos4)
 
     tpc_plot = fig.add_subplot(gs[0, 2])
     pos5 = tpc_plot.get_position() # get the original position
+    
+
     arrow_gap = 0.01
     # Create an arrow between the right of the inset and left of the FFT plot:
     ptB = (pos4[0]+pos3.width*2.2+arrow_gap, pos4[1] + pos4[3] / 2)
     ptE = (ptB[0] + 0.05, ptB[1])
     
-    arrow = patches.FancyArrowPatch(ptB, ptE, transform=fig.transFigure,fc = "g", arrowstyle='simple', alpha = 0.3,
-    mutation_scale = 40.)
+    arrow = patches.FancyArrowPatch(
+        ptB, ptE, transform=fig.transFigure,fc = COLOR_INSET, arrowstyle='simple', alpha = 0.3,
+        mutation_scale = 40.
+        )
     # 5. Add patch to list of objects to draw onto the figure
     fig.patches.append(arrow)
 
     # Create the TPC plot:
-    create_tpc_plot(fig, sofc_small_im, 40, {"pred": "g"}, sofc_small_im.mean(), tpc_plot)
+    circle_pred, cls, cbar = create_tpc_plot(fig, sofc_small_im, 40, {"pred": "g"}, sofc_small_im.mean(), tpc_plot)
+    tpc_plot.set_xlabel('TPC distance')
+    tpc_plot.set_ylabel('TPC distance')
+    tpc_plot.legend([circle_pred], [f"Predicted Char. l. s.: {np.round(cls, 2)}"], loc='upper right')
+    cbar.set_label(f'TPC function')
 
+    # Bounds plot:
+    bounds_plot = fig.add_subplot(gs[0, 3])
 
     # No, create the plot showing that the real phase fraction lies within
     # the predicted bounds roughly 95% of the time:
     ax_bars = fig.add_subplot(gs[1, :])
-    ax_bars.set_title("(a)")
-
-    # obtain the data:
-    in_bounds_res = get_in_bounds_results(dims=dims, porespy_bool=False)
-    res_2d = in_bounds_res["2D"]
-
- 
-    # make the table:
-    # first make the data:
-    in_bounds_res = get_in_bounds_results(dims=dims, porespy_bool=True)
-    res_2d = in_bounds_res["2D"]
-    order = ["one_im", "model_wo_gmm", "model_with_gmm"]
-
-    def make_data(dim_res):
-        data = []
-        for key in order:
-            num_trials, num_in_bounds = dim_res[key]
-            row = [
-                f"{num_trials}", 
-                f"{num_in_bounds}/{num_trials} = {num_in_bounds/num_trials*100:.2f}%", 
-                "95%", 
-                f"{np.abs(0.95-num_in_bounds/num_trials)*100:.2f}%"
-                ]
-            data.append(row)
-        return data
-    
-    data_2d = make_data(res_2d)
-    res_3d = in_bounds_res["3D"]
-    data_3d = make_data(res_3d)
-    table_data = data_2d + data_3d
-    ax_table = fig.add_subplot(gs[2, :])
-    plt.figtext(0.415, 0.485, '(b)', ha='center', va='bottom', fontsize=12)
-    ax_table.axis('off')
-    colWidths = np.array([0.14, 0.31, 0.14, 0.14])
-    colWidths /= colWidths.sum()
-    column_labels = ["Number of trials", "Material's true phase fraction is in the predicted bounds", "Confidence goal", "Absolute error"]
-    row_labels1 = ["Classical subdivision method (2D)", "ImageRep only std prediction (2D)", "ImageRep (2D)"]
-    row_labels2 = ["Classical subdivision method (3D)", "ImageRep only std prediction (3D)", "ImageRep (3D)"]
-    row_labels = row_labels1 + row_labels2
-    table1 = ax_table.table(cellText=table_data, colLabels=column_labels, rowLabels=row_labels, loc='center', colWidths=colWidths)
-    for key, cell in table1.get_celld().items():
-        cell.set_text_props(ha='center', va='center')
-    ax_table.text(-0.23, .77, 'PoreSpy materials', ha='left', va='top', transform=ax_table.transAxes)
-    imagerep_2d_cell = table1[(3, 3)]  # Cell in the bottom-right corner (last row, last column)
-    imagerep_2d_cell.set_facecolor('lightgreen')
-    imagerep_3d_cell = table1[(6, 3)]  # Cell in the bottom-right corner (last row, last column)
-    imagerep_3d_cell.set_facecolor('lightgreen')
-    
-    # Second table for SOFC anode:
-    in_bounds_res = get_in_bounds_results(dims=dims, porespy_bool=False)
-    res_2d = in_bounds_res["2D"]
-    order = ["one_im", "model_wo_gmm", "model_with_gmm"]
-
-    def make_data(dim_res):
-        data = []
-        for key in order:
-            num_trials, num_in_bounds = dim_res[key]
-            row = [
-                f"{num_trials}", 
-                f"{num_in_bounds}/{num_trials} = {num_in_bounds/num_trials*100:.2f}%", 
-                "95%", 
-                f"{np.abs(0.95-num_in_bounds/num_trials)*100:.2f}%"
-                ]
-            data.append(row)
-        return data
-    
-    data_2d = make_data(res_2d)
-    table_data = data_2d 
-    ax_table = fig.add_subplot(gs[3, :])
-    plt.figtext(0.415, 0.485, '(b)', ha='center', va='bottom', fontsize=12)
-    ax_table.axis('off')
-    colWidths = np.array([0.14, 0.31, 0.14, 0.14])
-    colWidths /= colWidths.sum()
-    column_labels = ["Number of trials", "Material's true phase fraction is in the predicted bounds", "Confidence goal", "Absolute error"]
-    row_labels1 = ["Classical subdivision method (2D)", "ImageRep only std prediction (2D)", "ImageRep (2D)"]
-    row_labels = row_labels1 
-    table1 = ax_table.table(cellText=table_data, colLabels=column_labels, rowLabels=row_labels, loc='center', colWidths=colWidths)
-    for key, cell in table1.get_celld().items():
-        cell.set_text_props(ha='center', va='center')
-    ax_table.text(-0.23, .77, 'SOFC Anode', ha='left', va='top', transform=ax_table.transAxes)
-    imagerep_2d_cell = table1[(3, 3)]  # Cell in the bottom-right corner (last row, last column)
-    imagerep_2d_cell.set_facecolor('lightgreen')
 
     # plt.tight_layout()
 

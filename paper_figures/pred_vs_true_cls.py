@@ -54,6 +54,7 @@ def create_tpc_plot(fig, img, center, colors, img_pf, ax, with_real_cls = 0):
         ax.legend([circle_pred], [f"Predicted Char. l. s. from \nimage on the left column: {np.round(cls, 2)}"], loc='upper right')
     ax.set_xlabel('Two-point correlation distance')
     ax.set_ylabel('Two-point correlation distance')
+    return circle_pred, cls, cbar
 
 if __name__ == "__main__":
     

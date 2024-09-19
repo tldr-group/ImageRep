@@ -200,7 +200,7 @@ def ps_error_prediction(dim, data, confidence, error_target):
                         ]
                     
                     args = [
-                        small_im, true_pf, edge_length, confidence, error_target, 
+                        dim, small_im, true_pf, edge_length, confidence, error_target, 
                         true_cls, true_error, in_the_bounds_one_im, 
                         in_the_bounds_w_model, in_the_bounds_wo_model, iters,
                         one_im_clss, clss, true_clss
@@ -214,6 +214,74 @@ def ps_error_prediction(dim, data, confidence, error_target):
                 json.dump(data, file)
 
     return errs, true_clss, clss, one_im_clss
+
+def separator_error_prediction(data, confidence, error_target, separator_name='Targray'):
+    true_clss = []
+    clss = []
+    one_im_clss = []
+    in_the_bounds_one_im = []
+    in_the_bounds_w_model = []
+    in_the_bounds_wo_model = []
+    iters = 0
+    dim = "3D"
+    dir = 'validation_data/3D'
+    separator_ims = []
+    
+    for file in os.listdir(dir):
+        if file.startswith(separator_name):
+            separator_im = tifffile.imread(f'{dir}/{file}')
+            # The images are 2-phase:
+            separator_im[separator_im != 0] = 1
+            separator_ims.append(separator_im)
+            
+    data[f"validation_{dim}"][f"separator_{separator_name}"] = {}
+    for separator_im in separator_ims:
+        separator_im = np.expand_dims(separator_im, axis=0)
+        print(f'large im shape: {separator_im.shape}')
+        separator_im_phase_fraction = np.mean(separator_im)
+        print(f'phase fraction: {separator_im_phase_fraction}')
+        edge_lengths_fit = data[f"validation_{dim}"]["edge_lengths_fit"]
+        # Since there are 4 images, the true cls will be the mean of the images:
+        true_cls = util.stat_analysis_error(
+            separator_im, separator_im_phase_fraction, edge_lengths_fit
+        )
+        print(f"True cls: {true_cls}")
+        data[f"validation_{dim}"][f"separator_{separator_name}"]["true_cls"] = true_cls
+        data[f"validation_{dim}"][f"separator_{separator_name}"]["true_pf"] = separator_im_phase_fraction
+        edge_lengths_pred = data[f"validation_{dim}"]["edge_lengths_pred"]
+        edge_lengths_pred = list(np.array(edge_lengths_pred) - 80)  
+        edge_lengths_pred = edge_lengths_pred[:-1]
+        for edge_length in edge_lengths_pred:
+            edge_lengths_repeats = 50
+            for _ in range(edge_lengths_repeats):
+                true_error = util.bernouli_from_cls(
+                    true_cls, separator_im_phase_fraction, [edge_length] * int(dim[0])
+                )
+                start_idx = [
+                        np.random.randint(0, separator_im.shape[i] - edge_length)
+                        for i in range(1, int(dim[0]) + 1)
+                    ]
+                end_idx = [start_idx[i] + edge_length for i in range(int(dim[0]))]
+                small_im = separator_im[0][
+                            start_idx[0] : end_idx[0],
+                            start_idx[1] : end_idx[1],
+                            start_idx[2] : end_idx[2],
+                        ]
+                
+                args = [
+                    dim, small_im, separator_im_phase_fraction, edge_length, confidence, error_target, 
+                    true_cls, true_error, in_the_bounds_one_im, 
+                    in_the_bounds_w_model, in_the_bounds_wo_model, iters,
+                    one_im_clss, clss, true_clss
+                ]
+                run_dict = small_im_stats(*args)
+                data[f"validation_{dim}"][f"separator_{separator_name}"][f"run_{iters}"] = run_dict
+                iters += 1
+                print("\n")
+            with open("representativity/validation/validation_w_real.json", "w") as file:
+                json.dump(data, file)
+
+
 
 def sofc_anode_error_prediction(data, confidence, error_target):
     true_clss = []
@@ -280,7 +348,7 @@ def sofc_anode_error_prediction(data, confidence, error_target):
                     ]
                     
                     args = [
-                        small_im, cur_phase_phase_fraction, edge_length, confidence, error_target, 
+                        dim, small_im, cur_phase_phase_fraction, edge_length, confidence, error_target, 
                         true_cls, true_error, in_the_bounds_one_im, 
                         in_the_bounds_w_model, in_the_bounds_wo_model, iters,
                         one_im_clss, clss, true_clss
@@ -293,7 +361,7 @@ def sofc_anode_error_prediction(data, confidence, error_target):
                 json.dump(data, file)
 
 
-def small_im_stats(small_im, true_pf, edge_length, confidence, error_target, 
+def small_im_stats(dim, small_im, true_pf, edge_length, confidence, error_target, 
                    true_cls, true_error, in_the_bounds_one_im, in_the_bounds_w_model,
                    in_the_bounds_wo_model, iters, one_im_clss, clss, true_clss):
     run_dict = {"edge_length": str(edge_length)}
@@ -373,9 +441,10 @@ if __name__ == "__main__":
     # shape = [1000, 1000]
     all_data = json_validation_preprocessing()
 
-    dim = "2D"
-    sofc_anode_error_prediction(all_data, confidence=0.95, error_target=0.05)
+    # dim = "2D"
+    # sofc_anode_error_prediction(all_data, confidence=0.95, error_target=0.05)
     # dim = "3D"
+    separator_error_prediction(all_data, confidence=0.95, error_target=0.05, separator_name='PP1615')
     # get porespy generators:
     # errs, true_clss, clss, one_im_clss = ps_error_prediction(
     #     dim, all_data, confidence=0.95, error_target=0.05
