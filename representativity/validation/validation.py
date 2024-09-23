@@ -233,7 +233,7 @@ def separator_error_prediction(data, confidence, error_target, separator_name='T
             # The images are 2-phase:
             separator_im[separator_im != 0] = 1
             separator_ims.append(separator_im)
-            
+
     data[f"validation_{dim}"][f"separator_{separator_name}"] = {}
     for separator_im in separator_ims:
         separator_im = np.expand_dims(separator_im, axis=0)
@@ -250,7 +250,7 @@ def separator_error_prediction(data, confidence, error_target, separator_name='T
         data[f"validation_{dim}"][f"separator_{separator_name}"]["true_pf"] = separator_im_phase_fraction
         edge_lengths_pred = data[f"validation_{dim}"]["edge_lengths_pred"]
         edge_lengths_pred = list(np.array(edge_lengths_pred) - 80)  
-        edge_lengths_pred = edge_lengths_pred[:-1]
+        edge_lengths_pred = edge_lengths_pred[1:]
         for edge_length in edge_lengths_pred:
             edge_lengths_repeats = 50
             for _ in range(edge_lengths_repeats):

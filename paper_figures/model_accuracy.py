@@ -6,17 +6,57 @@ import random
 from matplotlib.gridspec import GridSpec
 import matplotlib.patches as patches
 from paper_figures.pred_vs_true_cls import create_tpc_plot
+from representativity import core
 
-COLOR_INSET = "darkorange"
+COLOR_INSET = "orange"
+COLOR_PHI = "blue"
+COLOR_IN = "green"
+COLOR_OUT = "red"
+LINE_W = 1.5
+
+
+def get_prediction_interval_stats(inset_image):
+    phase_fraction = float(np.mean(inset_image))
+    n_dims = len(inset_image.shape)  # 2D or 3D
+    n_elems = int(np.prod(inset_image.shape))
+
+    two_point_correlation = core.radial_tpc(inset_image, n_dims == 3, True)
+    integral_range = core.tpc_to_cls(
+        two_point_correlation,
+        inset_image,
+    )
+
+    n = core.n_samples_from_dims(
+        [np.array(inset_image.shape, dtype=np.int32)], integral_range
+    )
+    # bern = bernouilli
+    std_bern = (
+        (1 / n[0]) * (phase_fraction * (1 - phase_fraction))
+    ) ** 0.5  # this is the std of phi relative to Phi with
+    std_model = core.get_std_model(n_dims, n_elems)
+    n = core.n_samples_from_dims(
+        [np.array(inset_image.shape, dtype=np.int32)], integral_range
+    )
+    
+    std_model = core.get_std_model(n_dims, n_elems)
+    conf_bounds, pf_1d, cum_sum_sum = core.get_prediction_interval(
+        inset_image.mean(),
+        std_bern,
+        std_model,
+    )
+    
+    return conf_bounds, pf_1d, cum_sum_sum
 
 # Plot the data
 if __name__ == '__main__':
 
     dims = ["2D", "3D"]
     
-    col_width = 20
-    fig = plt.figure(figsize=(col_width, col_width/3))
-    gs = GridSpec(2, 4)
+    col_width = 18
+    fig = plt.figure(figsize=(col_width, col_width/2.5))
+    gs = GridSpec(2, 3, width_ratios=[2, 1, 1])
+    # Have some space between the subplots:
+    gs.update(wspace=0.5, hspace=0.3)
 
     # Create the SOFC anode image, with an inset:
     sofc_dir = 'validation_data/2D'
@@ -27,56 +67,52 @@ if __name__ == '__main__':
     sofc_large_im[sofc_large_im == 7] = 1
     sofc_large_im = sofc_large_im[:sofc_large_im.shape[0], :sofc_large_im.shape[0]]
     middle_indices = sofc_large_im.shape
-    small_im_size = middle_indices[0]//6
+    small_im_size = 350
     
     # Subregion of the original image:
     x1, x2, y1, y2 = middle_indices[0]//2-small_im_size//2, middle_indices[0]//2+small_im_size//2, middle_indices[1]//2-small_im_size//2,middle_indices[1]//2+small_im_size//2  
-    x1, x2, y1, y2 = x1 + 100, x2 + 100, y1 - 300, y2 - 300
+    x_move, y_move = 150, -200
+    x1, x2, y1, y2 = x1 + x_move, x2 + x_move, y1 + y_move, y2 + y_move
     sofc_small_im = sofc_large_im[x1:x2, y1:y2]
     ax_sofc_im = fig.add_subplot(gs[0, 0])
     ax_sofc_im.imshow(sofc_large_im, cmap='gray', interpolation='nearest')
+    ax_sofc_im.set_xlabel(f"Material's phase fraction $\phi$: {sofc_large_im.mean():.3f}")
 
     # Create the inset:
-    ax_inset = ax_sofc_im.inset_axes([1.2, 0, 1, 1], xlim=(x1, x2), ylim=(y1, y2))
+    inset_shift = 1.2
+    ax_inset = ax_sofc_im.inset_axes([inset_shift, 0, 1, 1], xlim=(x1, x2), ylim=(y1, y2))
+    ax_inset.set_xlabel(f"Inset phase fraction: {sofc_small_im.mean():.3f}")
     inset_pos = ax_inset.get_position()
     ax_inset.imshow(sofc_small_im, cmap='gray', interpolation='nearest', extent=[x1, x2, y1, y2])
     for spine in ax_inset.spines.values():
         spine.set_edgecolor(COLOR_INSET)
-    ax_sofc_im.indicate_inset_zoom(ax_inset, alpha=1, edgecolor=COLOR_INSET)
+        spine.set_linewidth(LINE_W)
+    ax_sofc_im.indicate_inset_zoom(ax_inset, alpha=1, edgecolor=COLOR_INSET, linewidth=LINE_W)
     ax_sofc_im.set_xticks([])
     ax_sofc_im.set_yticks([])
     ax_inset.set_xticks([])
     ax_inset.set_yticks([])
 
-    # Add some patches of the same size as the inset:
-    patch_size = middle_indices[0]//6
-    num_patches = 6
-    # Randomly place the patches, just not overlapping the center:
-    patch_positions = []
-    for i in range(num_patches):
-        x1 = random.randint(0, middle_indices[0]-patch_size)
-        x2 = x1 + patch_size
-        y1 = random.randint(0, middle_indices[1]-patch_size)
-        y2 = y1 + patch_size
-        patch_positions.append((x1, x2, y1, y2))
-    for i, (x1, x2, y1, y2) in enumerate(patch_positions):
-        ax_sofc_im.add_patch(patches.Rectangle((x1, y1), patch_size, patch_size, edgecolor=COLOR_INSET, facecolor='none'))
+    
     
 
     pos3 = ax_sofc_im.get_position() # get the original position
-    pos4 = [pos3.x0, pos3.y0, pos3.width, pos3.height] 
-
-    # pos4 = [pos3.x0 - 0.28, pos3.y0, pos3.width, pos3.height] 
+    # pos4 = [pos3.x0, pos3.y0, pos3.width, pos3.height] 
     # ax_sofc_im.set_position(pos4)
 
-    tpc_plot = fig.add_subplot(gs[0, 2])
+    ax_bars = fig.add_subplot(gs[1, :])
+    pos_ax_bars = ax_bars.get_position()
+    pos4 = [pos_ax_bars.x0, pos3.y0, pos3.width, pos3.height] 
+    ax_sofc_im.set_position(pos4)
+
+    tpc_plot = fig.add_subplot(gs[0, 1])
     pos5 = tpc_plot.get_position() # get the original position
     
 
-    arrow_gap = 0.01
+    arrow_gap = 0.03
     # Create an arrow between the right of the inset and left of the FFT plot:
-    ptB = (pos4[0]+pos3.width*2.2+arrow_gap, pos4[1] + pos4[3] / 2)
-    ptE = (ptB[0] + 0.05, ptB[1])
+    ptB = (pos4[0]+pos3.width*(1+inset_shift)+arrow_gap, pos4[1] + pos4[3] / 2)
+    ptE = (ptB[0] + 0.03, ptB[1])
     
     arrow = patches.FancyArrowPatch(
         ptB, ptE, transform=fig.transFigure,fc = COLOR_INSET, arrowstyle='simple', alpha = 0.3,
@@ -92,14 +128,75 @@ if __name__ == '__main__':
     tpc_plot.legend([circle_pred], [f"Predicted Char. l. s.: {np.round(cls, 2)}"], loc='upper right')
     cbar.set_label(f'TPC function')
 
-    # Bounds plot:
-    bounds_plot = fig.add_subplot(gs[0, 3])
+    # Create the prediction interval plot:
+    pred_interval_ax = fig.add_subplot(gs[0, 2])
+    conf_bounds, pf_1d, cum_sum_sum = get_prediction_interval_stats(sofc_small_im)
+    # cumulative sum to the original data:
+    original_data = np.diff(cum_sum_sum)
+    pred_interval_ax.plot(pf_1d[:-1], original_data, label="Likelihood of $\phi$")
 
-    # No, create the plot showing that the real phase fraction lies within
-    # the predicted bounds roughly 95% of the time:
-    ax_bars = fig.add_subplot(gs[1, :])
+    # pred_interval_ax.fill_between(pf_1d, cum_sum_sum - conf_bounds, cum_sum_sum + conf_bounds, alpha=0.3)
+    pred_interval_ax.set_xlabel('Phase fraction')
+    # No y-ticks:
+    # pred_interval_ax.set_yticks([])
+    # Fill between confidence bounds:
+    conf_start, conf_end = conf_bounds
+    # Fill between the confidence bounds under the curve:
+    pred_interval_ax.fill_between(
+        pf_1d[:-1], 
+        original_data, 
+        where=(pf_1d[:-1] >= conf_start) & (pf_1d[:-1] <= conf_end), 
+        alpha=0.3,
+        label="95% confidence bounds"
+        )
+    # Plot in dashed vertical lines the materials phase fraction and the inset phase fraction:
+    pred_interval_ax.vlines(
+        sofc_large_im.mean(),
+        0,
+        np.max(original_data),
+        linestyle="--",
+        color=COLOR_PHI,
+        label="$\phi$",
+    )
+    pred_interval_ax.vlines(
+        sofc_small_im.mean(),
+        0,
+        np.max(original_data),
+        linestyle="--",
+        color=COLOR_INSET,
+        label="Inset phase fraction",
+    )
+    pred_interval_ax.legend(loc='upper right')
+    pred_interval_ax.set_ylim([0, pred_interval_ax.get_ylim()[1]])
+    inset_pf = sofc_small_im.mean()
+    xerr = 
+    pred_interval_ax.errorbar(sofc_small_im.mean(), 0, xerr=, fmt='o')
 
-    # plt.tight_layout()
+    # Plot the model accuracy:
+    # First, plot \phi as a horizontal line:
+    ax_bars.axhline(sofc_large_im.mean(), color=COLOR_PHI, linestyle="--", label="$\phi$")
+
+    # Add some patches of the same size as the inset:
+    patch_size = small_im_size
+    num_images = 40
+    num_patches = 6
+    # Randomly place the patches, just not overlapping the center:
+    patch_positions = []
+    images = []
+    for i in range(num_images):
+        x1 = random.randint(0, middle_indices[0]-patch_size)
+        x2 = x1 + patch_size
+        y1 = random.randint(0, middle_indices[1]-patch_size)
+        y2 = y1 + patch_size
+        patch_positions.append((x1, x2, y1, y2))
+        images.append(sofc_large_im[x1:x2, y1:y2])
+
+    
+    for i, (x1, x2, y1, y2) in enumerate(patch_positions):
+        if i > num_patches:
+            break
+        ax_sofc_im.add_patch(patches.Rectangle(
+            (x1, y1), patch_size, patch_size, edgecolor=COLOR_INSET, linewidth=LINE_W, facecolor='none'))
 
     plt.savefig("paper_figures/output/model_accuracy.pdf", format="pdf", bbox_inches='tight', dpi=300)
 
