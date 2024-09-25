@@ -74,6 +74,7 @@ if __name__ == '__main__':
     for spine in ax_inset.spines.values():
         spine.set_edgecolor(COLOR_INSET)
         spine.set_linewidth(LINE_W)
+
     ax_sofc_im.indicate_inset_zoom(ax_inset, alpha=1, edgecolor=COLOR_INSET, linewidth=LINE_W)
     ax_sofc_im.set_xticks([])
     ax_sofc_im.set_yticks([])
@@ -112,12 +113,22 @@ if __name__ == '__main__':
     
 
     # Rep. calculation:
-    same_samll_im = fig.add_subplot(gs[1, 0])
-    same_samll_im.imshow(sofc_small_im, cmap='gray', interpolation='nearest')
+    same_small_im = fig.add_subplot(gs[1, 0])
+    same_small_im.imshow(sofc_small_im, cmap='gray', interpolation='nearest')
+    same_small_im.set_xticks([])
+    same_small_im.set_yticks([])
+    same_small_im.set_xlabel(f"Single image input")
+    for spine in same_small_im.spines.values():
+        spine.set_edgecolor(COLOR_INSET)
+        spine.set_linewidth(LINE_W)
 
     # Create the TPC plot:
     tpc_plot = fig.add_subplot(gs[1, 1])
-    create_tpc_plot(fig, sofc_small_im, 40, {"pred": "g"}, sofc_small_im.mean(), tpc_plot)
+    create_tpc_plot(fig, sofc_small_im, 40, {"pred": "g"}, sofc_small_im.mean(), tpc_plot, with_omega_notation=False)
+    tpc_plot.set_xlabel('')
+    tpc_plot.set_ylabel('')
+    tpc_plot.set_xticks([])
+    tpc_plot.set_yticks([])
 
     # Results:
 

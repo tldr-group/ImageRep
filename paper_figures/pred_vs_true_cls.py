@@ -14,7 +14,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.ndimage import zoom 
 
 # Create TPC plot:
-def create_tpc_plot(fig, img, center, colors, img_pf, ax, with_real_cls = 0):
+def create_tpc_plot(fig, img, center, colors, img_pf, ax, with_real_cls = 0, with_omega_notation = True):
     center = 40
     # print(f'starting tpc radial')
     tpc = core.radial_tpc(img, volumetric=False)
@@ -27,12 +27,14 @@ def create_tpc_plot(fig, img, center, colors, img_pf, ax, with_real_cls = 0):
     contour = ax.contourf(tpc_im, cmap="plasma", levels=200)
     for c in contour.collections:
         c.set_edgecolor("face")
-    if with_real_cls:
-        circle_real = plt.Circle((center, center), real_cls, fill=False, color=colors["true"], label=f"True Char. l. s. radius: {np.round(real_cls, 2)}")
-        ax.add_artist(circle_real)
+    circle_pred = None
+    if with_omega_notation:
+        if with_real_cls:
+            circle_real = plt.Circle((center, center), real_cls, fill=False, color=colors["true"], label=f"True Char. l. s. radius: {np.round(real_cls, 2)}")
+            ax.add_artist(circle_real)
 
-    circle_pred = plt.Circle((center, center), cls, fill=False, color=colors["pred"], label=f"Predicted Char. l. s. radius: {np.round(cls, 2)}")
-    ax.add_artist(circle_pred)
+        circle_pred = plt.Circle((center, center), cls, fill=False, color=colors["pred"], label=f"Predicted Char. l. s. radius: {np.round(cls, 2)}")
+        ax.add_artist(circle_pred)
 
     x_ticks = ax.get_xticks()[1:-1]
     ax.set_xticks(x_ticks, np.int64(np.array(x_ticks) - center))
@@ -43,15 +45,22 @@ def create_tpc_plot(fig, img, center, colors, img_pf, ax, with_real_cls = 0):
     cbar = fig.colorbar(contour, cax=cax, orientation="vertical")
     # cbar_ticks = cbar.ax.get_yticks()
     cbar_ticks = np.linspace(img_pf, img_pf**2, 6)
-    cbar.ax.set_yticks(cbar_ticks, [r'$\Phi(\omega)$']+list(np.round(cbar_ticks[1:-1],2))+[r'$\Phi(\omega)^2$'])
-    cbar.set_label(f'Two-point correlation function')
-    fakexy = [0, 0]
-    circle_pred = plt.Line2D(fakexy, fakexy, linestyle='none', marker='o', fillstyle='none', color=colors["pred"], alpha=1.00)
-    if with_real_cls:
-        circle_real = plt.Line2D(fakexy, fakexy, linestyle='none', marker='o', fillstyle='none', color=colors["true"], alpha=1.00)
-        ax.legend([circle_real, circle_pred], [f"True Char. l. s.: {np.round(real_cls, 2)}", f"Predicted Char. l. s. from \nimage on the left column: {np.round(cls, 2)}"], loc='upper right')
+    if with_omega_notation:
+        cbar.ax.set_yticks(cbar_ticks, [r'$\Phi(\omega)$']+list(np.round(cbar_ticks[1:-1],2))+[r'$\Phi(\omega)^2$'])
     else:
-        ax.legend([circle_pred], [f"Predicted Char. l. s. from \nimage on the left column: {np.round(cls, 2)}"], loc='upper right')
+        cbar.ax.set_yticks(cbar_ticks, list(np.round(cbar_ticks,2)))
+    if with_omega_notation:
+        cbar.set_label(f'Two-point correlation function')
+    else:
+        cbar.set_label(f'Two-point correlation (TPC) function')
+    fakexy = [0, 0]
+    if with_real_cls:
+        circle_pred = plt.Line2D(fakexy, fakexy, linestyle='none', marker='o', fillstyle='none', color=colors["pred"], alpha=1.00)
+        if with_real_cls:
+            circle_real = plt.Line2D(fakexy, fakexy, linestyle='none', marker='o', fillstyle='none', color=colors["true"], alpha=1.00)
+            ax.legend([circle_real, circle_pred], [f"True Char. l. s.: {np.round(real_cls, 2)}", f"Predicted Char. l. s. from \nimage on the left column: {np.round(cls, 2)}"], loc='upper right')
+        else:
+            ax.legend([circle_pred], [f"Predicted Char. l. s. from \nimage on the left column: {np.round(cls, 2)}"], loc='upper right')
     ax.set_xlabel('Two-point correlation distance')
     ax.set_ylabel('Two-point correlation distance')
     return circle_pred, cls, cbar
