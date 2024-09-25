@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import json
 import tifffile
 import random
 from matplotlib.gridspec import GridSpec
