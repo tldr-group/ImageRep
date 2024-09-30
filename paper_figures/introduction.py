@@ -7,6 +7,7 @@ from scipy.stats import norm
 import matplotlib.patches as patches
 from paper_figures.pred_vs_true_cls import create_tpc_plot
 from representativity import core
+from paper_figures.model_accuracy import get_prediction_interval_stats
 from scipy.stats import norm
 import matplotlib.mlab as mlab
 
@@ -129,8 +130,60 @@ if __name__ == '__main__':
     tpc_plot.set_ylabel('')
     tpc_plot.set_xticks([])
     tpc_plot.set_yticks([])
+    tpc_plot.set_title("(f)")
 
     # Results:
 
+    
+    # Create the prediction interval plot:
     res_1_pred = fig.add_subplot(gs[0, 3])
+    conf_bounds, pf_1d, cum_sum_sum = get_prediction_interval_stats(sofc_small_im)
+    # cumulative sum to the original data:
+    original_data = np.diff(cum_sum_sum)
+    res_1_pred.plot(pf_1d[:-1], original_data, label="ImageRep likelihood of $\phi$\ngiven only inset image")
+
+    res_1_pred.set_xlabel('Phase fraction')
+    # No y-ticks:
+    # res_1_pred.set_yticks([])
+    # Fill between confidence bounds:
+    conf_start, conf_end = conf_bounds
+    # Fill between the confidence bounds under the curve:
+    res_1_pred.fill_between(
+        pf_1d[:-1], 
+        original_data, 
+        where=(pf_1d[:-1] >= conf_start) & (pf_1d[:-1] <= conf_end), 
+        alpha=0.3,
+        color='black',
+        )
+    # Plot in dashed vertical lines the materials phase fraction and the inset phase fraction:
+    phi = sofc_large_im.mean()
+    res_1_pred.vlines(
+        phi,
+        0,
+        np.max(original_data),
+        linestyle="--",
+        color='black',
+        label="Unknown material's phase fraction",
+    )
+    res_1_pred.vlines(
+        sofc_small_im.mean(),
+        0,
+        np.max(original_data),
+        linestyle="--",
+        color=COLOR_INSET,
+        label="Inset phase fraction",
+    )
+    
+    # No y-ticks:
+    res_1_pred.set_yticks([])
+    res_1_pred.set_title("(d)")
+
+    res_1_pred.set_ylim([0, res_1_pred.get_ylim()[1]])
+    inset_pf = sofc_small_im.mean()
+    xerr = inset_pf - conf_start
+    # res_1_pred.errorbar(
+        # sofc_small_im.mean(), 0.0002, xerr=xerr, fmt='o', capsize=6, color=COLOR_INSET, label="95% confidence interval", linewidth=LINE_W)
+    res_1_pred.legend(loc='upper left')
+
+
     res_2_pred = fig.add_subplot(gs[1, 3])

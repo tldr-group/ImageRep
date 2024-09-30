@@ -40,15 +40,19 @@ def create_tpc_plot(fig, img, center, colors, img_pf, ax, with_real_cls = 0, wit
     ax.set_xticks(x_ticks, np.int64(np.array(x_ticks) - center))
     ax.set_yticks(x_ticks, np.int64(np.array(x_ticks) - center))
     divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.05)
 
-    cbar = fig.colorbar(contour, cax=cax, orientation="vertical")
+    if with_omega_notation:
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        cbar = fig.colorbar(contour, cax=cax, orientation="vertical")
+    else:
+        cax = divider.append_axes("bottom", size="3%", pad=0.05)
+        cbar = fig.colorbar(contour, cax=cax, orientation="horizontal", location="bottom")
     # cbar_ticks = cbar.ax.get_yticks()
     cbar_ticks = np.linspace(img_pf, img_pf**2, 6)
     if with_omega_notation:
         cbar.ax.set_yticks(cbar_ticks, [r'$\Phi(\omega)$']+list(np.round(cbar_ticks[1:-1],2))+[r'$\Phi(\omega)^2$'])
     else:
-        cbar.ax.set_yticks(cbar_ticks, list(np.round(cbar_ticks,2)))
+        cbar.ax.set_xticks(cbar_ticks, list(np.round(cbar_ticks,2)))
     if with_omega_notation:
         cbar.set_label(f'Two-point correlation function')
     else:
