@@ -1,16 +1,14 @@
-# Representativity
-
-![Tests](https://github.com/tldr-group/Representativity/actions/workflows/tests.yml/badge.svg)
+# ImageRep
 
 [Try it out!](https://www.imagerep.io/)
 
-Here we introduce the 'ImageRep' method for fast phase fraction representativity estimation from a single microstructural image. This is achieved by calculating the Two-Point Correlation (TPC) function of the image, combined with a data-driven analysis of the [Microlib](https://microlib.io/) dataset. By applying a statistical framework that utilizes both data sources, we can establish the uncertainty in the phase fraction in the image with a given confidence, **and** the image size that would be needed to meet a given target uncertainty. Further details are provided in our [paper](CITATION.cff).
+Here we introduce the 'ImageRep' method for fast phase fraction representativity estimation from a single microstructural image. This is achieved by calculating the Two-Point Correlation (TPC) function of the image, combined with a data-driven analysis of the [MicroLib](https://microlib.io/) dataset. By applying a statistical framework that utilizes both data sources, we can establish the uncertainty in the phase fraction in the image with a given confidence, **and** the image size that would be needed to meet a given target uncertainty. Further details are provided in our [paper](CITATION.cff).
 
 If you use this ImageRep in your research, [please cite us](CITATION.cff).
 
 ## Usage:
 
-This method can be used via the [website (imagerep.io)](https://www.imagerep.io/)or as python package - see [`example.ipynb`](example.ipynb).
+This method can be used via the [website (imagerep.io)](https://www.imagerep.io/) or as python package - see [`example.ipynb`](example.ipynb).
 
 <p align="center">
     <img src="https://sambasegment.blob.core.windows.net/resources/repr_repo_v2.gif">
@@ -81,6 +79,8 @@ yarn && yarn start
 2. Navigate to [`http://localhost:8080/`](http://localhost:8080/) (the browser should do this automatically).
 
 ## Testing Instructions
+
+![Tests](https://github.com/tldr-group/Representativity/actions/workflows/tests.yml/badge.svg)
 
 1. Run (with your virtual enviroment activated!)
 
