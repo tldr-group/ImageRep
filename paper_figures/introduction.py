@@ -11,6 +11,8 @@ from paper_figures.model_accuracy import get_prediction_interval_stats
 from scipy.stats import norm
 import matplotlib.mlab as mlab
 import matplotlib.lines as mlines
+import tifffile
+
 
 COLOR_INSET = "darkorange"
 COLOR_PHI = "blue"
@@ -44,9 +46,9 @@ if __name__ == '__main__':
     
     # Subregion of the original image:
     x1, x2, y1, y2 = middle_indices[0]//2-small_im_size//2, middle_indices[0]//2+small_im_size//2, middle_indices[1]//2-small_im_size//2,middle_indices[1]//2+small_im_size//2  
-    x_move, y_move = 350, 0
+    x_move, y_move = 480, 290
     x1, x2, y1, y2 = x1 + x_move, x2 + x_move, y1 + y_move, y2 + y_move
-    sofc_small_im = sofc_large_im[x1:x2, y1:y2]
+    sofc_small_im = sofc_large_im[y1:y2, x1:x2]
     ax_sofc_im = fig.add_subplot(gs[0, 0])
     ax_sofc_im.imshow(sofc_large_im, cmap='gray', interpolation='nearest')
     ax_sofc_im.set_xlabel(f"Unknown material's phase fraction: {sofc_large_im.mean():.3f}")
@@ -140,13 +142,29 @@ if __name__ == '__main__':
 
     # Text of representativity analysis:
     rep_text = fig.add_subplot(gs[1, 2])
+
+    microlib_examples = tifffile.imread("paper_figures/microlib_examples.tif")
+    microlib_examples_size = min(microlib_examples.shape)
+    microlib_examples = microlib_examples[-microlib_examples_size:, -microlib_examples_size:]
+    microlib_examples = microlib_examples / microlib_examples.max()
+    width_mult, height_mult = 0.8, 0.8
+    large_microlib_im = np.ones((int(microlib_examples_size / width_mult), int(microlib_examples_size / height_mult)))
+    start_idx = int((large_microlib_im.shape[0] - microlib_examples_size) / 2)
+    large_microlib_im[-microlib_examples_size:, start_idx:start_idx+microlib_examples_size] = microlib_examples
+    rep_text.imshow(large_microlib_im, cmap='gray', interpolation='nearest')
+
     rep_text.set_title("(g)")
-    rep_text.text(0.5, 0.5, 
-                  "TPC integration and data driven\ncorrection", va='center', ha='center')
+    text_y = 0.1
+    text_pos = (0.5*large_microlib_im.shape[1], text_y*large_microlib_im.shape[0])
+    rep_text.text(*text_pos, 
+                  "TPC integration and data-driven \ncorrection using MicroLib ", va='center', ha='center')
     font_size = rep_text.texts[0].get_fontsize()
     rep_text.texts[0].set_fontsize(font_size + 2)
     # delete the axis:
     rep_text.axis('off')
+
+    
+
     
     # Results:
 
