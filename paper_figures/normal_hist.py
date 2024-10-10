@@ -53,4 +53,4 @@ axs[0, 1].set_title(f'Sample micrograph {size2}x{size2} phase fraction = 0.3197'
 plt.tight_layout()
 
 # Show the figure
-plt.savefig('normal_hist.png')
+plt.savefig('paper_figures/output/normal_hist.png')

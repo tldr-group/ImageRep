@@ -1,7 +1,8 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { DragDropProps } from "./interfaces";
 
-const DEFAULT_IMAGE = "../assets/default.tiff";
+const DEFAULT_IMAGE_2D = "../assets/default_2D.tiff";
+const DEFAULT_IMAGE_3D = "../assets/default_3D.tiff";
 
 export const dragDropStyle = {
     height: '75vh', width: '75vw',
@@ -27,8 +28,8 @@ const DragDrop = ({ loadFromFile }: DragDropProps): JSX.Element => {
         };
     };
 
-    const viewExample = async () => {
-        const url = new URL(DEFAULT_IMAGE, location.origin);
+    const viewExample = async (path: string) => {
+        const url = new URL(path, location.origin);
         console.log(url)
         const resp = await fetch(url);
         const data = await resp.blob();
@@ -43,7 +44,7 @@ const DragDrop = ({ loadFromFile }: DragDropProps): JSX.Element => {
             onDragOver={handleDrag}
             onDrop={handeDrop}
         >
-            {(!isMobile) && <span>Drag microstructure file or <a style={{ cursor: "pointer", color: 'blue' }} onClick={viewExample}> view example!</a></span>}
+            {(!isMobile) && <span>Drag microstructure file, or view example <a style={{ cursor: "pointer", color: 'blue' }} onClick={e => viewExample(DEFAULT_IMAGE_2D)}>in 2D</a> or  <a style={{ cursor: "pointer", color: 'blue' }} onClick={e => viewExample(DEFAULT_IMAGE_3D)}> 3D</a></span>}
         </div>
     );
 }

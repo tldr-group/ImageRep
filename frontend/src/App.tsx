@@ -8,13 +8,13 @@ import NormalSlider from "./components/NormalSlider";
 import { Menu } from "./components/Menu";
 import { ErrorMessage, CLSModal, MoreInfo } from "./components/Popups"
 
-import { loadFromTIFF, loadFromImage } from "./components/imageLogic";
+import { loadFromTIFF, loadFromImage, getPhaseFraction } from "./components/imageLogic";
 
 import "./assets/scss/App.scss";
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const PATH = "http://127.0.0.1:5000";
-//const PATH = "https://samba-segment.azurewebsites.net";
+//const PATH = "http://127.0.0.1:5000";
+const PATH = "https://samba-segment.azurewebsites.net";
 //const PATH = "http://localhost:7071/api";
 //const PATH = "https://representative.azurewebsites.net/api"
 const PF_ENDPOINT = PATH + "/phasefraction"
@@ -147,7 +147,13 @@ const App = () => {
             })
 
             const vals = imageInfo?.phaseVals!
-            const phaseFrac = accurateFractions![vals[selectedPhase - 1]]
+            const phaseFrac = (accurateFractions != null) ?
+                accurateFractions[vals[selectedPhase - 1]]
+                : getPhaseFraction(
+                    imageInfo?.previewData.data!,
+                    vals[selectedPhase - 1]
+                );
+
             setPfB([phaseFrac - absErr, phaseFrac + absErr])
 
             if (obj["cls"] > IR_LIMIT_PX) { setShowWarning("cls") }

@@ -71,7 +71,7 @@ export const CLSModal = () => {
         }
     }
 
-    const txt = (showWarning == "over") ? 'Success!' : "Warning!"
+    const txt = (showWarning == "over") ? 'Good news!' : "Warning!"
     const bg = (showWarning == "over") ? '#6ac40a' : '#fcba03'
 
     return (
@@ -95,12 +95,14 @@ export const MoreInfo = () => {
         imageInfo: [imageInfo,],
         analysisInfo: [analysisInfo,],
         showInfo: [showInfo, setShowInfo],
-        menuState: [, setMenuState]
+        menuState: [menuState, setMenuState]
     } = useContext(AppContext)!;
 
     const handleClose = () => {
         setShowInfo(false);
-        setMenuState('conf_result');
+        if (menuState == "conf_result_full") {
+            setMenuState('conf_result');
+        }
     };
 
     return (

@@ -191,12 +191,24 @@ const Result = () => {
     const lResultRef = useRef<HTMLHeadingElement>(null);
 
     const vals = imageInfo?.phaseVals!
-    const phaseFrac = (accurateFractions != null) ?
-        accurateFractions[vals[selectedPhase - 1]]
-        : getPhaseFraction(
-            imageInfo?.previewData.data!,
-            vals[selectedPhase - 1]
-        );
+
+    const getPhaseFracs = () => {
+        const accurateAvailable = accurateFractions != null
+        const coarseAvailable = (imageInfo != null) && (imageInfo.previewData.data != null)
+
+        if (accurateAvailable) {
+            return accurateFractions[vals[selectedPhase - 1]]
+        } else if (coarseAvailable) {
+            return getPhaseFraction(
+                imageInfo?.previewData.data!,
+                vals[selectedPhase - 1]
+            );
+        } else {
+            return 0
+        }
+    }
+
+    const phaseFrac = getPhaseFracs();
 
 
     const l = analysisInfo?.lForDefaultErr;
@@ -257,6 +269,8 @@ const Result = () => {
     const vol = (ii?.nDims! == 3) ? (ii?.height! * ii?.width! * ii?.width!) : (ii?.height! * ii?.width!)
     const nMore = (Math.ceil(Math.pow(l!, imageInfo?.nDims!) / vol)) - 1
 
+    const modalTitle = `Results for "${imageInfo?.file?.name}"`
+
     const title = "Phase Fraction Estimation of the Material"
 
     const smallResults = (
@@ -313,7 +327,7 @@ const Result = () => {
     const largeResults = (<>
         <Modal show={showFull} onHide={handleClose} size="lg">
             <Modal.Header style={{ backgroundColor: '#212529', color: '#ffffff' }} closeVariant="white" closeButton>
-                <Modal.Title>Results!</Modal.Title>
+                <Modal.Title>{modalTitle}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <Accordion defaultActiveKey={['0', '1']} flush alwaysOpen>
