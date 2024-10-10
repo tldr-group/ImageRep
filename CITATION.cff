@@ -5,11 +5,13 @@ authors:
     orcid: 0000-0003-0142-8597
   - name: Ronan Docherty
     orcid: 0000-0002-7332-0924
+  - name: Steve Kench
+    orcid: 0000-0002-7263-6724
   - name: Samuel J. Cooper
     orcid: 0000-0003-4055-6903
-title: "Predicting Microstructural Representativity from a Single Image"
+title: "Prediction of Microstructural Representativity from a Single Image"
 doi: ARXIV_DOI
-url: "https://github.com/tldr-group/Representativity"
+url: "https://github.com/tldr-group/ImageRep"
 preferred-citation:
   type: article
   authors:
@@ -17,10 +19,12 @@ preferred-citation:
     orcid: 0000-0003-0142-8597
   - name: Ronan Docherty
     orcid: 0000-0002-7332-0924
+  - name: Steve Kench
+    orcid: 0000-0002-7263-6724
   - name: Samuel J. Cooper
     orcid: 0000-0003-4055-6903
   doi: ARXIV_DOI
   journal: "arXiV preprint"
   month: 8
-  title: "Predicting Microstructural Representativity from a Single Image"
+  title: "Prediction of Microstructural Representativity from a Single Image"
   year: 2024

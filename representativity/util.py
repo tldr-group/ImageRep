@@ -74,7 +74,8 @@ def angular_img(img):
     return img_rot
 
 
-def stat_analysis_error(img, pf, edge_lengths):  # TODO see if to delete this or not
+def stat_analysis_error(img, pf, edge_lengths):  
+    '''Calculates and returns the real cls based on statistical analysis of the large image.'''
     img_dims = [np.array((l,) * (len(img.shape) - 1)) for l in edge_lengths]
     err_exp = real_image_stats(img, edge_lengths, pf)
     real_cls = core.fit_statisical_cls_from_errors(err_exp, img_dims, pf)
@@ -82,7 +83,7 @@ def stat_analysis_error(img, pf, edge_lengths):  # TODO see if to delete this or
     return real_cls
 
 
-def real_image_stats(img, ls, pf, repeats=4000, conf=0.95):
+def real_image_stats(img, ls, pf, repeats=4000, conf=0.95, stack=False):
     """Calculates the error of the stat. analysis for different edge lengths.
     The error is calculated by the std of the mean of the subimages divided by the pf.
     params:
@@ -96,7 +97,7 @@ def real_image_stats(img, ls, pf, repeats=4000, conf=0.95):
     for l in ls:
         pfs = []
         n_pos_ims = int(np.prod(img.shape) / l**dims)
-        repeats = n_pos_ims * 2
+        repeats = n_pos_ims * 10
         # print(f'one im repeats = {repeats} for l = {l}')
         if dims == 1:
             for _ in range(repeats):
