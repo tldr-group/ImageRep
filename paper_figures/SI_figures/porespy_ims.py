@@ -7,6 +7,8 @@ from representativity.validation import validation
 
 
 if __name__ == '__main__':
+    fig = plt.figure(figsize=(10, 10))
+    gs = fig.add_gridspec(1, 1)
     num_generators = 50
     num_images = 5
     generators_chosen = np.random.choice(num_generators, num_images, replace=False)
@@ -45,10 +47,8 @@ if __name__ == '__main__':
                 ] += cur_im
     stacked = 1 - stacked
 
-    
-
     # Create the PoreSpy images:
-    ax_porespy_im = fig.add_subplot(gs[0, 0])
+    ax_porespy_im = fig.add_subplot(gs[0])
     ax_porespy_im.imshow(stacked, vmin=0, vmax=1, cmap='gray', interpolation='nearest')
     ax_porespy_im.set_title('(a)')
     ax_porespy_im.axis('off') 
@@ -56,3 +56,5 @@ if __name__ == '__main__':
     pos1 = ax_porespy_im.get_position() # get the original position
     pos2 = [pos1.x0 - 0.15, pos1.y0+0, pos1.width+0.1, pos1.height+0.1] 
     ax_porespy_im.set_position(pos2) 
+
+    plt.show()

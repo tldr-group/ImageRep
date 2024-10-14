@@ -80,10 +80,10 @@ yarn && yarn start
 
 ## Testing Instructions
 
-![Tests](https://github.com/tldr-group/Representativity/actions/workflows/tests.yml/badge.svg)
-
 1. Run (with your virtual enviroment activated!)
 
 ```
 python tests/tests.py
 ```
+
+![Tests](https://github.com/tldr-group/Representativity/actions/workflows/tests.yml/badge.svg)
