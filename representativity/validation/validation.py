@@ -2,7 +2,6 @@ from representativity import util, core
 from porespy.generators import *
 import os
 import sys
-import matplotlib.pyplot as plt
 import porespy as ps
 from itertools import product
 import tifffile
@@ -130,10 +129,6 @@ def get_large_im_stack(generator, large_shape, large_im_repeats, args):
             else:
                 large_im = large_im[2:-2, 2:-2, 2:-2]
         large_ims.append(large_im)
-        plt.plot([large_im[i,:].mean() for i in range(large_im.shape[0])])
-        plt.ylabel('Phase fraction')
-        plt.xlabel('slice')
-        plt.show()
     res = np.stack(large_ims, axis=0)
     if generator == fractal_noise:
         porosity = 0.5
