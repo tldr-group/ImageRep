@@ -17,7 +17,7 @@ def plot_likelihood_of_phi(image_pf, pred_std, std_dist_std):
     fig.set_size_inches(15, 9)
 
     plt.subplots_adjust(wspace=0.5, hspace=0.4)
-    im = np.load(f"{DATA_PATH}im_for_prediction_interval_fig.npy")
+    im = np.load(f"{DATA_PATH}figure_data/im_for_prediction_interval_fig.npy")
     ax[0, 0].imshow(im[:400, :400], cmap="gray", interpolation="nearest")
     ax[0, 0].set_xticks([])
     ax[0, 0].set_yticks([])
@@ -222,7 +222,7 @@ def plot_likelihood_of_phi(image_pf, pred_std, std_dist_std):
 
 if __name__ == "__main__":
     
-    im = np.load(f"{DATA_PATH}im_for_prediction_interval_fig.npy")
+    im = np.load(f"{DATA_PATH}figure_data/im_for_prediction_interval_fig.npy")
     image_pf = im.mean()
     out = core.make_error_prediction(
                             im,

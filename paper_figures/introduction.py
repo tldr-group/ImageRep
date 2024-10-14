@@ -143,7 +143,7 @@ if __name__ == '__main__':
     # Text of representativity analysis:
     rep_text = fig.add_subplot(gs[1, 2])
 
-    microlib_examples = tifffile.imread("paper_figures/microlib_examples.tif")
+    microlib_examples = tifffile.imread("paper_figures/figure_data/microlib_examples.tif")
     microlib_examples_size = min(microlib_examples.shape)
     microlib_examples = microlib_examples[-microlib_examples_size:, -microlib_examples_size:]
     microlib_examples = microlib_examples / microlib_examples.max()
