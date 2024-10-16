@@ -189,15 +189,15 @@ for i, dim in enumerate(dims):
         edge_lengths[edge_length_pos],
         stds[edge_length_pos],
         color=sigma_color,
-        label=r"$\sigma_{mod}$ for img size $%s^%s$" % (edge_length[i], dim_str),
+        label=r"$\sigma_{\it{mod}}$ for image size $%s^%s$" % (edge_length[i], dim_str),
     )
     ax3.plot(edge_lengths, pred_error * 100, label="Prediction error fit")
-    ax3.set_xlabel("Img size")
+    ax3.set_xlabel("Image size")
     ax3.set_xticks(
         edge_lengths[::2], [r"$%s^%s$" % (i, dim_str) for i in edge_lengths[::2]]
     )
     
-    ax3.set_ylabel(r"Model percentage error std, $\sigma_{mod}$ / %")
+    ax3.set_ylabel(r"Model percentage error std, $\sigma_{\it{mod}}$ / %")
     if i == 0:
         ax3.legend(loc="upper right")
 
