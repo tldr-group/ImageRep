@@ -7,7 +7,7 @@ def update_phase_fraction(params, porosity):
     # am_pf = am_pf + cbd
     am_pf = 1 - porosity
     original_am_pf = params["Positive electrode active material volume fraction"]
-    original_am_pf += 0.07
+    original_am_pf += 0.07  # The original phase fraction is higher
     params["Positive electrode active material volume fraction"] = am_pf
     # params["Positive electrode thickness [m]"] *= (am_pf/original_am_pf)
     # print(f"electrode thickness = {params['Positive electrode thickness [m]']}")
@@ -22,10 +22,10 @@ def run_simulation(params):
     model = pybamm.lithium_ion.DFN()
     sim = pybamm.Simulation(model, parameter_values=params)
     current = params["Current function [A]"]
-    if current < 1:
-        sim.solve([0, 18500/current])
+    if current <= 1:
+        sim.solve([0, 30000])
     else:
-        sim.solve([0, 593])
+        sim.solve([0, 297])
     return sim
 
 def plot_results(ax, sim, phase_fraction, param_values):
@@ -74,7 +74,7 @@ if __name__ == "__main__":
 
     # Discharge curve for phase fraction 1
     ax_discharge1 = axs[0, 1]
-    amps = 5.09/100
+    amps = 1
     c_rate = "C/100"
     run_and_plot(ax_discharge1, phase_fraction1, phase_fraction2, amps)
     ax_discharge1.set_title("(b)")
@@ -83,8 +83,8 @@ if __name__ == "__main__":
 
     # Discharge curve for phase fraction 2
     ax_discharge2 = axs[1, 1]
-    amps = 5.09*3
-    c_rate = "3C"
+    amps = 20
+    c_rate = "3.5C"
     run_and_plot(ax_discharge2, phase_fraction1, phase_fraction2, amps)
 
     plt.tight_layout()
