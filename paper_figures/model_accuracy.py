@@ -14,7 +14,7 @@ COLOR_OUT = "red"
 LINE_W = 1.5
 
 
-def get_prediction_interval_stats(inset_image):
+def get_prediction_interval_stats(inset_image, conf_level=0.95, n_divisions=301):
     phase_fraction = float(np.mean(inset_image))
     n_dims = len(inset_image.shape)  # 2D or 3D
     n_elems = int(np.prod(inset_image.shape))
@@ -42,6 +42,8 @@ def get_prediction_interval_stats(inset_image):
         inset_image.mean(),
         std_bern,
         std_model,
+        conf_level=conf_level,
+        n_divisions=n_divisions
     )
     
     return conf_bounds, pf_1d, cum_sum_sum
