@@ -855,6 +855,7 @@ def make_error_prediction(
     target_error: float = 0.05,
     equal_shape: bool = True,
     model_error: bool = True,
+    image_stack: bool = False,
 ) -> ModelResult:
     """Given $binary_img, compute the $target_error % phase fraction bounds around the
     measured phase fraction in $binary_img. Also find the length needed to reduce the
@@ -872,22 +873,32 @@ def make_error_prediction(
     :type equal_shape: bool, optional
     :param model_error: whether to account for model error in the returned values, defaults to True
     :type model_error: bool, optional
+    :param image_stack: whether the image is a stack of images or one image, defaults to False
+    :type image_stack: bool, optional
     :return: _description_
     :rtype: dict
     """
-    phase_fraction = float(np.mean(binary_img))
-    n_dims = len(binary_img.shape)  # 2D or 3D
-    n_elems = int(np.prod(binary_img.shape))
+    if not image_stack:
+        binary_img = [binary_img]
+    
+    n_elements, pfs, irs = [], [], []
+    for img in binary_img:
+        pfs.append(float(np.mean(img)))
+        n_dims = len(img.shape)  # 2D or 3D
+        n_elements.append(int(np.prod(img.shape)))
 
-    two_point_correlation = radial_tpc(binary_img, n_dims == 3, True)
-    integral_range = tpc_to_cls(
-        two_point_correlation,
-        binary_img,
-    )
+        two_point_correlation = radial_tpc(img, n_dims == 3, True)
+        irs.append(tpc_to_cls(two_point_correlation,img))
 
-    n = n_samples_from_dims(
-        [np.array(binary_img.shape, dtype=np.int32)], integral_range
-    )
+    # integral range and phase fraction  is the weighted average 
+    # of the integral ranges and pfs of the stack of images:
+    integral_range = np.average(irs, weights=n_elements)
+    phase_fraction = np.average(pfs, weights=n_elements)
+    n_elems = sum(n_elements)
+    # calculate shape of the big image:
+    img_shapes = [np.array(img.shape, dtype=np.int32) for img in binary_img]
+    n_list = n_samples_from_dims(img_shapes, integral_range)
+    n = [sum(n_list)]
     # bern = bernouilli
     std_bern = (
         (1 / n[0]) * (phase_fraction * (1 - phase_fraction))
