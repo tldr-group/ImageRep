@@ -349,6 +349,8 @@ def fit_statisical_cls_from_errors(
     coarse_cls = test_all_cls_in_range(
         patch_errors_arr, image_pf, np.arange(1, max_cls, 1), img_dims
     )
+    if coarse_cls <= 1:  # avoid division by 0
+        coarse_cls += 0.1  # can't have less then 0.5 cls.
     fine_cls = test_all_cls_in_range(
         patch_errors_arr,
         image_pf,
