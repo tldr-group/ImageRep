@@ -35,7 +35,6 @@ export const replaceGreyscaleWithColours = (arr: Uint8ClampedArray, mapping: { [
 }
 
 export const getPhaseFraction = (arr: Uint8ClampedArray, val: number, nChannels: number = 4) => {
-    console.log('ahhhh')
     const uniqueVals = arr.filter((_, i, __) => { return i % nChannels == 0 })
     const matching = uniqueVals.filter((v) => v == val);
     if (arr.length == 0) {return 0}
