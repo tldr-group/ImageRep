@@ -396,7 +396,7 @@ const Result = () => {
                             <ListGroup>
                                 <ListGroup.Item variant="dark" style={{ cursor: "pointer" }} onClick={e => handleShowFull()}>Click for Brief explanation!</ListGroup.Item>
                                 <ListGroup.Item>Implementation in the <a href="https://github.com/tldr-group/Representativity">GitHub</a></ListGroup.Item>
-                                <ListGroup.Item>Full details can be found in the <a href="comingsoon">paper</a></ListGroup.Item>
+                                <ListGroup.Item>Full details can be found in the <a href="https://arxiv.org/abs/2410.19568v1">paper</a></ListGroup.Item>
                             </ListGroup>
                         </Accordion.Body>
                     </Accordion.Item>

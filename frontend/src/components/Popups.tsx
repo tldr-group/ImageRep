@@ -128,7 +128,7 @@ export const MoreInfo = () => {
                             the measured phase fraction with c% of the time.</b>
                     </p>
 
-                    <p>Full details can be found in the <a href="comingsoon">paper</a>.</p>
+                    <p>Full details can be found in the <a href="https://arxiv.org/abs/2410.19568v1">paper</a>.</p>
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="dark" onClick={handleClose}>

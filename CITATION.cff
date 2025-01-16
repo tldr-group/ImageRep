@@ -10,8 +10,8 @@ authors:
   - name: Samuel J. Cooper
     orcid: 0000-0003-4055-6903
 title: "Prediction of Microstructural Representativity from a Single Image"
-doi: ARXIV_DOI
-url: "https://github.com/tldr-group/ImageRep"
+doi: arXiv:2410.19568v1 
+url: "https://arxiv.org/abs/2410.19568v1"
 preferred-citation:
   type: article
   authors:
@@ -23,7 +23,7 @@ preferred-citation:
     orcid: 0000-0002-7263-6724
   - name: Samuel J. Cooper
     orcid: 0000-0003-4055-6903
-  doi: ARXIV_DOI
+  doi: arXiv:2410.19568v1 
   journal: "arXiV preprint"
   month: 8
   title: "Prediction of Microstructural Representativity from a Single Image"
