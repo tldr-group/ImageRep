@@ -129,6 +129,7 @@ export const MoreInfo = () => {
                     </p>
 
                     <p>Full details can be found in the <a href="https://arxiv.org/abs/2410.19568v1">paper</a>.</p>
+                    <p>Source code is available <a href="https://github.com/tldr-group/ImageRep">here</a>; please request any features or report any bugs in <a href="https://github.com/tldr-group/ImageRep/issues">the issues page!</a></p>
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="dark" onClick={handleClose}>
