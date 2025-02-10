@@ -46,7 +46,7 @@ const DragDrop = ({ loadFromFile }: DragDropProps): JSX.Element => {
         >
             {(!isMobile) && <div style={{display: 'flex', alignItems: 'center', flexDirection: 'column'}}>
                 <span>Drag microstructure file, or view example <a style={{ cursor: "pointer", color: 'blue' }} onClick={e => viewExample(DEFAULT_IMAGE_2D)}>in 2D</a> or  <a style={{ cursor: "pointer", color: 'blue' }} onClick={e => viewExample(DEFAULT_IMAGE_3D)}> 3D</a></span>
-                <span style={{fontSize: '0.7em'}}>(images must be segmented & background phases cropped out )</span>
+                <span style={{fontSize: '0.7em'}}>(image must be segmented & image background (e.g. scale bar) cropped out )</span>
             </div>}
         </div>
     );
