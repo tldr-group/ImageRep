@@ -98,14 +98,34 @@ const ConfidenceSelect = () => {
 
 
     const vals = imageInfo?.phaseVals!
+
+    console.log(accurateFractions)
+    console.log(vals)
+    console.log(selectedPhase)
+
+    const displayPhaseFrac = () => {
+        try {
+        if (accurateFractions == null && imageInfo && vals[selectedPhase -1] && imageInfo?.previewData.data) {
+            console.log('help')
+            const pf = getPhaseFraction(
+                imageInfo?.previewData.data!,
+                vals[selectedPhase - 1]
+            )
+            if (typeof pf == "number") {
+                return pf.toFixed(3)
+            }
+        } else if (accurateFractions && vals[selectedPhase -1]) {
+            return accurateFractions[vals[selectedPhase - 1]].toFixed(3)
+        }
+
+        return ''
+    } catch (e) {
+        return ''
+    }
+    }
     // horrible ternary: if server has responded and set the accurate phase fractions,
     // then use those values in the modal. If not, use the estimate from the first image
-    const phaseFrac = (accurateFractions != null) ?
-        accurateFractions[vals[selectedPhase - 1]].toFixed(3)
-        : getPhaseFraction(
-            imageInfo?.previewData.data!,
-            vals[selectedPhase - 1]
-        ).toFixed(3);
+    const phaseFrac = displayPhaseFrac()
 
     const setConf = (e: any) => {
         setSelectedConf(Number(e.target!.value))
@@ -376,7 +396,7 @@ const Result = () => {
                             <ListGroup>
                                 <ListGroup.Item variant="dark" style={{ cursor: "pointer" }} onClick={e => handleShowFull()}>Click for Brief explanation!</ListGroup.Item>
                                 <ListGroup.Item>Implementation in the <a href="https://github.com/tldr-group/Representativity">GitHub</a></ListGroup.Item>
-                                <ListGroup.Item>Full details can be found in the <a href="comingsoon">paper</a></ListGroup.Item>
+                                <ListGroup.Item>Full details can be found in the <a href="https://arxiv.org/abs/2410.19568v1">paper</a></ListGroup.Item>
                             </ListGroup>
                         </Accordion.Body>
                     </Accordion.Item>
