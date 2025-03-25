@@ -160,6 +160,41 @@ class IntegrationTests(unittest.TestCase):
         result = model.make_error_prediction(test_arr, model_error=True)
         assert np.isclose(result["integral_range"], l, atol=5)
 
+    def test_image_stack_cls(self):
+        """Test that the cls of a stack is the same as the cls of one image"""
+        print("## Test case: cls of image stack")
+        n_images = 4
+        h, l, vf = 800, 10, 0.4
+        percent_l = l / h
+        test_arr = binary_blobs(h, percent_l, 2, vf)
+        stack = [test_arr] * n_images
+        im_result = model.make_error_prediction(test_arr, model_error=True)
+        stack_result = model.make_error_prediction(stack, model_error=True, image_stack=True)
+        print(f"cls of single image: {im_result['integral_range']}")
+        print(f"cls of stack: {stack_result['integral_range']}")
+        assert np.isclose(im_result["integral_range"], stack_result["integral_range"])
+        
+    def test_image_stack(self):
+        n_images = 4  # needs to be a square number
+        h, l, vf = 800, 10, 0.4
+
+        large_h = int(np.sqrt(n_images) * h)
+        percent_l = l / large_h
+        large_test_arr = binary_blobs(large_h, percent_l, 2, vf)
+        # TODO split the large image into n_images:
+        stack = [large_test_arr[i*h:(i+1)*h, j*h:(j+1)*h]
+                 for i in range(int(np.sqrt(n_images))) 
+                 for j in range(int(np.sqrt(n_images)))]
+        
+        large_im_result = model.make_error_prediction(large_test_arr, model_error=True)
+        stack_result = model.make_error_prediction(stack, model_error=True, image_stack=True)
+        # check that it produces the same results:
+        large_im_err = large_im_result["percent_err"]
+        stack_err = stack_result["percent_err"]
+        print(f"large image err: {large_im_err}")
+        print(f"stack error err: {stack_err}")
+        assert np.isclose(large_im_err, stack_err, rtol=0.1)
+
     def test_repr_pred(self):
         """Test the percentage error of a random binomial size (500,500) - should be small"""
         print("## Test case: representativity of random binomial")
