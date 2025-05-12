@@ -2,7 +2,7 @@
 
 [Try it out!](https://www.imagerep.io/)
 
-Here we introduce the 'ImageRep' method for fast phase fraction representativity estimation from a single microstructural image. This is achieved by calculating the Two-Point Correlation (TPC) function of the image, combined with a data-driven analysis of the [MicroLib](https://microlib.io/) dataset. By applying a statistical framework that utilizes both data sources, we can establish the uncertainty in the phase fraction in the image with a given confidence, **and** the image size that would be needed to meet a given target uncertainty. Further details are provided in our [paper](CITATION.cff).
+Here we introduce the 'ImageRep' method for fast phase fraction representativity estimation from a single microstructural image. This is achieved by calculating the Two-Point Correlation (TPC) function of the image, combined with a data-driven analysis of the [MicroLib](https://microlib.io/) dataset. By applying a statistical framework that utilizes both data sources, we can establish the uncertainty in the phase fraction in the image with a given confidence, **and** the image size that would be needed to meet a given target uncertainty. Further details are provided in our [preprint](https://arxiv.org/abs/2410.19568).
 
 If you use this ImageRep in your research, [please cite us](CITATION.cff).
 
