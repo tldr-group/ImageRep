@@ -8,7 +8,8 @@
     "lint": "eslint './src/**/*.{js,ts,tsx}' --quiet",
     "start": "yarn run start-dev",
     "test": "yarn run start-model-test",
-    "start-dev": "webpack serve --config=configs/webpack/dev.js"
+    "start-dev": "webpack serve --config=configs/webpack/dev.js",
+    "pretty": "prettier --write \"./**/*.{js,jsx,mjs,cjs,ts,tsx,json}\""
   },
   "devDependencies": {
     "@babel/core": "^7.18.13",

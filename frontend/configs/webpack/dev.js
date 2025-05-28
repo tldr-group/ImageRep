@@ -10,8 +10,8 @@ module.exports = merge(commonConfig, {
     open: true,
     historyApiFallback: true,
     // These headers enable the cross origin isolation state
-    // needed to enable use of SharedArrayBuffer for ONNX 
-    // multithreading. 
+    // needed to enable use of SharedArrayBuffer for ONNX
+    // multithreading.
     headers: {
       "Cross-Origin-Opener-Policy": "same-origin",
       "Cross-Origin-Embedder-Policy": "credentialless",

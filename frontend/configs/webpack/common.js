@@ -58,12 +58,12 @@ module.exports = {
         {
           from: "src/assets",
           to: "assets",
-        }
-      ]
+        },
+      ],
     }),
     new HtmlWebpackPlugin({
       template: "./src/assets/index.html",
-      favicon: "./src/assets/favicon.png"
+      favicon: "./src/assets/favicon.png",
     }),
     new FriendlyErrorsWebpackPlugin(),
     new webpack.ProvidePlugin({
@@ -71,6 +71,6 @@ module.exports = {
     }),
   ],
   experiments: {
-    topLevelAwait: true
-  }
+    topLevelAwait: true,
+  },
 };
