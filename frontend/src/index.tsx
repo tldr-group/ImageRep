@@ -12,5 +12,5 @@ root.render(
         <Route path="/" element={<App />} />
       </Routes>
     </AppContextProvider>
-  </BrowserRouter>
+  </BrowserRouter>,
 );
