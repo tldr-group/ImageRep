@@ -29,10 +29,12 @@ const DragDrop = ({ loadFromFile }: DragDropProps): JSX.Element => {
   const handeDrop = (e: any) => {
     e.preventDefault();
     if (e.dataTransfer.items) {
-      const item = e.dataTransfer.items[0];
-      if (item.kind === "file") {
-        const file = item.getAsFile();
-        loadFromFile(file);
+      for (let x = 0; x < e.dataTransfer.items.length; x++) {
+        const item = e.dataTransfer.items[x];
+        if (item.kind === "file") {
+          const file = item.getAsFile();
+          loadFromFile(file);
+        }
       }
     }
   };
