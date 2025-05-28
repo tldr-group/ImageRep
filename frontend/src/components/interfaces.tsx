@@ -1,9 +1,17 @@
 import { createContext } from "react";
 
 interface contextProps {
+    selectedImgIdx: [
+        selectedImgIdx: number,
+        setSelectedImgIdx: (e: number) => void
+    ]
     imageInfo: [
         imageInfo: ImageLoadInfo | null,
         setImageInfo: (e: ImageLoadInfo | null) => void
+    ]
+    allImageInfos: [
+        allImageInfos: ImageLoadInfo[] ,
+        setAllImageInfos: (e: ImageLoadInfo[]) => void
     ]
     previewImg: [
         previewImg: HTMLImageElement | null,
@@ -68,6 +76,9 @@ export interface TopbarProps {
     loadFromFile: (file: File) => void;
     reset: () => void;
     changePhase: () => void;
+    selectedImgIdx: number;
+    setSelectedImgIdx: (e: number) => void;
+    allImageInfos: ImageLoadInfo[];
 }
 
 export function rgbaToHex(r: number, g: number, b: number, a: number) {
