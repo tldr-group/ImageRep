@@ -56,7 +56,7 @@ export interface TopbarProps {
   changePhase: () => void;
   selectedImgIdx: number;
   setSelectedImgIdx: (e: number) => void;
-  allImageInfos: ImageLoadInfo[];
+  nImgs: number;
 }
 
 export function rgbaToHex(r: number, g: number, b: number, a: number) {
