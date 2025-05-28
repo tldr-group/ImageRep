@@ -268,7 +268,7 @@ if __name__ == '__main__':
     res_2_pred.set_xticks([])
     res_2_pred.set_yticks([])
 
-    label = f"Sample size needed for ±{target_percetange_error}%\ndeviation from Material's phase\nfraction (95% CI), vs. the\ncurrent ±{np.round(percent_error*100, 2)}% CI."
+    label = f"Sample size needed for ±{target_percetange_error}%\ndeviation from Material's phase\nfraction (95% CI), vs. current\n±{np.round(percent_error*100, 2)}% deviation (± 0.022)."
     # Create custom Line2D objects for the spines
     spine_line = mlines.Line2D([], [], color='black', linestyle='--', 
                                linewidth=2, alpha=alpha, 
