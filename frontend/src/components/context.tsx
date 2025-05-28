@@ -4,8 +4,10 @@ import AppContext, { AnalysisInfo, ImageLoadInfo, MenuState, ErrorMessage } from
 const AppContextProvider = (props: {
     children: React.ReactElement<any, string | React.JSXElementConstructor<any>>;
 }) => {
-    // user files
+    // user 
+    const [selectedImgIdx, setSelectedImgIdx] = useState<number>(0);
     const [imageInfo, setImageInfo] = useState<ImageLoadInfo | null>(null);
+    const [allImageInfos, setAllImageInfos] = useState<ImageLoadInfo[]>([]);
     const [previewImg, setPreviewImg] = useState<HTMLImageElement | null>(null);
     // user options
     const [selectedPhase, setSelectedPhase] = useState<number>(0);
@@ -26,7 +28,9 @@ const AppContextProvider = (props: {
     return (
         <AppContext.Provider
             value={{
+                selectedImgIdx: [selectedImgIdx, setSelectedImgIdx],
                 imageInfo: [imageInfo, setImageInfo],
+                allImageInfos: [allImageInfos, setAllImageInfos],
                 previewImg: [previewImg, setPreviewImg],
                 selectedPhase: [selectedPhase, setSelectedPhase],
                 selectedConf: [selectedConf, setSelectedConf],
