@@ -256,13 +256,6 @@ const Result = () => {
         setMenuState('processing');
     }
 
-    const getDPofSigFig = (decimal: number) => {
-        const rounded = parseFloat(decimal.toPrecision(1));
-        const loc = Math.ceil(Math.abs(Math.log10(rounded)));
-        const capped = Math.min(loc, 5)
-        return capped
-    }
-
     const c = colours[selectedPhase];
     const headerHex = rgbaToHex(c[0], c[1], c[2], c[3]);
 
@@ -275,10 +268,8 @@ const Result = () => {
     const absErrFromPFB = (pfB![1] - pfB![0]) / 2
     const perErrFromPFB = 100 * (((pfB![1] - pfB![0]) / 2) / phaseFrac)
 
-    const roundTo = getDPofSigFig(absErrFromPFB);
-
     const beforeBoldText = `The phase fraction in the segmented image is ${phaseFrac.toFixed(3)}. Assuming perfect segmentation, the 'ImageRep' model proposed by Dahari et al. suggests that `
-    const boldText = `we can be ${selectedConf.toFixed(1)}% confident that the material's phase fraction is within ${perErrFromPFB?.toFixed(1)}% of this value (i.e. ${phaseFrac.toFixed(roundTo)}±${(absErrFromPFB).toFixed(roundTo)})`
+    const boldText = `we can be ${selectedConf.toFixed(1)}% confident that the material's phase fraction is within ${perErrFromPFB?.toFixed(1)}% of this value (i.e. ${phaseFrac.toFixed(3)}±${absErrFromPFB.toFixed(3)})`
     const copyText = beforeBoldText + boldText
     const afterText = "These results are derived from an estimated "
     const afterBoldText = `Characteristic Length Scale (CLS) of ${analysisInfo?.integralRange!.toFixed(0)}px`
