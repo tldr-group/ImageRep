@@ -36,6 +36,7 @@ const MAX_FILE_SIZE_BYTES = 1024 * 1024 * 500; // 500MB
 const App = () => {
   const {
     imageInfo: [imageInfo, setImageInfo],
+    selectedImgIdx: [selectedImgIdx, setSelectedImgIdx],
     previewImg: [previewImg, setPreviewImg],
     selectedPhase: [selectedPhase, setSelectedPhase],
     selectedConf: [selectedConf, setSelectedConf],
@@ -48,6 +49,9 @@ const App = () => {
     errorState: [errorState, setErrorState],
     showWarning: [showWarning, setShowWarning],
   } = useContext(AppContext)!;
+
+  const allImageInfos = useRef<ImageLoadInfo[]>([]);
+  const [nImgs, setNImgs] = useState<number>(0);
 
   const appLoadFile = async (file: File) => {
     const reader = new FileReader();
@@ -115,6 +119,10 @@ const App = () => {
         setImageInfo(result);
         setPreviewImg(result.previewImg);
         setMenuState("phase");
+
+        const newAllImgInfo = [...allImageInfos.current, result];
+        allImageInfos.current = newAllImgInfo;
+        setNImgs(newAllImgInfo.length);
       }
     };
   };
@@ -228,6 +236,14 @@ const App = () => {
     setShowWarning("");
   };
 
+  const setSelectedImg = (n: number) => {
+    const idx = Math.min(Math.max(n, 0), nImgs - 1);
+    const newImg = allImageInfos.current[idx];
+    setImageInfo(newImg);
+    setPreviewImg(newImg.previewImg);
+    setSelectedImgIdx(idx);
+  };
+
   useEffect(() => {
     if (menuState === "processing") {
       requestRepr();
@@ -240,6 +256,9 @@ const App = () => {
         loadFromFile={appLoadFile}
         reset={reset}
         changePhase={changePhase}
+        selectedImgIdx={selectedImgIdx}
+        setSelectedImgIdx={setSelectedImg}
+        nImgs={nImgs}
       ></Topbar>
       <div className={`flex`} style={{ margin: "1.5%" }}>
         {" "}
