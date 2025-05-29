@@ -21,8 +21,8 @@ import {
 import "./assets/scss/App.scss";
 import "bootstrap/dist/css/bootstrap.min.css";
 
-//const PATH = "http://127.0.0.1:5000";
-const PATH = "https://samba-segment.azurewebsites.net";
+const PATH = "http://127.0.0.1:5000";
+// const PATH = "https://samba-segment.azurewebsites.net";
 //const PATH = "http://localhost:7071/api";
 //const PATH = "https://representative.azurewebsites.net/api"
 const PF_ENDPOINT = PATH + "/phasefraction";
@@ -123,6 +123,7 @@ const App = () => {
         const newAllImgInfo = [...allImageInfos.current, result];
         allImageInfos.current = newAllImgInfo;
         setNImgs(newAllImgInfo.length);
+        setSelectedImgIdx(newAllImgInfo.length - 1);
       }
     };
   };
@@ -150,7 +151,10 @@ const App = () => {
       const info = imageInfo!;
 
       const formData = new FormData();
-      formData.append("userFile", info.file!);
+      for (let info of allImageInfos.current) {
+        formData.append("userFile", info.file!);
+      }
+      // formData.append("userFile", info.file!);
       formData.append(
         "selected_phase",
         String(info.phaseVals[selectedPhase - 1]),
@@ -242,6 +246,7 @@ const App = () => {
     setImageInfo(newImg);
     setPreviewImg(newImg.previewImg);
     setSelectedImgIdx(idx);
+    setSelectedPhase(selectedPhase);
   };
 
   useEffect(() => {
