@@ -128,19 +128,29 @@ def preprocess_arr(arr: np.ndarray) -> np.ndarray:
 
 
 def representativity(request) -> Response:
-    user_file = request.files["userFile"]
-    arr = get_arr_from_file(user_file)
+    # user_file = request.files["userFile"]
+    # print(request.files)
 
+    file_list: list = request.files.getlist("userFile")
+    print(file_list)
     selected_phase = int(request.values["selected_phase"])
     selected_conf: float = float(request.values["selected_conf"]) / 100
     selected_err: float = float(request.values["selected_err"]) / 100
 
     print(f"Phase: {selected_phase}, Conf: {selected_conf}, Err: {selected_err}")
 
-    binary_img = np.where(arr == selected_phase, 1, 0)
+    arrs = []
+    for file in file_list:
+        arr = get_arr_from_file(file)
+        binary_img = np.where(arr == selected_phase, 1, 0)
+        arrs.append(binary_img)
+    is_stack = len(arrs) > 1
+    print(len(arrs), is_stack)
+
+    # binary_img = np.where(arr == selected_phase, 1, 0)
 
     result = make_error_prediction(
-        binary_img, selected_conf, selected_err, model_error=True
+        arrs, selected_conf, selected_err, model_error=True, image_stack=is_stack
     )  # make_error_prediction(binary_img, selected_conf, selected_err)
     # this can get stuck sometimes in the optimisation step (usually cls > 1)
     out = {
@@ -152,9 +162,7 @@ def representativity(request) -> Response:
         "pf_1d": result["pf_1d"],
         "cum_sum_sum": result["cum_sum_sum"],
     }
-    print(
-        f"abs_err for {selected_phase}: {out['abs_err']} \n percent err: {out['percent_err']}"
-    )
+    print(f"abs_err for {selected_phase}: {out['abs_err']} \n percent err: {out['percent_err']}")
 
     response = Response(json.dumps(out), status=200)
     return response
