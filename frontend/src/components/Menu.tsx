@@ -1,5 +1,15 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
-import AppContext, { IR_LIMIT_PX, MenuState } from "./interfaces";
+import React, {
+  MutableRefObject,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import AppContext, {
+  ImageLoadInfo,
+  IR_LIMIT_PX,
+  MenuState,
+} from "./interfaces";
 import { colours, rgbaToHex } from "./interfaces";
 
 import Toast from "react-bootstrap/Toast";
@@ -15,7 +25,7 @@ import NormalSlider from "./NormalSlider";
 import ListGroup from "react-bootstrap/ListGroup";
 
 import Accordion from "react-bootstrap/Accordion";
-import { getPhaseFraction } from "./imageLogic";
+import { getPhaseFraction, mean } from "./imageLogic";
 
 const centreStyle = {
   display: "flex",
@@ -236,7 +246,11 @@ const ConfidenceSelect = () => {
   );
 };
 
-const Result = () => {
+const Result = ({
+  allImageInfos,
+}: {
+  allImageInfos: MutableRefObject<ImageLoadInfo[]>;
+}) => {
   // LB < VF_true < UB with '$CONF$% confidence
   // need L = $N$pix for \epsilon = ...
   // epsilon slider (updates bounds in line 1)
@@ -269,24 +283,28 @@ const Result = () => {
 
   const vals = imageInfo?.phaseVals!;
 
-  const getPhaseFracs = () => {
-    const accurateAvailable = accurateFractions != null;
-    const coarseAvailable =
-      imageInfo != null && imageInfo.previewData.data != null;
+  // const getPhaseFracs = () => {
+  //   const accurateAvailable = accurateFractions != null;
+  //   const coarseAvailable =
+  //     imageInfo != null && imageInfo.previewData.data != null;
 
-    if (accurateAvailable) {
-      return accurateFractions[vals[selectedPhase - 1]];
-    } else if (coarseAvailable) {
-      return getPhaseFraction(
-        imageInfo?.previewData.data!,
-        vals[selectedPhase - 1],
-      );
-    } else {
-      return 0;
-    }
-  };
+  //   if (accurateAvailable) {
+  //     return accurateFractions[vals[selectedPhase - 1]];
+  //   } else if (coarseAvailable) {
+  //     return getPhaseFraction(
+  //       imageInfo?.previewData.data!,
+  //       vals[selectedPhase - 1],
+  //     );
+  //   } else {
+  //     return 0;
+  //   }
+  // };
 
-  const phaseFrac = getPhaseFracs();
+  // const phaseFrac = getPhaseFracs();
+  console.log(selectedPhase);
+  const phaseFrac = mean(
+    allImageInfos.current.map((i) => i.phaseFractions[vals[selectedPhase - 1]]),
+  );
 
   const l = analysisInfo?.lForDefaultErr;
   const lStr = l?.toFixed(0);
@@ -561,7 +579,10 @@ const Result = () => {
   );
 };
 
-const getMenuInfo = (state: MenuState) => {
+const getMenuInfo = (
+  state: MenuState,
+  allImageInfos: MutableRefObject<ImageLoadInfo[]>,
+) => {
   switch (state) {
     case "phase":
       return { title: "Select Phase", innerHTML: <PhaseSelect /> };
@@ -577,16 +598,26 @@ const getMenuInfo = (state: MenuState) => {
         ),
       };
     case "conf_result_full":
-      return { title: "Results", innerHTML: <Result /> };
+      return {
+        title: "Results",
+        innerHTML: <Result allImageInfos={allImageInfos} />,
+      };
     case "conf_result":
-      return { title: "Results", innerHTML: <Result /> };
+      return {
+        title: "Results",
+        innerHTML: <Result allImageInfos={allImageInfos} />,
+      };
     case "hidden": // fall through
     default:
       return { title: "", innerHTML: <></> };
   }
 };
 
-export const Menu = () => {
+export const Menu = ({
+  allImageInfos,
+}: {
+  allImageInfos: MutableRefObject<ImageLoadInfo[]>;
+}) => {
   const {
     menuState: [menuState],
   } = useContext(AppContext)!;
@@ -598,13 +629,13 @@ export const Menu = () => {
   return (
     <>
       {menuState == "conf_result_full" ? (
-        getMenuInfo(menuState).innerHTML
+        getMenuInfo(menuState, allImageInfos).innerHTML
       ) : (
         <ToastContainer className="p-5" position="bottom-end">
           <Toast show={!hide}>
             <Toast.Header className="roundedme-2" closeButton={false}>
               <strong className="me-auto" style={{ fontSize: "1.5em" }}>
-                {getMenuInfo(menuState).title}
+                {getMenuInfo(menuState, allImageInfos).title}
               </strong>
               <Button
                 onClick={(e) => setCollapse(!collapse)}
@@ -615,7 +646,8 @@ export const Menu = () => {
               </Button>
             </Toast.Header>
             <Toast.Body>
-              {collapse == false && getMenuInfo(menuState).innerHTML}
+              {collapse == false &&
+                getMenuInfo(menuState, allImageInfos).innerHTML}
             </Toast.Body>
           </Toast>
         </ToastContainer>
