@@ -2,7 +2,11 @@ import { ImageLoadInfo } from "./interfaces";
 
 const UTIF = require("./UTIF.js");
 
-const checkPhases = (arr: Uint8ClampedArray, nChannels: number = 4) => {
+type PhaseCheck = { nPhases: number; segmented: boolean; vals: number[] };
+const checkPhases = (
+  arr: Uint8ClampedArray,
+  nChannels: number = 4,
+): PhaseCheck => {
   // given 2D image data, find N unique values, if > 6 call it unsegmented
   // ASSUMES RGBA ARRAYS: valid as UTIF decodes to RGBA
   const uniqueColours = arr.filter((_, i, __) => {
@@ -55,6 +59,35 @@ export const getPhaseFraction = (
   return matching.length / (arr.length / nChannels);
 };
 
+const imageInfoLoadHelper = (
+  arr: ImageData,
+  img: HTMLImageElement,
+  nDims: 2 | 3,
+  phaseCheck: PhaseCheck,
+  h: number,
+  w: number,
+  d: number,
+): ImageLoadInfo => {
+  const phaseFracs = Object.fromEntries(
+    phaseCheck.vals.map((v) => [v, getPhaseFraction(arr.data, v)]),
+  );
+
+  return {
+    file: null,
+    previewData: arr,
+    previewImg: img,
+    nDims: nDims,
+    nPhases: phaseCheck.nPhases,
+    phaseVals: phaseCheck.vals,
+    segmented: phaseCheck.segmented,
+    height: h,
+    width: w,
+    depth: d,
+    phaseFractions: phaseFracs,
+    isAccurate: false,
+  };
+};
+
 export const loadFromTIFF = (tiffBuffer: ArrayBuffer): ImageLoadInfo => {
   const tifs: Array<any> = UTIF.decode(tiffBuffer);
   const tif = tifs[0];
@@ -69,18 +102,15 @@ export const loadFromTIFF = (tiffBuffer: ArrayBuffer): ImageLoadInfo => {
 
   const phaseCheck = checkPhases(imgDataArr);
 
-  return {
-    file: null,
-    previewData: imgData,
-    previewImg: img,
-    nDims: nDims,
-    nPhases: phaseCheck.nPhases,
-    phaseVals: phaseCheck.vals,
-    segmented: phaseCheck.segmented,
-    height: tif.height,
-    width: tif.width,
-    depth: tifs.length,
-  };
+  return imageInfoLoadHelper(
+    imgData,
+    img,
+    nDims,
+    phaseCheck,
+    tif.height,
+    tif.width,
+    tifs.length,
+  );
 };
 
 const getImageDataFromImage = (image: HTMLImageElement): ImageData => {
@@ -127,16 +157,21 @@ export const loadFromImage = async (href: string): Promise<ImageLoadInfo> => {
   console.log("n channels:" + String(nChannels));
   const phaseCheck = checkPhases(imgData.data, nChannels);
 
-  return {
-    file: null,
-    previewData: imgData,
-    previewImg: img,
-    nDims: 2,
-    nPhases: phaseCheck.nPhases,
-    phaseVals: phaseCheck.vals,
-    segmented: phaseCheck.segmented,
-    height: img.height,
-    width: img.width,
-    depth: 1,
-  };
+  return imageInfoLoadHelper(
+    imgData,
+    img,
+    2,
+    phaseCheck,
+    img.height,
+    img.width,
+    1,
+  );
+};
+
+export const mean = (arr: number[]) => {
+  return (
+    arr.reduce((acc, v) => {
+      return acc + v;
+    }) / arr.length
+  );
 };

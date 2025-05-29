@@ -16,6 +16,7 @@ import {
   loadFromTIFF,
   loadFromImage,
   getPhaseFraction,
+  mean,
 } from "./components/imageLogic";
 
 import "./assets/scss/App.scss";
@@ -33,6 +34,10 @@ const REPR_ENDPOINT = PATH + "/repr";
 
 const MAX_FILE_SIZE_BYTES = 1024 * 1024 * 500; // 500MB
 
+// TODO:
+// put phase fracs in image load info
+// add isAccurate flag if its not frontend
+// make frontend average pf over imageInfos
 const App = () => {
   const {
     imageInfo: [imageInfo, setImageInfo],
@@ -114,7 +119,7 @@ const App = () => {
           setShowWarning("size");
         }
 
-        requestPhaseFraction(file);
+        requestPhaseFraction(file, result);
         result.file = file;
         setImageInfo(result);
         setPreviewImg(result.previewImg);
@@ -128,7 +133,7 @@ const App = () => {
     };
   };
 
-  const requestPhaseFraction = async (file: File) => {
+  const requestPhaseFraction = async (file: File, imageInfo: ImageLoadInfo) => {
     try {
       const formData = new FormData();
       formData.append("userFile", file);
@@ -136,7 +141,9 @@ const App = () => {
       const resp = await fetch(PF_ENDPOINT, { method: "POST", body: formData });
       const obj = await resp.json();
       const fractions = obj["phase_fractions"] as { [val: number]: number };
-      setAccurateFractions(fractions);
+      imageInfo.phaseFractions = fractions;
+      imageInfo.isAccurate = true;
+      // setAccurateFractions(fractions);
     } catch (e) {
       const error = e as Error;
       setErrorState({
@@ -186,13 +193,17 @@ const App = () => {
       });
 
       const vals = imageInfo?.phaseVals!;
-      const phaseFrac =
-        accurateFractions != null
-          ? accurateFractions[vals[selectedPhase - 1]]
-          : getPhaseFraction(
-              imageInfo?.previewData.data!,
-              vals[selectedPhase - 1],
-            );
+      // console.log(allImageInfos.current[0], selectedPhase);
+      const phaseFrac = mean(
+        allImageInfos.current.map((i) => i.phaseFractions[vals[selectedPhase]]),
+      );
+      console.log(phaseFrac);
+      // accurateFractions != null
+      //   ? accurateFractions[vals[selectedPhase - 1]]
+      //   : getPhaseFraction(
+      //       imageInfo?.previewData.data!,
+      //       vals[selectedPhase - 1],
+      //     );
 
       setPfB([phaseFrac - absErr, phaseFrac + absErr]);
 
@@ -272,7 +283,7 @@ const App = () => {
         {previewImg && <PreviewCanvas />}
         {false && <NormalSlider />}
       </div>
-      <Menu />
+      <Menu allImageInfos={allImageInfos} />
       <ErrorMessage />
       {showWarning != "" && <CLSModal />}
       <MoreInfo />
