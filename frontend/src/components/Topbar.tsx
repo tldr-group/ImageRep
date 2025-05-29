@@ -57,15 +57,20 @@ const Topbar = ({
         </Navbar.Brand>
 
         <Nav>
-          <Nav.Link onClick={(e) => setSelectedImgIdx(selectedImgIdx - 1)}>
-            &lt;
-          </Nav.Link>
-          <Nav.Link>
-            {selectedImgIdx + 1} / {nImgs}
-          </Nav.Link>
-          <Nav.Link onClick={(e) => setSelectedImgIdx(selectedImgIdx + 1)}>
-            &gt;
-          </Nav.Link>
+          {nImgs > 1 && (
+            <>
+              {" "}
+              <Nav.Link onClick={(e) => setSelectedImgIdx(selectedImgIdx - 1)}>
+                &lt;
+              </Nav.Link>
+              <Nav.Link>
+                {selectedImgIdx + 1} / {nImgs}
+              </Nav.Link>
+              <Nav.Link onClick={(e) => setSelectedImgIdx(selectedImgIdx + 1)}>
+                &gt;
+              </Nav.Link>
+            </>
+          )}
 
           <Nav.Link onClick={(e) => setShowInfo(true)}>Model Info</Nav.Link>
           <Nav.Link onClick={addData}>Add Data</Nav.Link>
