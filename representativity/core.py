@@ -849,8 +849,8 @@ def make_error_prediction(
 
     # integral range and phase fraction  is the weighted average
     # of the integral ranges and pfs of the stack of images:
-    integral_range = np.average(irs, weights=n_elements)
-    phase_fraction = np.average(pfs, weights=n_elements)
+    integral_range = float(np.average(irs, weights=n_elements))
+    phase_fraction = float(np.average(pfs, weights=n_elements))
     n_elems = sum(n_elements)
     # calculate shape of the big image:
     img_shapes = [np.array(img.shape, dtype=np.int32) for img in binary_img]
