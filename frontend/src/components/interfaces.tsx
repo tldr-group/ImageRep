@@ -99,6 +99,8 @@ export interface ImageLoadInfo {
   height: number;
   width: number;
   depth: number;
+  phaseFractions: Record<number, number>;
+  isAccurate: boolean;
 }
 
 export interface AnalysisInfo {
