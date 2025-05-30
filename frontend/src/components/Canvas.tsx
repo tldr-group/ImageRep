@@ -1,9 +1,10 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import AppContext, { Point } from "./interfaces";
+import AppContext, { ImageLoadInfo, MenuState, Point } from "./interfaces";
 import { colours } from "./interfaces";
 import {
   replaceGreyscaleWithColours,
   getImagefromImageData,
+  getNImagesForTargetL,
 } from "./imageLogic";
 import { DrawStyle } from "./interfaces";
 
@@ -122,7 +123,116 @@ const getAspectCorrectedDims = (
   return { w: nw, h: nh, ox: (cw - (nw + dox * sf)) / 2, oy: doy * sf, sf: sf };
 };
 
-const PreviewCanvas = () => {
+// TODO:
+// parent div that holds N preview canvases
+// conditionalise preview canvas to optionally have an image
+//   otherwise show preview lines
+// before repr back, show 1 preview image at full res
+// when zoom out, show N preview canvases in grid layout
+
+export const PreviewCanvasManager = ({
+  allImageInfos,
+}: {
+  allImageInfos: ImageLoadInfo[];
+}) => {
+  const {
+    imageInfo: [imageInfo],
+    // previewImg: [previewImg, setPreviewImg],
+    targetL: [targetL],
+    menuState: [menuState],
+  } = useContext(AppContext)!;
+
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const getNCanvases = (menuState: MenuState, l: number | null) => {
+    if (menuState !== "conf_result") {
+      return 1;
+    }
+    if (!imageInfo) {
+      return 1;
+    } else if (!l) {
+      return 1;
+    } else {
+      return getNImagesForTargetL(imageInfo, l, 0);
+    }
+  };
+
+  const getRescaledImgDims = (
+    clientWidth: number,
+    clientHeight: number,
+    imageWidth: number,
+    imageHeight: number,
+    nSquare: number,
+    pad: number = 30,
+  ): { iw: number; ih: number } => {
+    const container = containerRef.current;
+    if (!container) {
+      return { iw: 0, ih: 0 };
+    }
+
+    const wSF = (nSquare * imageWidth) / clientWidth;
+    const hSF = (nSquare * imageHeight) / clientHeight;
+
+    const maxSF = Math.max(wSF, hSF);
+
+    return { iw: imageWidth / maxSF - pad, ih: imageHeight / maxSF - pad };
+  };
+
+  const getImgDims = (nSquare: number): { iw: number; ih: number } => {
+    const container = containerRef.current;
+    if (!container || !imageInfo) {
+      return { iw: 0, ih: 0 };
+    }
+
+    return getRescaledImgDims(
+      container.clientWidth,
+      container.clientHeight,
+      imageInfo.width,
+      imageInfo.height,
+      nSquare,
+    );
+  };
+
+  const N = getNCanvases(menuState, targetL);
+  const dummyArr = [...Array(N).keys()];
+
+  // TODO: calc maxSF from image and client dims as before ,apply and set w and h independently
+  const nSquare = Math.ceil(Math.sqrt(N));
+  const closestSquare = Math.pow(nSquare, 2);
+  const { iw, ih } = getImgDims(nSquare);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        height: "75vh",
+        width: "75vw", // was 60vh/w
+        justifyContent: "flex-start",
+        alignItems: "center",
+        padding: "10px",
+        margin: "auto",
+        gap: "10px",
+      }}
+      ref={containerRef}
+    >
+      {dummyArr.map((v, i) => (
+        <div
+          key={i}
+          style={{
+            width: `${iw}px`,
+            height: `${ih}px`,
+            backgroundColor: "red",
+          }}
+        >
+          <span>{v}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export const PreviewCanvas = () => {
   const {
     imageInfo: [imageInfo],
     previewImg: [previewImg, setPreviewImg],
@@ -453,6 +563,7 @@ const PreviewCanvas = () => {
       }
     };
   }, [menuState]);
+
   return (
     <div ref={containerRef} style={centredStyle}>
       <div ref={frontDivRef} style={{ position: "absolute" }}></div>
