@@ -195,9 +195,9 @@ class IntegrationTests(unittest.TestCase):
         assert np.isclose(large_im_err, stack_err, rtol=0.1)
 
     def test_repr_pred(self):
-        """Test the percentage error of a random binomial size (500,500) - should be small"""
+        """Test the percentage error of a random binomial size (700,700) - should be small"""
         print("## Test case: representativity of random binomial")
-        test_arr = np.random.binomial(1, 0.5, (500, 500))
+        test_arr = np.random.binomial(1, 0.5, (700, 700))
         result = model.make_error_prediction(test_arr, model_error=True)
         assert result["percent_err"] < 0.05
 
