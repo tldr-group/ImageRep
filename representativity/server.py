@@ -54,13 +54,13 @@ def hello_world():
     return send_from_directory("", "index.html")
 
 
-def generic_response(request, fn: Callable):
+async def generic_response(request, fn: Callable):
     """Given a HTTP request and response function, return corsified response."""
     if "OPTIONS" in request.method:
         return _build_cors_preflight_response()
     elif "POST" in request.method:
         try:
-            response = fn(request)
+            response = await fn(request)
             return add_cors_headers(response)
         except Exception as e:
             print(e)
@@ -106,7 +106,7 @@ async def phase_fraction(request) -> Response:
 @app.route("/phasefraction", methods=["POST", "GET", "OPTIONS"])
 async def phase_fraction_app():
     """phase fraction route."""
-    response = generic_response(request, phase_fraction)
+    response = await generic_response(request, phase_fraction)
     return response
 
 
@@ -163,7 +163,7 @@ async def representativity(request) -> Response:
 
 
 @app.route("/repr", methods=["POST", "GET", "OPTIONS"])
-def representativity_app():
+async def representativity_app():
     """representativity route."""
-    response = generic_response(request, representativity)
+    response = await generic_response(request, representativity)
     return response
