@@ -6,7 +6,7 @@ import AppContext, {
 
 import Topbar from "./components/Topbar";
 import DragDrop from "./components/DragDrop";
-import PreviewCanvas from "./components/Canvas";
+import { PreviewCanvas, PreviewCanvasManager } from "./components/Canvas";
 import NormalSlider from "./components/NormalSlider";
 import { Menu } from "./components/Menu";
 import { ErrorMessage, CLSModal, MoreInfo } from "./components/Popups";
@@ -187,8 +187,7 @@ const App = () => {
       if (obj["cls"] > IR_LIMIT_PX) {
         setShowWarning("cls");
       }
-      const minSide = Math.min(imageInfo?.width!, imageInfo?.height!);
-      if (obj["l"] < minSide) {
+      if (obj["percent_err"] < errVF) {
         setShowWarning("over");
       }
 
@@ -237,6 +236,7 @@ const App = () => {
   };
 
   useEffect(() => {
+    console.log({ menuState });
     if (menuState === "processing") {
       requestRepr();
     }
@@ -256,7 +256,10 @@ const App = () => {
         {" "}
         {/*Canvas div on left, sidebar on right*/}
         {!previewImg && <DragDrop loadFromFile={appLoadFile} />}
-        {previewImg && <PreviewCanvas />}
+        {/* {previewImg && <PreviewCanvas />} */}
+        {previewImg && (
+          <PreviewCanvasManager allImageInfos={allImageInfos.current} />
+        )}
         {false && <NormalSlider allImageInfos={allImageInfos.current} />}
       </div>
       <Menu allImageInfos={allImageInfos.current} />
