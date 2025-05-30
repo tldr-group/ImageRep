@@ -12,7 +12,7 @@ const checkPhases = (
   const uniqueColours = arr.filter((_, i, __) => {
     return i % nChannels == 0;
   });
-  const uniqueValues = [...new Set(uniqueColours)].sort(); // create Set (only unique vals) then unpack into arr
+  const uniqueValues = [...new Set(uniqueColours)].sort((a, b) => a - b); // create Set (only unique vals) then unpack into arr
   const nPhases = uniqueValues.length;
   const segmented = nPhases < 6 ? true : false;
   // TODO: if data RGBA then opacity will be counted as phase - this is bug
