@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import AppContext, { Point } from "./interfaces";
 import { colours } from "./interfaces";
 import {

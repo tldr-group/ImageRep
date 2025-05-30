@@ -1,4 +1,3 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
 import { DragDropProps } from "./interfaces";
 
 const DEFAULT_IMAGE_2D = "../assets/default_2D.tiff";
