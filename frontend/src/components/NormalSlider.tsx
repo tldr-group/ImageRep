@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState, useContext } from "react";
-import AppContext, { rgbaToHex, colours, DrawStyle } from "./interfaces";
-import { getPhaseFraction } from "./imageLogic";
+import AppContext, {
+  rgbaToHex,
+  colours,
+  DrawStyle,
+  ImageLoadInfo,
+} from "./interfaces";
+import { mean } from "./imageLogic";
 
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
@@ -117,7 +122,11 @@ const FONT = "sans-serif";
 
 type confUpdate = "slider" | "select";
 
-const NormalSlider = () => {
+const NormalSlider = ({
+  allImageInfos,
+}: {
+  allImageInfos: ImageLoadInfo[];
+}) => {
   const {
     imageInfo: [imageInfo],
     analysisInfo: [analysisInfo],
@@ -144,10 +153,9 @@ const NormalSlider = () => {
   const shadedHex = rgbaToHex(c[0], c[1], c[2], 120);
 
   const vals = imageInfo?.phaseVals!;
-  const phaseFrac =
-    accurateFractions != null
-      ? accurateFractions[vals[selectedPhase - 1]]
-      : getPhaseFraction(imageInfo?.previewData.data!, vals[selectedPhase - 1]);
+  const phaseFrac = mean(
+    allImageInfos.map((i) => i.phaseFractions[vals[selectedPhase - 1]]),
+  );
 
   const getShadedPoints = (newLB: number, newUB: number) => {
     const pxLBx = xDataToPx(
@@ -164,6 +172,7 @@ const NormalSlider = () => {
     );
 
     const nNew = pxUBx - pxLBx;
+    console.log(nNew, pxLBx, pxUBx, newLB, newUB);
     const inds = [...Array(nNew).keys()].map((x) => x + pxLBx);
     const xData = inds.map((x) =>
       xPxToData(x, params.start_pf, params.end_pf, CANVAS_WIDTH),
@@ -338,6 +347,7 @@ const NormalSlider = () => {
     const [lbData, ubData] = [result[0], result[1]];
     const sigma = (ubData - lbData) / 4; // sigma should be fixed as ub and lb changes - this should be reflected in results as well
 
+    console.log({ phaseFrac });
     const newMaxY = normalDist(phaseFrac, phaseFrac, sigma);
     const newStartPf = phaseFrac - 4 * sigma;
     const newEndPf = phaseFrac + 4 * sigma;

@@ -41,12 +41,10 @@ const DragDrop = ({ loadFromFile }: DragDropProps): JSX.Element => {
 
   const viewExample = async (path: string) => {
     const url = new URL(path, location.origin);
-    console.log(url);
     const resp = await fetch(url);
     const data = await resp.blob();
     const metadata = { type: data.type };
     const file = new File([data], "default.tiff", metadata);
-    console.log(file);
     loadFromFile(file);
   };
 
