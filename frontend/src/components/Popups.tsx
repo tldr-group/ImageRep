@@ -1,13 +1,11 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
-import AppContext, { IR_LIMIT_PX, MenuState } from "./interfaces";
+import { useContext } from "react";
+import AppContext, { IR_LIMIT_PX } from "./interfaces";
 
 import Modal from "react-bootstrap/Modal";
 import Accordion from "react-bootstrap/Accordion";
 import Toast from "react-bootstrap/Toast";
 import ToastContainer from "react-bootstrap/ToastContainer";
 import Button from "react-bootstrap/Button";
-import App from "../App";
-import { stat } from "fs";
 
 export const ErrorMessage = () => {
   const {

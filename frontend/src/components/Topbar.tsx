@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useRef } from "react";
 import AppContext from "./interfaces";
 
 import Container from "react-bootstrap/Container";

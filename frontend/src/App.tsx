@@ -1,7 +1,6 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import AppContext, {
   ImageLoadInfo,
-  AnalysisInfo,
   IR_LIMIT_PX,
 } from "./components/interfaces";
 
@@ -12,32 +11,20 @@ import NormalSlider from "./components/NormalSlider";
 import { Menu } from "./components/Menu";
 import { ErrorMessage, CLSModal, MoreInfo } from "./components/Popups";
 
-import {
-  loadFromTIFF,
-  loadFromImage,
-  getPhaseFraction,
-  mean,
-} from "./components/imageLogic";
+import { loadFromTIFF, loadFromImage, mean } from "./components/imageLogic";
 
 import "./assets/scss/App.scss";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const PATH = "http://127.0.0.1:5000";
 // const PATH = "https://samba-segment.azurewebsites.net";
-//const PATH = "http://localhost:7071/api";
-//const PATH = "https://representative.azurewebsites.net/api"
 const PF_ENDPOINT = PATH + "/phasefraction";
-//const PF_ENDPOINT = "https://representativity.azurewebsites.net/phasefraction"
 
-//const REPR_ENDPOINT = PATH + "/repr";
 const REPR_ENDPOINT = PATH + "/repr";
 
 const MAX_FILE_SIZE_BYTES = 1024 * 1024 * 500; // 500MB
 
 // TODO:
-// put phase fracs in image load info
-// add isAccurate flag if its not frontend
-// make frontend average pf over imageInfos
 const App = () => {
   const {
     imageInfo: [imageInfo, setImageInfo],

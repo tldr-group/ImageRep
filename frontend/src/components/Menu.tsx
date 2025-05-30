@@ -1,9 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import AppContext, {
-  ImageLoadInfo,
-  IR_LIMIT_PX,
-  MenuState,
-} from "./interfaces";
+import AppContext, { ImageLoadInfo, MenuState } from "./interfaces";
 import { colours, rgbaToHex } from "./interfaces";
 
 import Toast from "react-bootstrap/Toast";
