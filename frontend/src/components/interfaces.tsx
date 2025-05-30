@@ -22,10 +22,6 @@ interface contextProps {
   errVF: [errVF: number, setErrVF: (e: number) => void];
   targetL: [targetL: number | null, setTargetL: (e: number | null) => void];
   pfB: [pfB: number[] | null, setpfB: (e: number[] | null) => void];
-  accurateFractions: [
-    accurateFractions: { [val: number]: number } | null,
-    setAccurateFractions: (e: { [val: number]: number } | null) => void,
-  ];
   analysisInfo: [
     analysisInfo: AnalysisInfo | null,
     setAnalysisInfo: (e: AnalysisInfo | null) => void,

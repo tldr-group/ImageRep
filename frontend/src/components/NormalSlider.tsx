@@ -134,7 +134,6 @@ const NormalSlider = ({
     selectedConf: [selectedConf, setSelectedConf],
     errVF: [errVF, setErrVF],
     pfB: [pfB, setPfB],
-    accurateFractions: [accurateFractions],
   } = useContext(AppContext)!;
 
   const canvasRef = useRef<HTMLCanvasElement>(null);

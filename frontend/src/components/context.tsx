@@ -21,9 +21,6 @@ const AppContextProvider = (props: {
   const [targetL, setTargetL] = useState<number | null>(null);
   const [pfB, setPfB] = useState<number[] | null>(null);
   // server data
-  const [accurateFractions, setAccurateFractions] = useState<{
-    [val: number]: number;
-  } | null>(null);
   const [analysisInfo, setAnalysisInfo] = useState<AnalysisInfo | null>(null);
   // control flow
   const [menuState, setMenuState] = useState<MenuState>("hidden");
@@ -48,7 +45,6 @@ const AppContextProvider = (props: {
         errVF: [errVF, setErrVF],
         targetL: [targetL, setTargetL],
         pfB: [pfB, setPfB],
-        accurateFractions: [accurateFractions, setAccurateFractions],
         analysisInfo: [analysisInfo, setAnalysisInfo],
         menuState: [menuState, setMenuState],
         errorState: [errorState, setErrorState],

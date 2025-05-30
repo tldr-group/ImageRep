@@ -48,7 +48,6 @@ const App = () => {
     errVF: [errVF, setErrVF],
     targetL: [targetL, setTargetL],
     pfB: [, setPfB],
-    accurateFractions: [accurateFractions, setAccurateFractions],
     analysisInfo: [, setAnalysisInfo],
     menuState: [menuState, setMenuState],
     errorState: [errorState, setErrorState],
@@ -137,14 +136,12 @@ const App = () => {
     try {
       const formData = new FormData();
       formData.append("userFile", file);
-      //formData.append('phaseVal', String(selectedPhaseValue));
       const resp = await fetch(PF_ENDPOINT, { method: "POST", body: formData });
       const obj = await resp.json();
       console.log("server PF for '" + imageInfo.file?.name + "': ", obj);
       const fractions = obj["phase_fractions"] as { [val: number]: number };
       imageInfo.phaseFractions = fractions;
       imageInfo.isAccurate = true;
-      // setAccurateFractions(fractions);
     } catch (e) {
       const error = e as Error;
       setErrorState({
@@ -224,7 +221,6 @@ const App = () => {
     setImageInfo(null);
     setAnalysisInfo(null);
     setTargetL(null);
-    setAccurateFractions(null);
     setSelectedPhase(0);
     setErrVF(5);
     setSelectedConf(95);

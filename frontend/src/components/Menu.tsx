@@ -131,7 +131,6 @@ const ConfidenceSelect = ({
     selectedPhase: [selectedPhase],
     selectedConf: [selectedConf, setSelectedConf],
     errVF: [errVF, setErrVF],
-    accurateFractions: [accurateFractions],
     menuState: [, setMenuState],
   } = useContext(AppContext)!;
 
@@ -222,7 +221,6 @@ const Result = ({ allImageInfos }: { allImageInfos: ImageLoadInfo[] }) => {
     selectedConf: [selectedConf, setSelectedConf],
     errVF: [errVF, setErrVF],
     pfB: [pfB],
-    // accurateFractions: [accurateFractions],
     menuState: [menuState, setMenuState],
     showInfo: [, setShowInfo],
   } = useContext(AppContext)!;
