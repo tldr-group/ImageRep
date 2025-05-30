@@ -123,13 +123,6 @@ const getAspectCorrectedDims = (
   return { w: nw, h: nh, ox: (cw - (nw + dox * sf)) / 2, oy: doy * sf, sf: sf };
 };
 
-// TODO:
-// parent div that holds N preview canvases
-// conditionalise preview canvas to optionally have an image
-//   otherwise show preview lines
-// before repr back, show 1 preview image at full res
-// when zoom out, show N preview canvases in grid layout
-
 export const PreviewCanvasManager = ({
   allImageInfos,
 }: {
@@ -258,6 +251,7 @@ export const PreviewImg = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hiddenCanvasRef = useRef<HTMLCanvasElement>(null);
 
+  // TODO: make image info a ref again, add useEffec on it to redraw img when it changes
   const [img, setImg] = useState<HTMLImageElement | null>(null);
 
   const drawStyle = !imageInfo
@@ -270,13 +264,11 @@ export const PreviewImg = ({
 
   const redraw = (image: HTMLImageElement | null) => {
     if (image === null) {
-      console.log("early returen");
       return;
     } // null check - useful for the resize listeners
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d");
     if (ctx == null) {
-      console.log("early returen");
       return;
     }
     ctx.imageSmoothingEnabled = false;
@@ -286,27 +278,36 @@ export const PreviewImg = ({
       canvas.height,
       canvas.width,
     ];
-    // const faceData = get3DFacePoints(
-    //   ih,
-    //   iw,
-    //   imageInfo?.depth!,
-    //   DEFAULT_ANGLE_RAD,
-    //   0.3,
-    // );
-    // const correctDims = getAspectCorrectedDims(
-    //   ih,
-    //   iw,
-    //   ch,
-    //   cw,
-    //   faceData.dox,
-    //   faceData.doy,
-    //   ADDITIONAL_SF,
-    // );
+    const faceData = get3DFacePoints(
+      ih,
+      iw,
+      imageInfo?.depth!,
+      DEFAULT_ANGLE_RAD,
+      0.3,
+    );
+    const correctDims = getAspectCorrectedDims(
+      ih,
+      iw,
+      ch,
+      cw,
+      faceData.dox,
+      faceData.doy,
+      ADDITIONAL_SF,
+    );
     ctx?.clearRect(0, 0, canvas.width, canvas.height);
-    // if (faceData.dox > 0) {
-    //   drawFaces(ctx!, faceData, correctDims.sf, correctDims.ox, correctDims.oy);
-    // }
-    ctx?.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    if (faceData.dox > 0) {
+      drawFaces(ctx!, faceData, correctDims.sf, correctDims.ox, correctDims.oy);
+    }
+    // ctx?.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    ctx?.drawImage(
+      image,
+      correctDims.ox,
+      correctDims.oy,
+      correctDims.w,
+      correctDims.h,
+    );
   };
 
   const drawFaces = (
@@ -370,19 +371,22 @@ export const PreviewImg = ({
     redraw(img!);
   }, [img]);
 
-  // useEffect(() => {
-  //   if (!imageInfo) {
-  //     return;
-  //   }
-  //   if (menuState != "phase") {
-  //     return;
-  //   }
-  //   setImg(imageInfo.previewImg);
-  // }, [menuState]);
-
   useEffect(() => {
     // HIGHLIGHT SPECIFIC PHASE WHEN BUTTON CLICKED
     if (imageInfo === null || imageInfo === undefined) {
+      containerRef.current!.animate(
+        [
+          // visiblity fade
+          { opacity: 0 },
+          { opacity: 1 },
+        ],
+        {
+          fill: "both",
+          duration: 2400,
+          iterations: Infinity, // loop infinitely
+          direction: "alternate", // forward and reverse
+        },
+      );
       return;
     }
     const uniqueVals = imageInfo.phaseVals;
@@ -417,8 +421,7 @@ export const PreviewImg = ({
     newImage.onload = () => {
       setImg(newImage);
     };
-    // setImg(newImage);
-  }, [selectedPhase]);
+  }, [selectedPhase, imageInfo]);
 
   useEffect(() => {
     // UPDATE WHEN CLIENT RESIZED
@@ -434,9 +437,6 @@ export const PreviewImg = ({
       canv.width = container.offsetWidth;
       canv.height = container.offsetHeight;
       console.log(canv.width, canv.height);
-      // console.log("size updated!");
-      // console.log({ w: canv.width, h: canv.height });
-      // we need to redraw otherwise setting w and h will clear the canvas
       redraw(img);
     }
   }, [style]);
