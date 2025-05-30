@@ -105,7 +105,6 @@ const App = () => {
           setShowWarning("size");
         }
 
-        requestPhaseFraction(file, result);
         result.file = file;
         setImageInfo(result);
         setPreviewImg(result.previewImg);
@@ -115,6 +114,8 @@ const App = () => {
         allImageInfos.current = newAllImgInfo;
         setNImgs(newAllImgInfo.length);
         setSelectedImgIdx(newAllImgInfo.length - 1);
+
+        requestPhaseFraction(file, result);
       }
     };
   };
@@ -230,7 +231,7 @@ const App = () => {
     const idx = Math.min(Math.max(n, 0), nImgs - 1);
     const newImg = allImageInfos.current[idx];
     setImageInfo(newImg);
-    setPreviewImg(newImg.previewImg);
+    // setPreviewImg(newImg.previewImg);
     setSelectedImgIdx(idx);
     setSelectedPhase(selectedPhase);
   };
