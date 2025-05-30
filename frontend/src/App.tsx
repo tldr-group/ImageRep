@@ -6,7 +6,7 @@ import AppContext, {
 
 import Topbar from "./components/Topbar";
 import DragDrop from "./components/DragDrop";
-import { PreviewCanvas, PreviewCanvasManager } from "./components/Canvas";
+import { PreviewCanvasManager } from "./components/Canvas";
 import NormalSlider from "./components/NormalSlider";
 import { Menu } from "./components/Menu";
 import { ErrorMessage, CLSModal, MoreInfo } from "./components/Popups";
