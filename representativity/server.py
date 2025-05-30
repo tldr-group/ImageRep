@@ -85,7 +85,7 @@ def get_arr_from_file(form_data_file) -> np.ndarray:
     return arr
 
 
-def phase_fraction(request) -> Response:
+async def phase_fraction(request) -> Response:
     """User sends file, parse as array (either via tiffile or PIL-> numpy) and return all phase fractions.
     It's cheap to compute all of them and this way it can be done on first upload in the background and
     minimise delays."""
@@ -104,7 +104,7 @@ def phase_fraction(request) -> Response:
 
 
 @app.route("/phasefraction", methods=["POST", "GET", "OPTIONS"])
-def phase_fraction_app():
+async def phase_fraction_app():
     """phase fraction route."""
     response = generic_response(request, phase_fraction)
     return response
@@ -127,10 +127,7 @@ def preprocess_arr(arr: np.ndarray) -> np.ndarray:
     return arr
 
 
-def representativity(request) -> Response:
-    # user_file = request.files["userFile"]
-    # print(request.files)
-
+async def representativity(request) -> Response:
     file_list: list = request.files.getlist("userFile")
     print(file_list)
     selected_phase = int(request.values["selected_phase"])
@@ -145,9 +142,6 @@ def representativity(request) -> Response:
         binary_img = np.where(arr == selected_phase, 1, 0)
         arrs.append(binary_img)
     is_stack = len(arrs) > 1
-    print(len(arrs), is_stack)
-
-    # binary_img = np.where(arr == selected_phase, 1, 0)
 
     result = make_error_prediction(
         arrs, selected_conf, selected_err, model_error=True, image_stack=is_stack
