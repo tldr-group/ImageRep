@@ -174,3 +174,17 @@ export const mean = (arr: number[]) => {
     }) / arr.length
   );
 };
+
+export const getNImagesForTargetL = (
+  imageInfo: ImageLoadInfo,
+  l: number,
+  to_subtract: number = 1,
+) => {
+  const ii = imageInfo;
+  const vol =
+    ii?.nDims! == 3
+      ? ii?.height! * ii?.width! * ii?.width!
+      : ii?.height! * ii?.width!;
+  const nMore = Math.ceil(Math.pow(l!, imageInfo?.nDims!) / vol) - to_subtract;
+  return nMore;
+};

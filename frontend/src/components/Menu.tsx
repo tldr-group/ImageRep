@@ -15,7 +15,7 @@ import NormalSlider from "./NormalSlider";
 import ListGroup from "react-bootstrap/ListGroup";
 
 import Accordion from "react-bootstrap/Accordion";
-import { mean } from "./imageLogic";
+import { getNImagesForTargetL, mean } from "./imageLogic";
 
 const centreStyle = {
   display: "flex",
@@ -286,12 +286,7 @@ const Result = ({ allImageInfos }: { allImageInfos: ImageLoadInfo[] }) => {
     navigator.clipboard.writeText(copyText);
   };
 
-  const ii = imageInfo;
-  const vol =
-    ii?.nDims! == 3
-      ? ii?.height! * ii?.width! * ii?.width!
-      : ii?.height! * ii?.width!;
-  const nMore = Math.ceil(Math.pow(l!, imageInfo?.nDims!) / vol) - 1;
+  const nMore = getNImagesForTargetL(imageInfo!, l!, allImageInfos.length);
 
   const modalTitle = `Results for "${imageInfo?.file?.name}"`;
 
