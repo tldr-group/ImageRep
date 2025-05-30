@@ -1,10 +1,4 @@
-import React, {
-  MutableRefObject,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import AppContext, {
   ImageLoadInfo,
   IR_LIMIT_PX,
@@ -25,7 +19,7 @@ import NormalSlider from "./NormalSlider";
 import ListGroup from "react-bootstrap/ListGroup";
 
 import Accordion from "react-bootstrap/Accordion";
-import { getPhaseFraction, mean } from "./imageLogic";
+import { mean } from "./imageLogic";
 
 const centreStyle = {
   display: "flex",
@@ -127,7 +121,11 @@ const PhaseSelect = () => {
   );
 };
 
-const ConfidenceSelect = () => {
+const ConfidenceSelect = ({
+  allImageInfos,
+}: {
+  allImageInfos: ImageLoadInfo[];
+}) => {
   const {
     imageInfo: [imageInfo],
     selectedPhase: [selectedPhase],
@@ -138,39 +136,9 @@ const ConfidenceSelect = () => {
   } = useContext(AppContext)!;
 
   const vals = imageInfo?.phaseVals!;
-
-  console.log(accurateFractions);
-  console.log(vals);
-  console.log(selectedPhase);
-
-  const displayPhaseFrac = () => {
-    try {
-      if (
-        accurateFractions == null &&
-        imageInfo &&
-        vals[selectedPhase - 1] &&
-        imageInfo?.previewData.data
-      ) {
-        console.log("help");
-        const pf = getPhaseFraction(
-          imageInfo?.previewData.data!,
-          vals[selectedPhase - 1],
-        );
-        if (typeof pf == "number") {
-          return pf.toFixed(3);
-        }
-      } else if (accurateFractions && vals[selectedPhase - 1]) {
-        return accurateFractions[vals[selectedPhase - 1]].toFixed(3);
-      }
-
-      return "";
-    } catch (e) {
-      return "";
-    }
-  };
-  // horrible ternary: if server has responded and set the accurate phase fractions,
-  // then use those values in the modal. If not, use the estimate from the first image
-  const phaseFrac = displayPhaseFrac();
+  const phaseFrac = mean(
+    allImageInfos.map((i) => i.phaseFractions[vals[selectedPhase - 1]]),
+  );
 
   const setConf = (e: any) => {
     setSelectedConf(Number(e.target!.value));
@@ -200,7 +168,7 @@ const ConfidenceSelect = () => {
           </tr>
           <tr>
             <td>Phase Fraction:</td>
-            <td>{phaseFrac}</td>
+            <td>{phaseFrac.toFixed(3)}</td>
           </tr>
           <tr>
             <td>Estimated Time:</td>
@@ -246,16 +214,7 @@ const ConfidenceSelect = () => {
   );
 };
 
-const Result = ({
-  allImageInfos,
-}: {
-  allImageInfos: MutableRefObject<ImageLoadInfo[]>;
-}) => {
-  // LB < VF_true < UB with '$CONF$% confidence
-  // need L = $N$pix for \epsilon = ...
-  // epsilon slider (updates bounds in line 1)
-  // conf re-select
-  // CSS zoom anim on canvas
+const Result = ({ allImageInfos }: { allImageInfos: ImageLoadInfo[] }) => {
   const {
     analysisInfo: [analysisInfo],
     imageInfo: [imageInfo],
@@ -263,7 +222,7 @@ const Result = ({
     selectedConf: [selectedConf, setSelectedConf],
     errVF: [errVF, setErrVF],
     pfB: [pfB],
-    accurateFractions: [accurateFractions],
+    // accurateFractions: [accurateFractions],
     menuState: [menuState, setMenuState],
     showInfo: [, setShowInfo],
   } = useContext(AppContext)!;
@@ -273,37 +232,13 @@ const Result = ({
   // we have two errVFs here because we want the values in the text to reflect the old
   // errVF, the one they sent to the server and the slider to represent the new one
   // which they are setting for recalculate.
-
-  // TODO: THERE IS RACE CONDITION BETWEEN ACCURATE PFS AND RESULTS: I.E IF ONE
-  // NOT RETURNED WEBSITE FALLS OVER - NOT GOOD. FIX
-  // MAY EVEN BE LAG IN COUNTING PHASE FRACS
   const [newErrVF, setNewErrVF] = useState<number>(5);
   const pfResultRef = useRef<HTMLHeadingElement>(null);
   const lResultRef = useRef<HTMLHeadingElement>(null);
 
   const vals = imageInfo?.phaseVals!;
-
-  // const getPhaseFracs = () => {
-  //   const accurateAvailable = accurateFractions != null;
-  //   const coarseAvailable =
-  //     imageInfo != null && imageInfo.previewData.data != null;
-
-  //   if (accurateAvailable) {
-  //     return accurateFractions[vals[selectedPhase - 1]];
-  //   } else if (coarseAvailable) {
-  //     return getPhaseFraction(
-  //       imageInfo?.previewData.data!,
-  //       vals[selectedPhase - 1],
-  //     );
-  //   } else {
-  //     return 0;
-  //   }
-  // };
-
-  // const phaseFrac = getPhaseFracs();
-  console.log(selectedPhase);
   const phaseFrac = mean(
-    allImageInfos.current.map((i) => i.phaseFractions[vals[selectedPhase - 1]]),
+    allImageInfos.map((i) => i.phaseFractions[vals[selectedPhase - 1]]),
   );
 
   const l = analysisInfo?.lForDefaultErr;
@@ -343,7 +278,11 @@ const Result = ({
   const absErrFromPFB = (pfB![1] - pfB![0]) / 2;
   const perErrFromPFB = 100 * ((pfB![1] - pfB![0]) / 2 / phaseFrac);
 
-  const beforeBoldText = `The phase fraction in the segmented image is ${phaseFrac.toFixed(3)}. Assuming perfect segmentation, the 'ImageRep' model proposed by Dahari et al. suggests that `;
+  const isBatch = allImageInfos.length > 1;
+  const batchText = isBatch ? "(mean)" : "";
+  const imgText = isBatch ? "images" : "image";
+
+  const beforeBoldText = `The ${batchText} phase fraction in the segmented ${imgText} is ${phaseFrac.toFixed(3)}. Assuming perfect segmentation, the 'ImageRep' model proposed by Dahari et al. suggests that `;
   const boldText = `we can be ${selectedConf.toFixed(1)}% confident that the material's phase fraction is within ${perErrFromPFB?.toFixed(1)}% of this value (i.e. ${phaseFrac.toFixed(3)}±${absErrFromPFB.toFixed(3)})`;
   const copyText = beforeBoldText + boldText;
   const afterText = "These results are derived from an estimated ";
@@ -474,7 +413,7 @@ const Result = ({
               {/*Need to manually overwrite the style here because of werid bug*/}
               <Accordion.Body style={{ visibility: "visible" }}>
                 <div style={{ display: "flex", alignItems: "center" }}>
-                  <NormalSlider></NormalSlider>
+                  <NormalSlider allImageInfos={allImageInfos} />
                 </div>
                 {beforeBoldText}
                 <b>{boldText}</b>
@@ -579,15 +518,15 @@ const Result = ({
   );
 };
 
-const getMenuInfo = (
-  state: MenuState,
-  allImageInfos: MutableRefObject<ImageLoadInfo[]>,
-) => {
+const getMenuInfo = (state: MenuState, allImageInfos: ImageLoadInfo[]) => {
   switch (state) {
     case "phase":
       return { title: "Select Phase", innerHTML: <PhaseSelect /> };
     case "conf":
-      return { title: "Choose Parameters", innerHTML: <ConfidenceSelect /> };
+      return {
+        title: "Choose Parameters",
+        innerHTML: <ConfidenceSelect allImageInfos={allImageInfos} />,
+      };
     case "processing":
       return {
         title: "Processing",
@@ -613,11 +552,7 @@ const getMenuInfo = (
   }
 };
 
-export const Menu = ({
-  allImageInfos,
-}: {
-  allImageInfos: MutableRefObject<ImageLoadInfo[]>;
-}) => {
+export const Menu = ({ allImageInfos }: { allImageInfos: ImageLoadInfo[] }) => {
   const {
     menuState: [menuState],
   } = useContext(AppContext)!;

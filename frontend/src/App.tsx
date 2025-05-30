@@ -94,7 +94,7 @@ const App = () => {
         const href = reader.result as string;
         result = await loadFromImage(href);
       }
-      console.log(result);
+      console.log({ result });
 
       if (result == null) {
         setErrorState({
@@ -174,10 +174,9 @@ const App = () => {
         body: formData,
       });
       const obj = await resp.json();
+      console.log({ obj });
 
       const absErr: number = obj["abs_err"];
-
-      console.log(obj);
 
       setMenuState("conf_result_full");
       setAnalysisInfo({
@@ -193,18 +192,11 @@ const App = () => {
       });
 
       const vals = imageInfo?.phaseVals!;
-      // console.log(allImageInfos.current[0], selectedPhase);
       const phaseFrac = mean(
-        allImageInfos.current.map((i) => i.phaseFractions[vals[selectedPhase]]),
+        allImageInfos.current.map(
+          (i) => i.phaseFractions[vals[selectedPhase - 1]],
+        ),
       );
-      console.log(phaseFrac);
-      // accurateFractions != null
-      //   ? accurateFractions[vals[selectedPhase - 1]]
-      //   : getPhaseFraction(
-      //       imageInfo?.previewData.data!,
-      //       vals[selectedPhase - 1],
-      //     );
-
       setPfB([phaseFrac - absErr, phaseFrac + absErr]);
 
       if (obj["cls"] > IR_LIMIT_PX) {
@@ -281,9 +273,9 @@ const App = () => {
         {/*Canvas div on left, sidebar on right*/}
         {!previewImg && <DragDrop loadFromFile={appLoadFile} />}
         {previewImg && <PreviewCanvas />}
-        {false && <NormalSlider />}
+        {false && <NormalSlider allImageInfos={allImageInfos.current} />}
       </div>
-      <Menu allImageInfos={allImageInfos} />
+      <Menu allImageInfos={allImageInfos.current} />
       <ErrorMessage />
       {showWarning != "" && <CLSModal />}
       <MoreInfo />
