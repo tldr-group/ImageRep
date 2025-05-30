@@ -143,6 +143,11 @@ export const PreviewCanvasManager = ({
   } = useContext(AppContext)!;
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const [canvDims, setCanvDims] = useState<{ iw: number; ih: number }>({
+    iw: 0,
+    ih: 0,
+  });
+  const notResultsZoom = menuState !== "conf_result";
 
   const getNCanvases = (menuState: MenuState, l: number | null) => {
     if (menuState !== "conf_result") {
@@ -163,7 +168,7 @@ export const PreviewCanvasManager = ({
     imageWidth: number,
     imageHeight: number,
     nSquare: number,
-    pad: number = 30,
+    pad: number = 15,
   ): { iw: number; ih: number } => {
     const container = containerRef.current;
     if (!container) {
@@ -181,25 +186,29 @@ export const PreviewCanvasManager = ({
   const getImgDims = (nSquare: number): { iw: number; ih: number } => {
     const container = containerRef.current;
     if (!container || !imageInfo) {
-      return { iw: 0, ih: 0 };
+      return { iw: 100, ih: 100 };
     }
 
-    return getRescaledImgDims(
+    const rescaledDims = getRescaledImgDims(
       container.clientWidth,
       container.clientHeight,
       imageInfo.width,
       imageInfo.height,
       nSquare,
     );
+    return rescaledDims;
   };
 
   const N = getNCanvases(menuState, targetL);
   const dummyArr = [...Array(N).keys()];
 
-  // TODO: calc maxSF from image and client dims as before ,apply and set w and h independently
   const nSquare = Math.ceil(Math.sqrt(N));
-  const closestSquare = Math.pow(nSquare, 2);
-  const { iw, ih } = getImgDims(nSquare);
+
+  useEffect(() => {
+    const res = getImgDims(nSquare);
+    console.log("updating canv dims");
+    setCanvDims(res);
+  }, [menuState, targetL, allImageInfos]);
 
   return (
     <div
@@ -217,17 +226,230 @@ export const PreviewCanvasManager = ({
       ref={containerRef}
     >
       {dummyArr.map((v, i) => (
-        <div
+        <PreviewImg
           key={i}
+          imageInfo={notResultsZoom ? imageInfo : allImageInfos[i]}
           style={{
-            width: `${iw}px`,
-            height: `${ih}px`,
-            backgroundColor: "red",
+            width: `${canvDims.iw}px`,
+            height: `${canvDims.ih}px`,
+            backgroundClip: "red",
           }}
-        >
-          <span>{v}</span>
-        </div>
+        />
       ))}
+    </div>
+  );
+};
+
+export const PreviewImg = ({
+  imageInfo,
+  style,
+}: {
+  imageInfo: ImageLoadInfo | null;
+  style: React.CSSProperties;
+}) => {
+  const {
+    // previewImg: [previewImg, setPreviewImg],
+    selectedPhase: [selectedPhase],
+    menuState: [menuState],
+  } = useContext(AppContext)!;
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const frontDivRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hiddenCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  const [img, setImg] = useState<HTMLImageElement | null>(null);
+
+  const drawStyle = !imageInfo
+    ? {
+        ...style,
+        background:
+          "repeating-linear-gradient(45deg, #b4b4b4d9, #b4b4b4d9 10px, #e5e5e5e3 10px, #e5e5e5e3 20px)",
+      }
+    : style;
+
+  const redraw = (image: HTMLImageElement | null) => {
+    if (image === null) {
+      console.log("early returen");
+      return;
+    } // null check - useful for the resize listeners
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d");
+    if (ctx == null) {
+      console.log("early returen");
+      return;
+    }
+    ctx.imageSmoothingEnabled = false;
+    const [ih, iw, ch, cw] = [
+      image.naturalHeight,
+      image.naturalWidth,
+      canvas.height,
+      canvas.width,
+    ];
+    // const faceData = get3DFacePoints(
+    //   ih,
+    //   iw,
+    //   imageInfo?.depth!,
+    //   DEFAULT_ANGLE_RAD,
+    //   0.3,
+    // );
+    // const correctDims = getAspectCorrectedDims(
+    //   ih,
+    //   iw,
+    //   ch,
+    //   cw,
+    //   faceData.dox,
+    //   faceData.doy,
+    //   ADDITIONAL_SF,
+    // );
+    ctx?.clearRect(0, 0, canvas.width, canvas.height);
+    // if (faceData.dox > 0) {
+    //   drawFaces(ctx!, faceData, correctDims.sf, correctDims.ox, correctDims.oy);
+    // }
+    ctx?.drawImage(image, 0, 0, canvas.width, canvas.height);
+  };
+
+  const drawFaces = (
+    ctx: CanvasRenderingContext2D,
+    faces: faces,
+    sf: number,
+    ox: number,
+    oy: number,
+    frame: boolean = false,
+  ) => {
+    const style1 = frame ? topSideFrame : topSide;
+    const style2 = frame ? rightSideFrame : rightSide;
+    drawPoints(ctx, faces.face1, sf, ox, oy, style1); //"#dbdbdbff"
+    drawPoints(ctx, faces.face2, sf, ox, oy, style2);
+
+    if (frame) {
+      drawPoints(ctx, faces.face3, sf, ox, oy, style1);
+    }
+  };
+
+  const drawPoints = (
+    ctx: CanvasRenderingContext2D,
+    points: Array<Point>,
+    sf: number,
+    ox: number,
+    oy: number,
+    style: DrawStyle,
+  ) => {
+    const p0 = points[0];
+    ctx.fillStyle = style.fillColour;
+    ctx.strokeStyle = style.lineColour;
+    if (style.lineCap) {
+      ctx.lineCap = style.lineCap;
+    }
+    if (style.lineDash) {
+      ctx.setLineDash(style.lineDash);
+    } else {
+      ctx.setLineDash([]);
+    }
+
+    ctx.lineWidth = style.lineWidth;
+    ctx.fillStyle = style.fillColour;
+    ctx.beginPath();
+    ctx.moveTo(ox + p0.x * sf, p0.y * sf);
+    for (let i = 1; i < points.length; i++) {
+      const p = points[i];
+      ctx.lineTo(ox + p.x * sf, p.y * sf);
+    }
+    ctx.closePath();
+    if (style.toFill) {
+      ctx.fill();
+    } else {
+      ctx.stroke();
+    }
+  };
+
+  // ================ EFFECTS ================
+  useEffect(() => {
+    // UPDATE WHEN IMAGE CHANGED
+    console.log("redrawing!");
+    redraw(img!);
+  }, [img]);
+
+  // useEffect(() => {
+  //   if (!imageInfo) {
+  //     return;
+  //   }
+  //   if (menuState != "phase") {
+  //     return;
+  //   }
+  //   setImg(imageInfo.previewImg);
+  // }, [menuState]);
+
+  useEffect(() => {
+    // HIGHLIGHT SPECIFIC PHASE WHEN BUTTON CLICKED
+    if (imageInfo === null || imageInfo === undefined) {
+      return;
+    }
+    const uniqueVals = imageInfo.phaseVals;
+    // create mapping of {greyscaleVal1: [color to draw], greyscaleVal2: [color to draw]}
+    // where color to draw is blue, orange, etc if val1 phase selected, greyscale otherwise
+    const phaseCheck = (x: number, i: number) => {
+      const alpha = selectedPhase == 0 ? 255 : 80;
+      const originalColour = [x, [x, x, x, alpha]]; // identity mapping of grey -> grey in RGBA
+      const newColour = [x, colours[i + 1]]; // grey -> phase colour
+      const phaseIsSelected = i + 1 == selectedPhase;
+      return phaseIsSelected ? newColour : originalColour;
+    };
+    // NB we ignore alpha in the draw call so doesn't matter that it's x here
+    const mapping = Object.fromEntries(
+      uniqueVals!.map((x, i, _) => phaseCheck(x, i)),
+    );
+    console.log({ mapping }, { selectedPhase }, { uniqueVals });
+
+    const imageData = imageInfo.previewData;
+    const newImageArr = replaceGreyscaleWithColours(imageData.data, mapping);
+    const newImageData = new ImageData(
+      newImageArr,
+      imageInfo.width,
+      imageInfo.height,
+    );
+    const newImage = getImagefromImageData(
+      newImageData,
+      imageInfo.height,
+      imageInfo.width,
+    );
+
+    newImage.onload = () => {
+      setImg(newImage);
+    };
+    // setImg(newImage);
+  }, [selectedPhase]);
+
+  useEffect(() => {
+    // UPDATE WHEN CLIENT RESIZED
+
+    const container = containerRef.current!;
+    const canv = canvasRef.current!;
+    console.log(canv.width, canv.height);
+
+    if (
+      canv.width != container.offsetWidth ||
+      canv.height != container.offsetHeight
+    ) {
+      canv.width = container.offsetWidth;
+      canv.height = container.offsetHeight;
+      console.log(canv.width, canv.height);
+      // console.log("size updated!");
+      // console.log({ w: canv.width, h: canv.height });
+      // we need to redraw otherwise setting w and h will clear the canvas
+      redraw(img);
+    }
+  }, [style]);
+
+  return (
+    <div ref={containerRef} style={drawStyle}>
+      <div ref={frontDivRef} style={{ position: "absolute" }}></div>
+      <canvas ref={canvasRef} id={"preview"}></canvas>
+      <canvas
+        ref={hiddenCanvasRef}
+        style={{ visibility: "hidden", position: "absolute" }}
+        id={"hidden"}
+      ></canvas>
     </div>
   );
 };
