@@ -94,7 +94,7 @@ const App = () => {
         const href = reader.result as string;
         result = await loadFromImage(href);
       }
-      console.log({ result });
+      console.log("uploaded file: ", result);
 
       if (result == null) {
         setErrorState({
@@ -140,6 +140,7 @@ const App = () => {
       //formData.append('phaseVal', String(selectedPhaseValue));
       const resp = await fetch(PF_ENDPOINT, { method: "POST", body: formData });
       const obj = await resp.json();
+      console.log("server PF for '" + imageInfo.file?.name + "': ", obj);
       const fractions = obj["phase_fractions"] as { [val: number]: number };
       imageInfo.phaseFractions = fractions;
       imageInfo.isAccurate = true;
@@ -174,7 +175,7 @@ const App = () => {
         body: formData,
       });
       const obj = await resp.json();
-      console.log({ obj });
+      console.log("repr result:", obj);
 
       const absErr: number = obj["abs_err"];
 

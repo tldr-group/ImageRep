@@ -154,7 +154,6 @@ export const loadFromImage = async (href: string): Promise<ImageLoadInfo> => {
 
   const imgData = getImageDataFromImage(img);
   const nChannels = findNChannels(imgData.data, img.height, img.width);
-  console.log("n channels:" + String(nChannels));
   const phaseCheck = checkPhases(imgData.data, nChannels);
 
   return imageInfoLoadHelper(

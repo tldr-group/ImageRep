@@ -172,7 +172,6 @@ const NormalSlider = ({
     );
 
     const nNew = pxUBx - pxLBx;
-    console.log(nNew, pxLBx, pxUBx, newLB, newUB);
     const inds = [...Array(nNew).keys()].map((x) => x + pxLBx);
     const xData = inds.map((x) =>
       xPxToData(x, params.start_pf, params.end_pf, CANVAS_WIDTH),
@@ -347,7 +346,6 @@ const NormalSlider = ({
     const [lbData, ubData] = [result[0], result[1]];
     const sigma = (ubData - lbData) / 4; // sigma should be fixed as ub and lb changes - this should be reflected in results as well
 
-    console.log({ phaseFrac });
     const newMaxY = normalDist(phaseFrac, phaseFrac, sigma);
     const newStartPf = phaseFrac - 4 * sigma;
     const newEndPf = phaseFrac + 4 * sigma;
