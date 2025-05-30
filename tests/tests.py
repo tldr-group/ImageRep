@@ -115,19 +115,18 @@ class IntegrationTests(unittest.TestCase):
             "## Test case: characteristic length scale on random squares of increasing size"
         )
         target_vf = 0.5
-        y, x = 500, 500
+        x, y = 2000, 2000
+        
         for l in [5, 10, 15, 20]:
+            im = np.random.rand(x//l, y//l)
+            im[im >= target_vf] = 1
+            im[im < target_vf] = 0
+            im = np.repeat(np.repeat(im, l, axis=0), l, axis=1)
             n_rects = int((y / l) * target_vf) ** 2
-            arr = np.zeros((y, x), dtype=np.uint8)
-            for i in range(n_rects):
-                dx, dy = np.random.randint(0, y), np.random.randint(0, x)
-                rr, cc = rectangle((dy, dx), extent=(l, l), shape=(y, x))
-                arr[rr, cc] = 1
-
-            tpc = model.radial_tpc(arr, False, False)
-            integral_range = model.tpc_to_cls(tpc, arr)
+            tpc = model.radial_tpc(im, False, False)
+            integral_range = model.tpc_to_cls(tpc, im)
             print(f"square cls of length {l}: {integral_range} with {n_rects}")
-            assert 0.5 * l < integral_range < 2 * l
+            assert 0.9 * l < integral_range < 1.1 * l
 
     def test_cls_disks(self):
         print(
@@ -196,9 +195,9 @@ class IntegrationTests(unittest.TestCase):
         assert np.isclose(large_im_err, stack_err, rtol=0.1)
 
     def test_repr_pred(self):
-        """Test the percentage error of a random binomial size (500,500) - should be small"""
+        """Test the percentage error of a random binomial size (700,700) - should be small"""
         print("## Test case: representativity of random binomial")
-        test_arr = np.random.binomial(1, 0.5, (500, 500))
+        test_arr = np.random.binomial(1, 0.5, (700, 700))
         result = model.make_error_prediction(test_arr, model_error=True)
         assert result["percent_err"] < 0.05
 

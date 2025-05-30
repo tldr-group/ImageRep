@@ -6,7 +6,9 @@ from scipy.optimize import minimize  # type: ignore
 from typing import TypedDict
 
 DEFAULT_N_DIV = 301
-VERBOSE = False
+SMALL_IM_2D = 1000**2  # number of pixels in a 1000x1000 image
+SMALL_IM_3D = 250**3  # number of voxels in a 250x250x250 image
+VERBOSE = False  # whether to print debug info
 
 # %% ======================== TWO-POINT CORRELATION METHODS ========================
 
@@ -603,6 +605,35 @@ def calc_pred_cls(
     return float(pred_cls)
 
 
+def classical_approach_test(binary_image: np.ndarray,
+                            n_dims: int) -> bool:
+    """Check if the image is small enough to use the classical approach to CLS estimation.
+
+    :param binary_image: 2/3D binary arr for the microstructure
+    :type binary_image: np.ndarray
+    :param n_dims: whether arr is 2/3D
+    :type n_dims: int
+    :return: whether the image is small enough or squarish enough to use the classical approach
+    :rtype: bool
+    """
+    im_size = np.prod(binary_image.shape)
+    if n_dims == 2:
+        if im_size > SMALL_IM_2D:
+            if VERBOSE:
+                print(f"Image is big enough, not comparing to classical approach")
+            return False
+    if n_dims == 3:
+        if im_size > SMALL_IM_3D:
+            if VERBOSE:
+                print(f"Image is big enough, not comparing to classical approach")
+            return False
+    if VERBOSE:
+        print(
+            f"Image is too small with ({im_size} elements, {n_dims}D), comparing to classical approach"
+        )   
+    return True
+
+
 def tpc_to_cls(tpc: np.ndarray, binary_image: np.ndarray) -> float:
     """Compute the Characteristic Length Scale (CLS) from the TPC array and microstructure.
     First, the distance where the TPC stops fluctuating (r_0) is found. Using this the TPC-estimated
@@ -658,24 +689,25 @@ def tpc_to_cls(tpc: np.ndarray, binary_image: np.ndarray) -> float:
     pred_cls = calc_pred_cls(
         coeff, tpc, image_phase_fraction, phase_fraction_squared, bool_array, img_shape
     )
-    # use classical apporach to see if CLS is off
-    pred_is_off, sign = pred_cls_is_off(pred_cls, binary_image, image_phase_fraction)
-    while pred_is_off:
-        how_off = "negative" if sign > 0 else "positive"
-        if VERBOSE:
-            print(f"pred cls = {pred_cls} is too {how_off}, CHANGING TPC VALUES")
-        tpc, pred_cls = change_pred_cls(
-            coeff,
-            tpc,
-            image_phase_fraction,
-            phase_fraction_squared,
-            bool_array,
-            img_shape,
-            sign,
-        )
-        pred_is_off, sign = pred_cls_is_off(
-            pred_cls, binary_image, image_phase_fraction
-        )
+    # use classical apporach to see if CLS is off, only for small squarish-images:
+    if classical_approach_test(binary_image, len(img_shape)):
+        pred_is_off, sign = pred_cls_is_off(pred_cls, binary_image, image_phase_fraction)
+        while pred_is_off:
+            how_off = "negative" if sign > 0 else "positive"
+            if VERBOSE:
+                print(f"pred cls = {pred_cls} is too {how_off}, CHANGING TPC VALUES")
+            tpc, pred_cls = change_pred_cls(
+                coeff,
+                tpc,
+                image_phase_fraction,
+                phase_fraction_squared,
+                bool_array,
+                img_shape,
+                sign,
+            )
+            pred_is_off, sign = pred_cls_is_off(
+                pred_cls, binary_image, image_phase_fraction
+            )
     return pred_cls
 
 

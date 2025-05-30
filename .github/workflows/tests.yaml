@@ -7,7 +7,7 @@ on:
   push:
     branches: [ "cleanup" ]
   pull_request:
-    branches: [ "main",  ]
+    branches: [ "**" ]
 
 permissions:
   contents: read
