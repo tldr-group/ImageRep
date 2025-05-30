@@ -7,7 +7,7 @@ from typing import TypedDict
 
 DEFAULT_N_DIV = 301
 SMALL_IM_2D = 1000**2  # number of pixels in a 1000x1000 image
-SMALL_IM_3D = 250**3  # number of pixels in a 250x250x250 image
+SMALL_IM_3D = 250**3  # number of voxels in a 250x250x250 image
 VERBOSE = False  # whether to print debug info
 
 # %% ======================== TWO-POINT CORRELATION METHODS ========================
