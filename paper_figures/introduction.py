@@ -51,7 +51,7 @@ if __name__ == '__main__':
     sofc_small_im = sofc_large_im[y1:y2, x1:x2]
     ax_sofc_im = fig.add_subplot(gs[0, 0])
     ax_sofc_im.imshow(sofc_large_im, cmap='gray', interpolation='nearest')
-    ax_sofc_im.set_xlabel(f"Unknown material's phase fraction: {sofc_large_im.mean():.3f}")
+    ax_sofc_im.set_xlabel(f"Material's unknown phase fraction: {sofc_large_im.mean():.3f}", fontsize=11)
 
     patch_positions = []
     phase_fractions = []
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     # Create the inset:
     inset_shift = 1 + wspace
     ax_inset = ax_sofc_im.inset_axes([inset_shift, 0, 1, 1], xlim=(x1, x2), ylim=(y1, y2))
-    ax_inset.set_xlabel(f"Sample's phase fraction: {sofc_small_im.mean():.3f}")
+    ax_inset.set_xlabel(f"Sample's phase fraction: {sofc_small_im.mean():.3f}", fontsize=11)
     inset_pos = ax_inset.get_position()
     ax_inset.imshow(sofc_small_im, cmap='gray', interpolation='nearest', extent=[x1, x2, y1, y2])
     for spine in ax_inset.spines.values():
@@ -86,8 +86,8 @@ if __name__ == '__main__':
     ax_sofc_im.set_yticks([])
     ax_inset.set_xticks([])
     ax_inset.set_yticks([])
-    ax_sofc_im.set_title("(a)")
-    ax_inset.set_title("(b)")
+    ax_sofc_im.set_title("(a)", fontsize=12)
+    ax_inset.set_title("(b)", fontsize=12)
 
     
 
@@ -99,25 +99,26 @@ if __name__ == '__main__':
     x = np.linspace(sofc_large_im.mean() - gap_pfs, sofc_large_im.mean() + gap_pfs, 200)
     p = norm.pdf(x, mu, sigma)
     unknown_dist.plot(x, p, color=COLOR_IN, linewidth=2, 
-                      label="Unknown phase fraction\ndistribution of same-sized samples.")
+                      label="Same-sized samples unknown\nphase fraction distribution.")
     # Make the plot 1.5 times lower in the plot:
-    unknown_dist.set_ylim(0, unknown_dist.get_ylim()[1]*1.6)
+    unknown_dist.set_ylim(0, unknown_dist.get_ylim()[1]*1.8)
     unknown_dist.set_xlim(sofc_large_im.mean() - gap_pfs, sofc_large_im.mean() + gap_pfs)
     unknown_dist.set_yticks([])
 
     # Now add the unknown material's phase fraction, until the normal distribution:
     ymax = norm.pdf(sofc_large_im.mean(), mu, sigma)
     ymax_mean = ymax / unknown_dist.get_ylim()[1]
-    unknown_dist.axvline(sofc_large_im.mean(), ymax=ymax_mean, color='black', linestyle='--', linewidth=2,
-                         label="Unknown material's phase fraction")
     # And the sample phase fraction:
     ymax_sample = norm.pdf(sofc_small_im.mean(), mu, sigma)
-    ymax_sample = ymax_sample / unknown_dist.get_ylim()[1]
+    ymax_sample = ymax_sample / unknown_dist.get_ylim()[1] 
     unknown_dist.axvline(sofc_small_im.mean(), ymax=ymax_sample, color=COLOR_INSET, linestyle='--', linewidth=2, 
                          label="Sample's phase fraction")
-    unknown_dist.legend(loc='upper left')
-    unknown_dist.set_title("(c)")
-    unknown_dist.set_xlabel('Phase fraction')
+    unknown_dist.axvline(sofc_large_im.mean(), ymax=ymax_mean, color='black', linestyle='--', linewidth=2,
+                         label="Material's unknown phase\nfraction")
+    
+    unknown_dist.legend(loc='upper left', fontsize=11)
+    unknown_dist.set_title("(c)", fontsize=12)
+    unknown_dist.set_xlabel('Phase fraction', fontsize=11)
     
 
     # Rep. calculation:
@@ -125,11 +126,11 @@ if __name__ == '__main__':
     same_small_im.imshow(sofc_small_im, cmap='gray', interpolation='nearest')
     same_small_im.set_xticks([])
     same_small_im.set_yticks([])
-    same_small_im.set_xlabel(f"Single image input")
+    same_small_im.set_xlabel(f"Single image input", fontsize=11)
     for spine in same_small_im.spines.values():
         spine.set_edgecolor(COLOR_INSET)
         spine.set_linewidth(LINE_W)
-    same_small_im.set_title('(e)')
+    same_small_im.set_title('(e)', fontsize=12)
 
     # Create the TPC plot:
     tpc_plot = fig.add_subplot(gs[1, 1])
@@ -138,12 +139,12 @@ if __name__ == '__main__':
     tpc_plot.set_ylabel('')
     tpc_plot.set_xticks([])
     tpc_plot.set_yticks([])
-    tpc_plot.set_title("(f)")
+    tpc_plot.set_title("(f)", fontsize=12)
 
     # Text of representativity analysis:
     rep_text = fig.add_subplot(gs[1, 2])
 
-    microlib_examples = tifffile.imread("paper_figures/microlib_examples.tif")
+    microlib_examples = tifffile.imread("paper_figures/figure_data/microlib_examples.tif")
     microlib_examples_size = min(microlib_examples.shape)
     microlib_examples = microlib_examples[-microlib_examples_size:, -microlib_examples_size:]
     microlib_examples = microlib_examples / microlib_examples.max()
@@ -153,13 +154,13 @@ if __name__ == '__main__':
     large_microlib_im[-microlib_examples_size:, start_idx:start_idx+microlib_examples_size] = microlib_examples
     rep_text.imshow(large_microlib_im, cmap='gray', interpolation='nearest')
 
-    rep_text.set_title("(g)")
+    rep_text.set_title("(g)", fontsize=12)
     text_y = 0.1
     text_pos = (0.5*large_microlib_im.shape[1], text_y*large_microlib_im.shape[0])
     rep_text.text(*text_pos, 
                   "TPC integration and data-driven \ncorrection using MicroLib ", va='center', ha='center')
     font_size = rep_text.texts[0].get_fontsize()
-    rep_text.texts[0].set_fontsize(font_size + 2)
+    rep_text.texts[0].set_fontsize(font_size + 3)
     # delete the axis:
     rep_text.axis('off')
 
@@ -174,10 +175,10 @@ if __name__ == '__main__':
     conf_bounds, pf_1d, cum_sum_sum = get_prediction_interval_stats(sofc_small_im)
     # cumulative sum to the original data:
     original_data = np.diff(cum_sum_sum)
-    res_1_pred.plot(pf_1d[1:], original_data, label="Predicted likelihood of material's\nphase fraction", linewidth=2)
-    res_1_pred.set_ylim(0, res_1_pred.get_ylim()[1]*1.6)
+    res_1_pred.plot(pf_1d[1:], original_data, label="Predicted likelihood of\nmaterial's phase fraction", linewidth=2)
+    res_1_pred.set_ylim(0, res_1_pred.get_ylim()[1]*1.8)
     res_1_pred.set_xlim(pf_1d[0], pf_1d[-1])
-    res_1_pred.set_xlabel('Phase fraction')
+    res_1_pred.set_xlabel('Phase fraction', fontsize=11)
     # No y-ticks:
     # res_1_pred.set_yticks([])
     # Fill between confidence bounds:
@@ -212,11 +213,11 @@ if __name__ == '__main__':
         linestyle="--",
         linewidth=2,
         color='black',
-        label="Unknown material's phase fraction",
+        label="Material's unknown phase\nfraction",
     )
     # No y-ticks:
     res_1_pred.set_yticks([])
-    res_1_pred.set_title("(d)")
+    res_1_pred.set_title("(d)", fontsize=12)
 
     res_1_pred.set_ylim([0, res_1_pred.get_ylim()[1]])
     inset_pf = sofc_small_im.mean()
@@ -224,7 +225,7 @@ if __name__ == '__main__':
     res_1_pred.errorbar(
         sofc_small_im.mean(), 0.0003, xerr=xerr, fmt='o', capsize=6, 
         color=COLOR_INSET, label="95% confidence interval", linewidth=LINE_W, capthick=LINE_W)
-    res_1_pred.legend(loc='upper left')
+    res_1_pred.legend(loc='upper left', fontsize=11)
     
     
 
@@ -267,7 +268,7 @@ if __name__ == '__main__':
     res_2_pred.set_xticks([])
     res_2_pred.set_yticks([])
 
-    label = f"Predicted sample size for a smaller\n95% confidence interval, with at\nmost {target_percetange_error}% deviation from material's\nphase fraction instead of {np.round(percent_error*100, 2)}%."
+    label = f"Sample size needed for ±{target_percetange_error}%\ndeviation from Material's phase\nfraction (95% CI), vs. current\n±{np.round(percent_error*100, 2)}% deviation (± 0.022)."
     # Create custom Line2D objects for the spines
     spine_line = mlines.Line2D([], [], color='black', linestyle='--', 
                                linewidth=2, alpha=alpha, 
@@ -287,14 +288,14 @@ if __name__ == '__main__':
                                 linewidth=1)
 
     # Add the custom lines to the legend
-    res_2_pred.legend(handles=[spine_line], loc='upper left')
+    res_2_pred.legend(handles=[spine_line], loc='upper left', fontsize=11)
 
     for spine in res_2_pred.spines.values():
         spine.set_linestyle("--")
         spine.set_linewidth(2)
         spine.set_alpha(alpha)
     
-    res_2_pred.set_title("(h)")
+    res_2_pred.set_title("(h)", fontsize=12)
 
     positions = []
     for i in range(8):
@@ -356,7 +357,7 @@ if __name__ == '__main__':
         # Insert the title as text in the top middle of the rectangle:
         text_pos = (lower_left_corner[0] + width_rect/2, lower_left_corner[1] + height_rect - gap_up_down/5)
         fig.text(text_pos[0], text_pos[1], title, ha='center', va='center', 
-                 fontsize=font_size+4, transform=fig.transFigure)
+                 fontsize=18, transform=fig.transFigure)
 
         fig.patches.append(rect)
 

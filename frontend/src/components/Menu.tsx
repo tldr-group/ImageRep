@@ -98,14 +98,34 @@ const ConfidenceSelect = () => {
 
 
     const vals = imageInfo?.phaseVals!
+
+    console.log(accurateFractions)
+    console.log(vals)
+    console.log(selectedPhase)
+
+    const displayPhaseFrac = () => {
+        try {
+        if (accurateFractions == null && imageInfo && vals[selectedPhase -1] && imageInfo?.previewData.data) {
+            console.log('help')
+            const pf = getPhaseFraction(
+                imageInfo?.previewData.data!,
+                vals[selectedPhase - 1]
+            )
+            if (typeof pf == "number") {
+                return pf.toFixed(3)
+            }
+        } else if (accurateFractions && vals[selectedPhase -1]) {
+            return accurateFractions[vals[selectedPhase - 1]].toFixed(3)
+        }
+
+        return ''
+    } catch (e) {
+        return ''
+    }
+    }
     // horrible ternary: if server has responded and set the accurate phase fractions,
     // then use those values in the modal. If not, use the estimate from the first image
-    const phaseFrac = (accurateFractions != null) ?
-        accurateFractions[vals[selectedPhase - 1]].toFixed(3)
-        : getPhaseFraction(
-            imageInfo?.previewData.data!,
-            vals[selectedPhase - 1]
-        ).toFixed(3);
+    const phaseFrac = displayPhaseFrac()
 
     const setConf = (e: any) => {
         setSelectedConf(Number(e.target!.value))
@@ -236,13 +256,6 @@ const Result = () => {
         setMenuState('processing');
     }
 
-    const getDPofSigFig = (decimal: number) => {
-        const rounded = parseFloat(decimal.toPrecision(1));
-        const loc = Math.ceil(Math.abs(Math.log10(rounded)));
-        const capped = Math.min(loc, 5)
-        return capped
-    }
-
     const c = colours[selectedPhase];
     const headerHex = rgbaToHex(c[0], c[1], c[2], c[3]);
 
@@ -255,10 +268,8 @@ const Result = () => {
     const absErrFromPFB = (pfB![1] - pfB![0]) / 2
     const perErrFromPFB = 100 * (((pfB![1] - pfB![0]) / 2) / phaseFrac)
 
-    const roundTo = getDPofSigFig(absErrFromPFB);
-
     const beforeBoldText = `The phase fraction in the segmented image is ${phaseFrac.toFixed(3)}. Assuming perfect segmentation, the 'ImageRep' model proposed by Dahari et al. suggests that `
-    const boldText = `we can be ${selectedConf.toFixed(1)}% confident that the material's phase fraction is within ${perErrFromPFB?.toFixed(1)}% of this value (i.e. ${phaseFrac.toFixed(roundTo)}±${(absErrFromPFB).toFixed(roundTo)})`
+    const boldText = `we can be ${selectedConf.toFixed(1)}% confident that the material's phase fraction is within ${perErrFromPFB?.toFixed(1)}% of this value (i.e. ${phaseFrac.toFixed(3)}±${absErrFromPFB.toFixed(3)})`
     const copyText = beforeBoldText + boldText
     const afterText = "These results are derived from an estimated "
     const afterBoldText = `Characteristic Length Scale (CLS) of ${analysisInfo?.integralRange!.toFixed(0)}px`
@@ -376,7 +387,7 @@ const Result = () => {
                             <ListGroup>
                                 <ListGroup.Item variant="dark" style={{ cursor: "pointer" }} onClick={e => handleShowFull()}>Click for Brief explanation!</ListGroup.Item>
                                 <ListGroup.Item>Implementation in the <a href="https://github.com/tldr-group/Representativity">GitHub</a></ListGroup.Item>
-                                <ListGroup.Item>Full details can be found in the <a href="comingsoon">paper</a></ListGroup.Item>
+                                <ListGroup.Item>Full details can be found in the <a href="https://arxiv.org/abs/2410.19568v1">paper</a></ListGroup.Item>
                             </ListGroup>
                         </Accordion.Body>
                     </Accordion.Item>

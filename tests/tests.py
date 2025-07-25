@@ -115,19 +115,18 @@ class IntegrationTests(unittest.TestCase):
             "## Test case: characteristic length scale on random squares of increasing size"
         )
         target_vf = 0.5
-        y, x = 500, 500
+        x, y = 2000, 2000
+        
         for l in [5, 10, 15, 20]:
+            im = np.random.rand(x//l, y//l)
+            im[im >= target_vf] = 1
+            im[im < target_vf] = 0
+            im = np.repeat(np.repeat(im, l, axis=0), l, axis=1)
             n_rects = int((y / l) * target_vf) ** 2
-            arr = np.zeros((y, x), dtype=np.uint8)
-            for i in range(n_rects):
-                dx, dy = np.random.randint(0, y), np.random.randint(0, x)
-                rr, cc = rectangle((dy, dx), extent=(l, l), shape=(y, x))
-                arr[rr, cc] = 1
-
-            tpc = model.radial_tpc(arr, False, False)
-            integral_range = model.tpc_to_cls(tpc, arr)
+            tpc = model.radial_tpc(im, False, False)
+            integral_range = model.tpc_to_cls(tpc, im)
             print(f"square cls of length {l}: {integral_range} with {n_rects}")
-            assert 0.5 * l < integral_range < 2 * l
+            assert 0.9 * l < integral_range < 1.1 * l
 
     def test_cls_disks(self):
         print(
@@ -160,10 +159,45 @@ class IntegrationTests(unittest.TestCase):
         result = model.make_error_prediction(test_arr, model_error=True)
         assert np.isclose(result["integral_range"], l, atol=5)
 
+    def test_image_stack_cls(self):
+        """Test that the cls of a stack is the same as the cls of one image"""
+        print("## Test case: cls of image stack")
+        n_images = 4
+        h, l, vf = 800, 10, 0.4
+        percent_l = l / h
+        test_arr = binary_blobs(h, percent_l, 2, vf)
+        stack = [test_arr] * n_images
+        im_result = model.make_error_prediction(test_arr, model_error=True)
+        stack_result = model.make_error_prediction(stack, model_error=True, image_stack=True)
+        print(f"cls of single image: {im_result['integral_range']}")
+        print(f"cls of stack: {stack_result['integral_range']}")
+        assert np.isclose(im_result["integral_range"], stack_result["integral_range"])
+        
+    def test_image_stack(self):
+        n_images = 4  # needs to be a square number
+        h, l, vf = 800, 10, 0.4
+
+        large_h = int(np.sqrt(n_images) * h)
+        percent_l = l / large_h
+        large_test_arr = binary_blobs(large_h, percent_l, 2, vf)
+        # TODO split the large image into n_images:
+        stack = [large_test_arr[i*h:(i+1)*h, j*h:(j+1)*h]
+                 for i in range(int(np.sqrt(n_images))) 
+                 for j in range(int(np.sqrt(n_images)))]
+        
+        large_im_result = model.make_error_prediction(large_test_arr, model_error=True)
+        stack_result = model.make_error_prediction(stack, model_error=True, image_stack=True)
+        # check that it produces the same results:
+        large_im_err = large_im_result["percent_err"]
+        stack_err = stack_result["percent_err"]
+        print(f"large image err: {large_im_err}")
+        print(f"stack error err: {stack_err}")
+        assert np.isclose(large_im_err, stack_err, rtol=0.1)
+
     def test_repr_pred(self):
-        """Test the percentage error of a random binomial size (500,500) - should be small"""
+        """Test the percentage error of a random binomial size (700,700) - should be small"""
         print("## Test case: representativity of random binomial")
-        test_arr = np.random.binomial(1, 0.5, (500, 500))
+        test_arr = np.random.binomial(1, 0.5, (700, 700))
         result = model.make_error_prediction(test_arr, model_error=True)
         assert result["percent_err"] < 0.05
 
