@@ -54,13 +54,13 @@ def hello_world():
     return send_from_directory("", "index.html")
 
 
-def generic_response(request, fn: Callable):
+async def generic_response(request, fn: Callable):
     """Given a HTTP request and response function, return corsified response."""
     if "OPTIONS" in request.method:
         return _build_cors_preflight_response()
     elif "POST" in request.method:
         try:
-            response = fn(request)
+            response = await fn(request)
             return add_cors_headers(response)
         except Exception as e:
             print(e)
@@ -85,7 +85,7 @@ def get_arr_from_file(form_data_file) -> np.ndarray:
     return arr
 
 
-def phase_fraction(request) -> Response:
+async def phase_fraction(request) -> Response:
     """User sends file, parse as array (either via tiffile or PIL-> numpy) and return all phase fractions.
     It's cheap to compute all of them and this way it can be done on first upload in the background and
     minimise delays."""
@@ -104,9 +104,9 @@ def phase_fraction(request) -> Response:
 
 
 @app.route("/phasefraction", methods=["POST", "GET", "OPTIONS"])
-def phase_fraction_app():
+async def phase_fraction_app():
     """phase fraction route."""
-    response = generic_response(request, phase_fraction)
+    response = await generic_response(request, phase_fraction)
     return response
 
 
@@ -127,20 +127,24 @@ def preprocess_arr(arr: np.ndarray) -> np.ndarray:
     return arr
 
 
-def representativity(request) -> Response:
-    user_file = request.files["userFile"]
-    arr = get_arr_from_file(user_file)
-
+async def representativity(request) -> Response:
+    file_list: list = request.files.getlist("userFile")
+    print(file_list)
     selected_phase = int(request.values["selected_phase"])
     selected_conf: float = float(request.values["selected_conf"]) / 100
     selected_err: float = float(request.values["selected_err"]) / 100
 
     print(f"Phase: {selected_phase}, Conf: {selected_conf}, Err: {selected_err}")
 
-    binary_img = np.where(arr == selected_phase, 1, 0)
+    arrs = []
+    for file in file_list:
+        arr = get_arr_from_file(file)
+        binary_img = np.where(arr == selected_phase, 1, 0)
+        arrs.append(binary_img)
+    is_stack = len(arrs) > 1
 
     result = make_error_prediction(
-        binary_img, selected_conf, selected_err, model_error=True
+        arrs, selected_conf, selected_err, model_error=True, image_stack=is_stack
     )  # make_error_prediction(binary_img, selected_conf, selected_err)
     # this can get stuck sometimes in the optimisation step (usually cls > 1)
     out = {
@@ -152,16 +156,14 @@ def representativity(request) -> Response:
         "pf_1d": result["pf_1d"],
         "cum_sum_sum": result["cum_sum_sum"],
     }
-    print(
-        f"abs_err for {selected_phase}: {out['abs_err']} \n percent err: {out['percent_err']}"
-    )
+    print(f"abs_err for {selected_phase}: {out['abs_err']} \n percent err: {out['percent_err']}")
 
     response = Response(json.dumps(out), status=200)
     return response
 
 
 @app.route("/repr", methods=["POST", "GET", "OPTIONS"])
-def representativity_app():
+async def representativity_app():
     """representativity route."""
-    response = generic_response(request, representativity)
+    response = await generic_response(request, representativity)
     return response
