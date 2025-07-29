@@ -483,7 +483,9 @@ const Result = ({ allImageInfos }: { allImageInfos: ImageLoadInfo[] }) => {
                   </ListGroup.Item>
                   <ListGroup.Item>
                     Full details can be found in the{" "}
-                    <a href="https://arxiv.org/abs/2410.19568v1">paper</a>
+                    <a href="https://advanced.onlinelibrary.wiley.com/doi/10.1002/advs.202414149">
+                      paper
+                    </a>
                   </ListGroup.Item>
                 </ListGroup>
               </Accordion.Body>

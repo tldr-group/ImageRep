@@ -147,7 +147,10 @@ export const MoreInfo = () => {
 
           <p>
             Full details can be found in the{" "}
-            <a href="https://arxiv.org/abs/2410.19568v1">paper</a>.
+            <a href="https://advanced.onlinelibrary.wiley.com/doi/10.1002/advs.202414149">
+              paper
+            </a>
+            .
           </p>
           <p>
             Source code is available{" "}
