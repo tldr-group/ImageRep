@@ -2,7 +2,7 @@
 
 [Try it out!](https://www.imagerep.io/)
 
-Here we introduce the 'ImageRep' method for fast phase fraction representativity estimation from a single microstructural image. This is achieved by calculating the Two-Point Correlation (TPC) function of the image, combined with a data-driven analysis of the [MicroLib](https://microlib.io/) dataset. By applying a statistical framework that utilizes both data sources, we can establish the uncertainty in the phase fraction in the image with a given confidence, **and** the image size that would be needed to meet a given target uncertainty. Further details are provided in our [preprint](https://arxiv.org/abs/2410.19568).
+Here we introduce the 'ImageRep' method for fast phase fraction representativity estimation from a single microstructural image. This is achieved by calculating the Two-Point Correlation (TPC) function of the image, combined with a data-driven analysis of the [MicroLib](https://microlib.io/) dataset. By applying a statistical framework that utilizes both data sources, we can establish the uncertainty in the phase fraction in the image with a given confidence, **and** the image size that would be needed to meet a given target uncertainty. Further details are provided in our [paper](https://advanced.onlinelibrary.wiley.com/doi/10.1002/advs.202414149).
 
 If you use this ImageRep in your research, [please cite us](CITATION.cff).
 
@@ -17,10 +17,11 @@ This method can be used via the [website (imagerep.io)](https://www.imagerep.io/
 NB: the website may run out of memory for large volumes (>1000x1000x1000) - if this happens run the method locally or contact us
 
 ## Limitations:
-- **This is not the only source of uncertainty!** Other sources *i.e,* segmentation uncertainty, also contribute and may be larger
-- For multi-phase materials, this method estimates the uncertainty in phase-fraction of a single (chosen) phase, counting all the others as a single phase (*i.e,* a binary microstructure)
+
+- **This is not the only source of uncertainty!** Other sources _i.e,_ segmentation uncertainty, also contribute and may be larger
+- For multi-phase materials, this method estimates the uncertainty in phase-fraction of a single (chosen) phase, counting all the others as a single phase (_i.e,_ a binary microstructure)
 - Not validated for for images smaller than 200x200 or 200x200x200
-- Not validated for large integral ranges/features sizes (>70 px) 
+- Not validated for large integral ranges/features sizes (>70 px)
 - Not designed for periodic structures
 - 'Length needed for target uncertainty' is an intentionally conservative estimate - retry when you have measured the larger sample to see a more accurate estimate of that uncertainty
 
@@ -31,10 +32,10 @@ These instructions are for installing and running the method locally. They assum
 ### Preliminaries
 
 Install [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) (ideally via a manager like [nvm](https://github.com/nvm-sh/nvm)) if you want to run the website. Clone this repo and change directory:
+
 ```
 git clone https://github.com/tldr-group/Representativity && cd Representativity
 ```
-
 
 ### Install & run the backend
 
@@ -55,12 +56,11 @@ python -m flask --app server run
 
 The server should now be running on `http://127.0.0.1:500` and listening for requests!
 
-
 3. If you want to reproduce (all) the figures, you'll need `pytorch` and some additional dependencies. It may be worth using [conda](https://www.anaconda.com/) to install `pytorch` as this will interact correctly with your GPU. Run
+
 ```
 pip install -r requirements_dev.txt
 ```
-
 
 ### Install & run the frontend
 

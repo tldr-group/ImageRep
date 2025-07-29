@@ -213,6 +213,8 @@ const App = () => {
     setSelectedConf(95);
     setErrorState({ msg: "", stackTrace: "" });
     setShowWarning("");
+    setNImgs(0);
+    allImageInfos.current = [];
   };
 
   const changePhase = () => {
