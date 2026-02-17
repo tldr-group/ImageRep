@@ -9,7 +9,6 @@ fig2 copy.py
 *info
 *mat
 *.pdf
-*.png
 *.npy
 
 .vscode
