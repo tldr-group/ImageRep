@@ -276,7 +276,6 @@ const NormalSlider = ({
     const tl = 12;
     const mx = CANVAS_WIDTH / 2;
     drawPoints([mx - tl, mx + tl], [2, 2], xAxisStyle);
-    drawText([params.max_y], [70 + CANVAS_WIDTH / 2], -0.94 * H_GAUSS, 24);
   };
 
   const redraw = () => {
